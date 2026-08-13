@@ -376,6 +376,21 @@ export function DashboardPage() {
                           : pos.dayChangePct < -0.01
                             ? `▼ ${Math.abs(pos.dayChangePct).toFixed(2)}%`
                             : "= 0,00%"}
+                        {pos.lastPrice > 0 && pos.dayChangePct !== 0 && (
+                          <>
+                            {" "}
+                            (
+                            {pos.dayChangePct > 0 ? "+" : "-"}
+                            {formatARS(
+                              Math.abs(
+                                pos.quantity *
+                                  pos.lastPrice *
+                                  (pos.dayChangePct / (100 + pos.dayChangePct))
+                              )
+                            )}
+                            )
+                          </>
+                        )}
                       </span>
                     </div>
                   </div>
@@ -447,22 +462,35 @@ export function DashboardPage() {
                   header: "Variación diaria",
                   align: "right",
                   render: (pos) => {
-                    // Estilo IOL: ▲ verde, ▼ rojo, = gris
-                    if (pos.dayChangePct > 0.01) {
-                      return (
-                        <span className="tabular-nums text-emerald-600">
-                          ▲ {pos.dayChangePct.toFixed(2)}%
-                        </span>
-                      );
-                    }
-                    if (pos.dayChangePct < -0.01) {
-                      return (
-                        <span className="tabular-nums text-red-600">
-                          ▼ {Math.abs(pos.dayChangePct).toFixed(2)}%
-                        </span>
-                      );
-                    }
-                    return <span className="tabular-nums text-muted-foreground">= 0,00%</span>;
+                    // Monto del día: cantidad × último × pct/(100+pct) — el %
+                    // es relativo al cierre anterior, así el cambio en $ es exacto
+                    const dayAmount =
+                      pos.lastPrice > 0
+                        ? pos.quantity * pos.lastPrice * (pos.dayChangePct / (100 + pos.dayChangePct))
+                        : 0;
+                    const dayUp = pos.dayChangePct > 0.01;
+                    const dayDown = pos.dayChangePct < -0.01;
+                    return (
+                      <div className="text-right">
+                        <div
+                          className={`tabular-nums ${
+                            dayUp ? "text-emerald-600" : dayDown ? "text-red-600" : "text-muted-foreground"
+                          }`}
+                        >
+                          {dayUp ? "▲" : dayDown ? "▼" : "="} {Math.abs(pos.dayChangePct).toFixed(2)}%
+                        </div>
+                        {dayAmount !== 0 && (
+                          <div
+                            className={`text-xs tabular-nums ${
+                              dayUp ? "text-emerald-600" : dayDown ? "text-red-600" : "text-muted-foreground"
+                            }`}
+                          >
+                            ({dayUp ? "+" : dayDown ? "-" : ""}
+                            {formatARS(Math.abs(dayAmount))})
+                          </div>
+                        )}
+                      </div>
+                    );
                   },
                 },
                 {
