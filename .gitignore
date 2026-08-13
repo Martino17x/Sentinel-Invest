@@ -1,0 +1,39 @@
+# Dependencias
+node_modules/
+
+# Builds
+dist/
+build/
+
+# Variables de entorno — ¡NUNCA commitear secretos!
+.env
+.env.local
+.env.*.local
+
+# Base de datos local
+*.db
+*.sqlite
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Railway / Dokploy
+.railway/
+
+# Proyecto viejo — tiene su propio .git y secretos (variables/ con
+# connection strings y OAuth). NO subir al repo de Sentinel Invest.
+Sentinel-Tracker/
+
+# Playwright MCP (capturas y logs de testing)
+.playwright-mcp/
+test-results/
+*.png
