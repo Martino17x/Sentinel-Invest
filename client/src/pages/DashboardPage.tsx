@@ -339,7 +339,7 @@ export function DashboardPage() {
                     </div>
                   </div>
 
-                  {/* Nivel 2: rendimiento del día (HERO) */}
+                  {/* Nivel 2: rendimiento (HERO) */}
                   <div className="mt-3 rounded-lg bg-muted/50 px-3 py-2.5">
                     <div className="flex items-baseline justify-between">
                       <span
@@ -358,17 +358,26 @@ export function DashboardPage() {
                         {pos.gainLossPct.toFixed(2)}%
                       </span>
                     </div>
-                    <p className="mt-0.5 flex items-center justify-between text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                      <span>Rendimiento hoy</span>
+                    <div className="mt-0.5 flex items-center justify-between">
+                      <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                        Rendimiento
+                      </span>
                       <span
-                        className={`normal-case tracking-normal ${
-                          pos.dayChangePct >= 0 ? "text-emerald-600" : "text-red-600"
+                        className={`text-xs font-medium tabular-nums ${
+                          pos.dayChangePct > 0.01
+                            ? "text-emerald-600"
+                            : pos.dayChangePct < -0.01
+                              ? "text-red-600"
+                              : "text-muted-foreground"
                         }`}
                       >
-                        {pos.dayChangePct >= 0 ? "▲" : "▼"} {pos.dayChangePct >= 0 ? "+" : ""}
-                        {pos.dayChangePct.toFixed(2)}% hoy
+                        {pos.dayChangePct > 0.01
+                          ? `▲ ${pos.dayChangePct.toFixed(2)}%`
+                          : pos.dayChangePct < -0.01
+                            ? `▼ ${Math.abs(pos.dayChangePct).toFixed(2)}%`
+                            : "= 0,00%"}
                       </span>
-                    </p>
+                    </div>
                   </div>
 
                   {/* Nivel 3: detalles compactos */}
@@ -434,6 +443,29 @@ export function DashboardPage() {
                   ),
                 },
                 {
+                  key: "variacion-diaria",
+                  header: "Variación diaria",
+                  align: "right",
+                  render: (pos) => {
+                    // Estilo IOL: ▲ verde, ▼ rojo, = gris
+                    if (pos.dayChangePct > 0.01) {
+                      return (
+                        <span className="tabular-nums text-emerald-600">
+                          ▲ {pos.dayChangePct.toFixed(2)}%
+                        </span>
+                      );
+                    }
+                    if (pos.dayChangePct < -0.01) {
+                      return (
+                        <span className="tabular-nums text-red-600">
+                          ▼ {Math.abs(pos.dayChangePct).toFixed(2)}%
+                        </span>
+                      );
+                    }
+                    return <span className="tabular-nums text-muted-foreground">= 0,00%</span>;
+                  },
+                },
+                {
                   key: "ultimo",
                   header: "Último",
                   align: "right",
@@ -446,12 +478,11 @@ export function DashboardPage() {
                   render: (pos) => <span className="tabular-nums">{formatARS(pos.avgPrice)}</span>,
                 },
                 {
-                  key: "rendimiento-hoy",
-                  header: "Rendimiento hoy",
+                  key: "rendimiento",
+                  header: "Rendimiento",
                   align: "right",
                   render: (pos) => {
                     const gainPositive = pos.gainLossPct >= 0;
-                    const dayUp = pos.dayChangePct >= 0;
                     // Estilo IOL: % sin "+" en positivos, monto con $ y signo
                     return (
                       <div className="text-right">
@@ -469,14 +500,6 @@ export function DashboardPage() {
                         >
                           {gainPositive ? "" : "-"}
                           {formatARS(Math.abs(pos.gainLossAmount))}
-                        </div>
-                        <div
-                          className={`text-[11px] tabular-nums ${
-                            dayUp ? "text-emerald-600" : "text-red-600"
-                          }`}
-                        >
-                          {dayUp ? "▲" : "▼"} {dayUp ? "+" : ""}
-                          {pos.dayChangePct.toFixed(2)}% hoy
                         </div>
                       </div>
                     );
