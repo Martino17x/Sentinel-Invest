@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { pool } from "./db/index.js";
+import { ensureSchema } from "./db/ensure-schema.js";
 import authRouter from "./routes/auth.js";
 import googleRouter from "./routes/google.js";
 import accountsRouter from "./routes/accounts.js";
@@ -50,6 +51,10 @@ app.listen(PORT, () => {
   console.log(`🚀 API escuchando en http://localhost:${PORT}`);
 });
 
+// Migraciones idempotentes al arranque — nunca deben romper el boot
+ensureSchema()
+  .then(() => console.log("✅ ensure-schema: OK"))
+  .catch((err) => console.warn("⚠️ ensure-schema:", err instanceof Error ? err.message : err));
 
 
 
@@ -61,4 +66,4 @@ app.listen(PORT, () => {
 
 
 
-// t12
+

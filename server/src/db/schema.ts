@@ -184,7 +184,13 @@ export const portfolioSnapshots = pgTable(
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     totalValue: numeric("total_value", { precision: 20, scale: 2 }).notNull(),
+    totalValueUsd: numeric("total_value_usd", { precision: 20, scale: 2 }).default("0").notNull(),
     cash: numeric("cash", { precision: 20, scale: 2 }).notNull(),
+    cashArs: numeric("cash_ars", { precision: 20, scale: 2 }).default("0").notNull(),
+    cashUsd: numeric("cash_usd", { precision: 20, scale: 2 }).default("0").notNull(),
+    positionsValue: numeric("positions_value", { precision: 20, scale: 2 }).default("0").notNull(),
+    unrealizedGain: numeric("unrealized_gain", { precision: 20, scale: 2 }).default("0").notNull(),
+    dayChangePct: numeric("day_change_pct", { precision: 10, scale: 4 }).default("0").notNull(),
     currency: currencyEnum("currency").default("ARS").notNull(),
     capturedAt: timestamp("captured_at", { withTimezone: true }).defaultNow().notNull(),
   },

@@ -4,6 +4,7 @@ import { db, schema } from "../db/index.js";
 import { requireAuth } from "../middleware/auth.js";
 import { getIolProvider } from "../services/iol/index.js";
 import { getIolCredentials } from "../lib/iol-credentials.js";
+import { saveDailySnapshot } from "../services/reports/reportBuilder.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -60,6 +61,16 @@ router.get("/", async (req: Request, res: Response) => {
     const creds = await getIolCredentials(req.user!.id);
     const provider = getIolProvider();
     const portfolio = await provider.getPortfolio(creds, result.account.iolAccountNumber);
+
+    // Snapshot del día (uno por día local por cuenta) — solo con cuentas
+    // reales en BD: en modo mock la cuenta es "demo" y no existe en la BD.
+    // El sync nunca debe romper la respuesta del portfolio.
+    if (process.env.IOL_PROVIDER === "api") {
+      await saveDailySnapshot(result.account.id, portfolio).catch((err) => {
+        console.warn("⚠️ snapshot sync:", err instanceof Error ? err.message : err);
+      });
+    }
+
     res.json({ portfolio });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Error al consultar el portafolio";

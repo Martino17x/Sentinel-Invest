@@ -12,6 +12,9 @@ import type {
   Quote,
 } from "./types.js";
 import { computeDayChange, buildDistributionByType } from "./portfolioMath.js";
+import { eq } from "drizzle-orm";
+import { db, schema } from "../../db/index.js";
+import { buildMonthlyCloses, buildMonthlyReport } from "../reports/reportBuilder.js";
 
 /**
  * PROVEEDOR REAL — habla con la API de InvertirOnline.
@@ -293,17 +296,29 @@ export class IolApiProvider implements IolProvider {
     };
   }
 
-  async getMonthlyCloses(_creds: IolCredentials, _accountNumber: string): Promise<MonthClose[]> {
-    // TODO: calcular desde portfolio_snapshots cuando existan
-    return [];
+  async getMonthlyCloses(creds: IolCredentials, accountNumber: string): Promise<MonthClose[]> {
+    const [account] = await db
+      .select()
+      .from(schema.accounts)
+      .where(eq(schema.accounts.iolAccountNumber, accountNumber));
+    // Sin cuenta en BD no hay snapshots — devolver [] honesto
+    if (!account) return [];
+    return buildMonthlyCloses(account.id, creds, this);
   }
 
   async getMonthlyReport(
-    _creds: IolCredentials,
-    _accountNumber: string,
-    _month: string
+    creds: IolCredentials,
+    accountNumber: string,
+    month: string
   ): Promise<MonthlyReport> {
-    throw new Error("Reportes mensuales requieren snapshots sincronizados");
+    const [account] = await db
+      .select()
+      .from(schema.accounts)
+      .where(eq(schema.accounts.iolAccountNumber, accountNumber));
+    if (!account) {
+      throw new Error(`No existe la cuenta IOL ${accountNumber} — los reportes requieren snapshots sincronizados`);
+    }
+    return buildMonthlyReport(account.id, creds, this, month);
   }
 }
 
