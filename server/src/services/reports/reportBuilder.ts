@@ -306,10 +306,10 @@ export async function buildMonthlyCloses(
     let bmv: number;
     if (list.length === 1) {
       // Mes con un solo snapshot: BMV = el snapshot anterior al mes.
-      // Si no hay anterior, el mes se saltea (no hay base para Dietz).
+      // Si no hay anterior (primer mes de datos, ej. el actual), BMV = el
+      // MISMO snapshot → twr 0% y grossChange 0 — el mes arranca la serie.
       const before = snapshots.filter((s) => s.capturedAt < monthStart);
-      if (before.length === 0) continue;
-      bmv = snapNumber(before[before.length - 1], "totalValue");
+      bmv = before.length === 0 ? emv : snapNumber(before[before.length - 1], "totalValue");
     } else {
       bmv = snapNumber(list[0], "totalValue");
     }

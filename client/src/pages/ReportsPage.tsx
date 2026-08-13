@@ -10,8 +10,16 @@ import {
   Scale,
   Activity,
   BarChart3,
+  CalendarClock,
+  Info,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,7 +27,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   CartesianGrid, Legend, Line, LineChart,
-  ResponsiveContainer, Tooltip, XAxis, YAxis,
+  ResponsiveContainer, Tooltip as ChartTooltip, XAxis, YAxis,
 } from "recharts";
 import { reportsApi, type MonthClose, type MonthlyReport } from "@/lib/api";
 
@@ -69,6 +77,27 @@ const TYPE_LABELS: Record<string, string> = {
   subscription: "Suscripción",
   redemption: "Rescate",
 };
+
+function MetricTooltip({ text }: { text: string }) {
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className="inline-flex cursor-help items-center rounded-sm text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Más información"
+          >
+            <Info className="h-3.5 w-3.5" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-64" sideOffset={6}>
+          {text}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
 
 export function ReportsPage() {
   const [closes, setCloses] = useState<MonthClose[]>([]);
@@ -161,6 +190,26 @@ export function ReportsPage() {
     );
   }
 
+  if (!loadingCloses && closes.length === 0 && !error) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8">
+        <Card>
+          <CardHeader className="items-center text-center">
+            <div className="rounded-full bg-muted p-3">
+              <CalendarClock className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <CardTitle className="text-lg">Todavía no hay reportes</CardTitle>
+            <CardDescription className="max-w-md">
+              Los reportes se generan con un snapshot diario de tu cartera. Sincronizá tu
+              portafolio y volvé mañana para ver tu primer punto — los reportes mensuales
+              completos (TWR, benchmark, movimientos) aparecen a fin de mes.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
   const beatBenchmark = (report?.twrPct ?? 0) >= (report?.benchmarkPct ?? 0);
 
   return (
@@ -168,7 +217,10 @@ export function ReportsPage() {
       {/* Header con selector de mes */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Reportes mensuales</h1>
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-2xl font-semibold tracking-tight">Reportes mensuales</h1>
+            <MetricTooltip text="Cierre de cada mes con rendimiento real (TWR), actividad y comparativas. Se generan con snapshots diarios de tu cartera." />
+          </div>
           <p className="text-sm text-muted-foreground">
             Cierre de cada mes — rendimiento, actividad y comparativas
           </p>
@@ -207,7 +259,10 @@ export function ReportsPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Valor al cierre</CardTitle>
+                <div className="flex items-center gap-1.5">
+                  <CardTitle className="text-sm font-medium">Valor al cierre</CardTitle>
+                  <MetricTooltip text="Valor total de tu cartera (pesos + dólares) al último día del mes." />
+                </div>
                 <Wallet className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -220,7 +275,10 @@ export function ReportsPage() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Rendimiento real (TWR)</CardTitle>
+                <div className="flex items-center gap-1.5">
+                  <CardTitle className="text-sm font-medium">Rendimiento real (TWR)</CardTitle>
+                  <MetricTooltip text="TWR (Time-Weighted Return): rendimiento real de tu cartera excluyendo aportes y retiros. Es la métrica estándar para comparar con el mercado." />
+                </div>
                 <Percent className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -235,7 +293,10 @@ export function ReportsPage() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Aportes netos</CardTitle>
+                <div className="flex items-center gap-1.5">
+                  <CardTitle className="text-sm font-medium">Aportes netos</CardTitle>
+                  <MetricTooltip text="Plata que metiste o sacaste de tu cartera en el mes (estimado: compras − ventas, IOL no expone depósitos)." />
+                </div>
                 <HandCoins className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -250,7 +311,10 @@ export function ReportsPage() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">vs Merval</CardTitle>
+                <div className="flex items-center gap-1.5">
+                  <CardTitle className="text-sm font-medium">vs Merval</CardTitle>
+                  <MetricTooltip text="Comparación de tu TWR contra el Merval (índice de acciones líderes de BYMA) en el mismo período." />
+                </div>
                 <Scale className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -270,7 +334,10 @@ export function ReportsPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Ganancia realizada</CardTitle>
+                <div className="flex items-center gap-1.5">
+                  <CardTitle className="text-sm font-medium">Ganancia realizada</CardTitle>
+                  <MetricTooltip text="Ganancia materializada al vender: (precio de venta − costo estimado) × cantidad." />
+                </div>
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -283,7 +350,10 @@ export function ReportsPage() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Ganancia latente</CardTitle>
+                <div className="flex items-center gap-1.5">
+                  <CardTitle className="text-sm font-medium">Ganancia latente</CardTitle>
+                  <MetricTooltip text="Ganancia en papel: valor actual de tus posiciones menos lo que pagaste por ellas." />
+                </div>
                 <Activity className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -296,7 +366,10 @@ export function ReportsPage() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Comisiones</CardTitle>
+                <div className="flex items-center gap-1.5">
+                  <CardTitle className="text-sm font-medium">Comisiones</CardTitle>
+                  <MetricTooltip text="Costo total de operar en el mes." />
+                </div>
                 <Tag className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -307,7 +380,10 @@ export function ReportsPage() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Cupones / dividendos</CardTitle>
+                <div className="flex items-center gap-1.5">
+                  <CardTitle className="text-sm font-medium">Cupones / dividendos</CardTitle>
+                  <MetricTooltip text="Intereses de bonos y dividendos de acciones cobrados en el mes." />
+                </div>
                 <BarChart3 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -346,7 +422,7 @@ export function ReportsPage() {
                       tickFormatter={(v: number) => formatARS(v)}
                     />
                     <YAxis yAxisId="right" orientation="right" hide domain={[900, 1100]} />
-                    <Tooltip
+                    <ChartTooltip
                       formatter={(value, name) => {
                         if (name === "cartera") return [formatARS(Number(value ?? 0)), "Cartera"];
                         return [Number(value ?? 0).toFixed(1), "Merval (base 1000)"];
@@ -382,8 +458,9 @@ export function ReportsPage() {
           {/* Mejor/peor día + FX */}
           <div className="grid gap-4 sm:grid-cols-3">
             <Card>
-              <CardHeader className="pb-2">
+              <CardHeader className="flex items-center gap-1.5 pb-2">
                 <CardTitle className="text-sm font-medium">Mejor día</CardTitle>
+                <MetricTooltip text="El día con mayor variación porcentual diaria de tu cartera en el mes (según los snapshots)." />
               </CardHeader>
               <CardContent>
                 {report.bestDay ? (
@@ -402,8 +479,9 @@ export function ReportsPage() {
             </Card>
 
             <Card>
-              <CardHeader className="pb-2">
+              <CardHeader className="flex items-center gap-1.5 pb-2">
                 <CardTitle className="text-sm font-medium">Peor día</CardTitle>
+                <MetricTooltip text="El día con mayor variación porcentual diaria de tu cartera en el mes (según los snapshots)." />
               </CardHeader>
               <CardContent>
                 {report.worstDay ? (
@@ -422,8 +500,9 @@ export function ReportsPage() {
             </Card>
 
             <Card>
-              <CardHeader className="pb-2">
+              <CardHeader className="flex items-center gap-1.5 pb-2">
                 <CardTitle className="text-sm font-medium">Tipo de cambio</CardTitle>
+                <MetricTooltip text="Variación del dólar oficial en el mes (USDARS)." />
               </CardHeader>
               <CardContent>
                 <div className={`text-lg font-bold ${pctColor(report.fxChangePct)}`}>

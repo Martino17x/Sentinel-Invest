@@ -376,15 +376,14 @@ export function DashboardPage() {
                           : pos.dayChangePct < -0.01
                             ? `▼ ${Math.abs(pos.dayChangePct).toFixed(2)}%`
                             : "= 0,00%"}
-                        {pos.lastPrice > 0 && pos.dayChangePct !== 0 && (
+                        {pos.totalValue > 0 && pos.dayChangePct !== 0 && (
                           <>
                             {" "}
                             (
                             {pos.dayChangePct > 0 ? "+" : "-"}
                             {formatARS(
                               Math.abs(
-                                pos.quantity *
-                                  pos.lastPrice *
+                                pos.totalValue *
                                   (pos.dayChangePct / (100 + pos.dayChangePct))
                               )
                             )}
@@ -462,11 +461,14 @@ export function DashboardPage() {
                   header: "Variación diaria",
                   align: "right",
                   render: (pos) => {
-                    // Monto del día: cantidad × último × pct/(100+pct) — el %
-                    // es relativo al cierre anterior, así el cambio en $ es exacto
+                    // Monto del día: totalValue × pct/(100+pct) — el % es relativo
+                    // al cierre anterior, así el cambio en $ es exacto.
+                    // OJO: NO usar quantity × lastPrice: para bonos/ONs IOL
+                    // reporta el precio por VN 100 (100× el precio unitario),
+                    // por lo que quantity × lastPrice ≠ totalValue (inflan 100×).
                     const dayAmount =
-                      pos.lastPrice > 0
-                        ? pos.quantity * pos.lastPrice * (pos.dayChangePct / (100 + pos.dayChangePct))
+                      pos.totalValue > 0
+                        ? pos.totalValue * (pos.dayChangePct / (100 + pos.dayChangePct))
                         : 0;
                     const dayUp = pos.dayChangePct > 0.01;
                     const dayDown = pos.dayChangePct < -0.01;
