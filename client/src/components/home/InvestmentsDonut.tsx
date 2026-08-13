@@ -1,0 +1,127 @@
+import { useMemo } from "react";
+import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { formatArs, formatUsd, maskAmount } from "@/lib/format";
+import type { DistributionByTypeItem } from "@/lib/api";
+
+const PIE_COLORS = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+];
+
+interface InvestmentsDonutProps {
+  distribution: DistributionByTypeItem[];
+  currency: "ARS" | "USD";
+  hidden: boolean;
+  loading: boolean;
+}
+
+/**
+ * "Mis inversiones": donut de distribución por categoría + desglose
+ * con badge de %, monto total y variación por categoría (estilo IOL).
+ * Cada categoría muestra el monto en la moneda activa (sin mezclar).
+ */
+export function InvestmentsDonut({
+  distribution,
+  currency,
+  hidden,
+  loading,
+}: InvestmentsDonutProps) {
+  const total = useMemo(() => {
+    if (currency === "ARS") {
+      return distribution.reduce((s, d) => s + d.amountArs, 0);
+    }
+    return distribution.reduce((s, d) => s + d.amountUsd, 0);
+  }, [distribution, currency]);
+
+  const chartData = distribution.map((d, i) => ({
+    ...d,
+    fill: PIE_COLORS[i % PIE_COLORS.length],
+  }));
+
+  const formatAmount = (item: DistributionByTypeItem) => {
+    const value = currency === "ARS" ? item.amountArs : item.amountUsd;
+    return hidden ? maskAmount(value) : currency === "ARS" ? formatArs(value) : formatUsd(value);
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Mis inversiones</CardTitle>
+        <CardDescription>Distribución por tipo de activo</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="flex flex-col items-center gap-4 py-4">
+            <Skeleton className="h-40 w-40 rounded-full" />
+            <div className="w-full space-y-2">
+              <Skeleton className="h-8" />
+              <Skeleton className="h-8" />
+              <Skeleton className="h-8" />
+            </div>
+          </div>
+        ) : distribution.length === 0 ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            No tenés inversiones todavía. Conectá tu cuenta IOL para ver tu cartera.
+          </p>
+        ) : (
+          <>
+            {/* Donut con total en el centro */}
+            <div className="relative mx-auto h-44 w-44">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={chartData}
+                    dataKey="pct"
+                    nameKey="label"
+                    innerRadius={52}
+                    outerRadius={72}
+                    paddingAngle={2}
+                    strokeWidth={0}
+                  >
+                    {chartData.map((entry, i) => (
+                      <Cell key={entry.type} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Total
+                </p>
+                <p className="text-base font-bold tabular-nums">
+                  {hidden ? maskAmount(total) : currency === "ARS" ? formatArs(total) : formatUsd(total)}
+                </p>
+              </div>
+            </div>
+
+            {/* Desglose por categoría */}
+            <div className="mt-5 space-y-2">
+              {chartData.map((item, i) => (
+                <div key={item.type} className="flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }}
+                    />
+                    <span className="truncate text-sm font-medium">{item.label}</span>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3 tabular-nums">
+                    <span className="text-sm font-semibold">{formatAmount(item)}</span>
+                    <span className="w-12 text-right text-xs text-muted-foreground">
+                      {item.pct.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

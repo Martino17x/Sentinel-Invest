@@ -4,16 +4,16 @@ import { useAuth } from "@/context/AuthContext";
 
 /**
  * Botón "Volver" con lógica responsive:
- * - Mobile (< md): visible en TODAS las páginas excepto /dashboard (el home).
+ * - Mobile (< md): visible en TODAS las páginas excepto /inicio (el home).
  * - Desktop (≥ md): visible solo en páginas secundarias (/profile, /connect).
  *
- * Al volver, si hay historial navegable usa browser back; si no, va al panel.
+ * Al volver, si hay historial navegable usa browser back; si no, va al inicio.
  */
 export function BackButton({ to }: { to?: string }) {
   const { user } = useAuth();
   if (!user) return null; // solo dentro de la app autenticada
 
-  const fallback = to ?? "/dashboard";
+  const fallback = to ?? "/inicio";
 
   return (
     <Link

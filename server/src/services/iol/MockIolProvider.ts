@@ -11,6 +11,7 @@ import type {
   Position,
   Quote,
 } from "./types.js";
+import { computeDayChange, buildDistributionByType } from "./portfolioMath.js";
 
 /**
  * Proveedor MOCK — devuelve datos falsos pero realistas.
@@ -21,10 +22,12 @@ import type {
 
 // Base de datos falsa de posiciones — replicando la cartera real
 // del usuario (captura de IOL: GD35, MRCUO, NVDA + efectivo ARS/USD)
+// Las variaciones diarias (dayChangePct) son realistas para que la
+// ganancia diaria calculada se vea viva en modo mock.
 const MOCK_POSITIONS: Position[] = [
-  { symbol: "GD35", name: "Bonos Rep. Arg. US$ Step Up 2035", assetType: "bono", market: "bonds", quantity: 651, avgPrice: 104209.74, lastPrice: 123820, currency: "ARS", totalValue: 806068.2, gainLossPct: 18.81, gainLossAmount: 127662.8, dayChangePct: 0.0 },
-  { symbol: "MRCUO", name: "On Gen Med Sa Cl.28 V08/27", assetType: "accion", market: "bcba", quantity: 54, avgPrice: 99663, lastPrice: 39000, currency: "ARS", totalValue: 21060, gainLossPct: -60.86, gainLossAmount: -32758.02, dayChangePct: 0.0 },
-  { symbol: "NVDA", name: "Cedear Nvidia Corporation", assetType: "cedear", market: "bcba", quantity: 3, avgPrice: 6780, lastPrice: 14850, currency: "ARS", totalValue: 44550, gainLossPct: 119.02, gainLossAmount: 24210, dayChangePct: 0.0 },
+  { symbol: "GD35", name: "Bonos Rep. Arg. US$ Step Up 2035", assetType: "bono", market: "bonds", quantity: 651, avgPrice: 104209.74, lastPrice: 123820, currency: "ARS", totalValue: 806068.2, gainLossPct: 18.81, gainLossAmount: 127662.8, dayChangePct: 0.12 },
+  { symbol: "MRCUO", name: "On Gen Med Sa Cl.28 V08/27", assetType: "accion", market: "bcba", quantity: 54, avgPrice: 99663, lastPrice: 39000, currency: "ARS", totalValue: 21060, gainLossPct: -60.86, gainLossAmount: -32758.02, dayChangePct: -0.62 },
+  { symbol: "NVDA", name: "Cedear Nvidia Corporation", assetType: "cedear", market: "bcba", quantity: 3, avgPrice: 6780, lastPrice: 14850, currency: "ARS", totalValue: 44550, gainLossPct: 119.02, gainLossAmount: 24210, dayChangePct: 3.42 },
 ];
 
 // Efectivo disponible para operar — separado por moneda (como IOL)
@@ -48,6 +51,9 @@ export class MockIolProvider implements IolProvider {
     const positionsValueArs = MOCK_POSITIONS.reduce((sum, p) => sum + p.totalValue, 0);
     const gainLossArs = MOCK_POSITIONS.reduce((sum, p) => sum + p.gainLossAmount, 0);
 
+    // Ganancia del día: ponderada por la variación diaria de cada posición
+    const dayChange = computeDayChange(MOCK_POSITIONS);
+
     return {
       accountNumber,
       cashArs: MOCK_CASH_ARS,
@@ -58,8 +64,11 @@ export class MockIolProvider implements IolProvider {
       totalUsd: MOCK_CASH_USD,
       gainLossArs,
       gainLossUsd: 0,
-      dayChangePct: 0.87,
+      dayChangePct: dayChange.pct,
+      dayChangeAmountArs: dayChange.amountArs,
+      dayChangeAmountUsd: dayChange.amountUsd,
       distribution: MOCK_DISTRIBUTION,
+      distributionByType: buildDistributionByType(MOCK_POSITIONS, MOCK_CASH_ARS, MOCK_CASH_USD),
       positions: MOCK_POSITIONS,
     };
   }

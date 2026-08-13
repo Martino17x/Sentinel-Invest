@@ -47,9 +47,23 @@ export interface PortfolioSummary {
   gainLossUsd: number;
   // Variación del día (porcentaje)
   dayChangePct: number;
+  // Ganancia/pérdida del día en dinero (real, ponderada por posición)
+  dayChangeAmountArs: number;
+  dayChangeAmountUsd: number;
   // Distribución porcentual por activo (incluye efectivo)
   distribution: { label: string; pct: number }[];
+  // Distribución por CATEGORÍA de activo (bonos, CEDEARs, efectivo...)
+  distributionByType: DistributionByTypeItem[];
   positions: Position[];
+}
+
+/** Ítem de la distribución por tipo de activo */
+export interface DistributionByTypeItem {
+  type: string; // assetType o "efectivo"
+  label: string; // nombre legible ("Bonos", "CEDEARs"...)
+  pct: number; // porcentaje del total
+  amountArs: number; // monto en ARS (sin mezclar monedas)
+  amountUsd: number; // monto en USD
 }
 
 /** Una operación histórica (compra/venta/suscripción/rescate) */

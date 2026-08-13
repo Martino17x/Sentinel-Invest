@@ -142,8 +142,19 @@ export interface PortfolioSummary {
   gainLossArs: number;
   gainLossUsd: number;
   dayChangePct: number;
+  dayChangeAmountArs: number;
+  dayChangeAmountUsd: number;
   distribution: { label: string; pct: number }[];
+  distributionByType: DistributionByTypeItem[];
   positions: Position[];
+}
+
+export interface DistributionByTypeItem {
+  type: string;
+  label: string;
+  pct: number;
+  amountArs: number;
+  amountUsd: number;
 }
 
 export interface PortfolioSnapshotPoint {

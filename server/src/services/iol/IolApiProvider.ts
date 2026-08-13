@@ -11,6 +11,7 @@ import type {
   Position,
   Quote,
 } from "./types.js";
+import { computeDayChange, buildDistributionByType } from "./portfolioMath.js";
 
 /**
  * PROVEEDOR REAL — habla con la API de InvertirOnline.
@@ -157,6 +158,9 @@ export class IolApiProvider implements IolProvider {
     const totalArs = cashArs + positionsValueArs;
     const totalUsd = cashUsd + positionsValueUsd;
 
+    // Ganancia del día REAL: ponderada por la variación diaria de cada posición
+    const dayChange = computeDayChange(positions);
+
     return {
       accountNumber,
       cashArs,
@@ -167,8 +171,11 @@ export class IolApiProvider implements IolProvider {
       totalUsd,
       gainLossArs: positions.reduce((s, p) => s + p.gainLossAmount, 0),
       gainLossUsd: 0,
-      dayChangePct: 0.87,
+      dayChangePct: dayChange.pct,
+      dayChangeAmountArs: dayChange.amountArs,
+      dayChangeAmountUsd: dayChange.amountUsd,
       distribution: buildDistribution(positions, cashArs, cashUsd),
+      distributionByType: buildDistributionByType(positions, cashArs, cashUsd),
       positions,
     };
   }
