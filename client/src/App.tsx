@@ -50,7 +50,7 @@ function ProtectedLayout() {
     <div className="min-h-svh bg-background">
       <Navigation />
       <IolConnectReminder />
-      <main className="relative pb-16 md:pb-0">
+      <main className="relative pb-24 md:pb-0">
         {/* Botón Volver EN EL FLUJO (no overlay): nunca se superpone al contenido.
             Padding propio arriba + separación del contenido con mb */}
         {showBack && (

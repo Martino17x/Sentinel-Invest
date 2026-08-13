@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatArs, formatUsd, maskAmount } from "@/lib/format";
+import { formatArs, formatCompact, formatUsd, maskAmount } from "@/lib/format";
 import type { DistributionByTypeItem } from "@/lib/api";
 
 // Paleta vibrante por categoría (estilo IOL: cada tipo con su color)
@@ -58,12 +58,12 @@ export function InvestmentsDonut({
   };
 
   return (
-    <Card>
+    <Card className="lg:h-full">
       <CardHeader>
         <CardTitle>Mis inversiones</CardTitle>
         <CardDescription>Distribución por tipo de activo</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="lg:flex lg:h-full lg:flex-col lg:justify-center">
         {loading ? (
           <div className="flex flex-col items-center gap-4 py-4">
             <Skeleton className="h-40 w-40 rounded-full" />
@@ -80,15 +80,15 @@ export function InvestmentsDonut({
         ) : (
           <>
             {/* Donut con total en el centro */}
-            <div className="relative mx-auto h-44 w-44">
+            <div className="relative mx-auto h-56 w-56 lg:h-64 lg:w-64">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={chartData}
                     dataKey="pct"
                     nameKey="label"
-                    innerRadius={52}
-                    outerRadius={72}
+                    innerRadius="59%"
+                    outerRadius="80%"
                     paddingAngle={2}
                     strokeWidth={0}
                   >
@@ -102,8 +102,12 @@ export function InvestmentsDonut({
                 <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                   Total
                 </p>
-                <p className="text-base font-bold tabular-nums">
-                  {hidden ? maskAmount(total) : currency === "ARS" ? formatArs(total) : formatUsd(total)}
+                <p className="px-2 text-center text-lg font-bold tabular-nums">
+                  {hidden
+                    ? maskAmount(total)
+                    : currency === "ARS"
+                      ? formatCompact(total, "ARS")
+                      : formatCompact(total, "USD")}
                 </p>
               </div>
             </div>
@@ -119,9 +123,9 @@ export function InvestmentsDonut({
                     />
                     <span className="truncate text-sm font-medium">{item.label}</span>
                   </div>
-                  <div className="flex shrink-0 items-center gap-3 tabular-nums">
-                    <span className="text-sm font-semibold">{formatAmount(item)}</span>
-                    <span className="w-12 text-right text-xs text-muted-foreground">
+                  <div className="flex shrink-0 items-center gap-2 tabular-nums">
+                    <span className="text-xs font-semibold">{formatAmount(item)}</span>
+                    <span className="w-11 text-right text-xs text-muted-foreground">
                       {item.pct.toFixed(1)}%
                     </span>
                   </div>

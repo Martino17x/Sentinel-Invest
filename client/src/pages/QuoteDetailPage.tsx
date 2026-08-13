@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { ArrowLeft, Star } from "lucide-react";
+import { useSmartBack } from "@/lib/use-smart-back";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,6 +31,7 @@ function formatPrice(value: number, currency: string) {
 
 export function QuoteDetailPage() {
   const { symbol } = useParams<{ symbol: string }>();
+  const { goBack } = useSmartBack("/quotes");
   const [quote, setQuote] = useState<Quote | null>(null);
   const [history, setHistory] = useState<{ date: string; close: number }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,14 +100,15 @@ export function QuoteDetailPage() {
       {/* Header con nombre del activo */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Link
-            to="/quotes"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          <button
+            type="button"
+            onClick={goBack}
+            className="inline-flex cursor-pointer items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             aria-label="Volver a cotizaciones"
           >
             <ArrowLeft className="h-4 w-4" />
             Cotizaciones
-          </Link>
+          </button>
           <span className="text-muted-foreground">/</span>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-semibold tracking-tight">{quote.symbol}</h1>

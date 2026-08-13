@@ -63,9 +63,9 @@ export function HomePage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4 sm:p-6 lg:max-w-5xl lg:p-8">
-      {/* Mobile: apilado. Desktop (md+): dos columnas */}
-      <div className="grid gap-4 md:grid-cols-2 md:items-start">
+    <div className="mx-auto max-w-lg space-y-4 p-4 sm:p-6 md:max-w-2xl lg:max-w-5xl lg:p-8">
+      {/* Mobile/tablet: apilado. Desktop (lg+): dos columnas */}
+      <div className="grid gap-4 lg:grid-cols-2">
         <div className="space-y-4">
           <HomeHero
             totalArs={portfolio.totalArs}

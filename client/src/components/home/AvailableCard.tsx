@@ -21,7 +21,7 @@ export function AvailableCard({ cashArs, cashUsd, hidden }: AvailableCardProps) 
         <div className="mt-3 space-y-1">
           <div className="flex items-center justify-between rounded-lg px-2 py-2.5">
             <span className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-bold">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold tracking-tight">
                 $
               </span>
               <span className="text-sm font-medium">Pesos</span>
@@ -33,7 +33,7 @@ export function AvailableCard({ cashArs, cashUsd, hidden }: AvailableCardProps) 
 
           <div className="flex items-center justify-between rounded-lg px-2 py-2.5">
             <span className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-bold">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold tracking-tight">
                 US$
               </span>
               <span className="text-sm font-medium">Dólares</span>

@@ -44,7 +44,7 @@ export function HomeHero({
             <SelectTrigger className="h-7 w-auto gap-1 px-2 text-xs font-medium">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="popper" align="end">
               <SelectItem value="ARS">ARS</SelectItem>
               <SelectItem value="USD">USD</SelectItem>
             </SelectContent>

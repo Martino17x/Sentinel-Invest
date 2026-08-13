@@ -43,6 +43,33 @@ export function formatUsd(value: number): string {
   return formatterUSD.format(value);
 }
 
+const formatterARSCompact = new Intl.NumberFormat("es-AR", {
+  style: "currency",
+  currency: "ARS",
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+
+const formatterUSDCompact = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+
+/**
+ * Formato COMPACTO para montos enormes (espacios angostos, ej. centro del donut):
+ * ≥ 1.000.000 → "$ 100,0 M" / "$ 1,2 MM" (es-AR usa "M" con sufijo diferente
+ * según Intl; en en-US "USD 100M"). Debajo de 1M usa el formato normal.
+ */
+export function formatCompact(value: number, currency: string): string {
+  const abs = Math.abs(value);
+  if (abs < 1_000_000) {
+    return currency === "USD" ? formatterUSD.format(value) : formatterARSNoDecimals.format(value);
+  }
+  return currency === "USD" ? formatterUSDCompact.format(value) : formatterARSCompact.format(value);
+}
+
 /**
  * Enmascara un monto (para el botón "ojo" de ocultar valores).
  * Muestra "••••" en lugar del número.
