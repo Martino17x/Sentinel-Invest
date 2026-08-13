@@ -112,16 +112,25 @@ export function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Ganancia / Pérdida</CardTitle>
-            <ChangeIcon className={`h-4 w-4 ${isUp ? "text-emerald-500" : "text-red-500"}`} />
+            <ChangeIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className={`text-xl font-bold ${isUp ? "text-emerald-600" : "text-red-600"}`}>
-              {isUp ? "+" : ""}
-              {formatARS(portfolio.gainLossArs)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {isUp ? "+" : ""}
-              {portfolio.dayChangePct.toFixed(2)}% hoy
+            {/* El monto grande es la ganancia ACUMULADA — se muestra neutro
+                (no es el balance del día; colorearlo confunde). */}
+            <div className="text-xl font-bold">{formatARS(portfolio.gainLossArs)}</div>
+            {/* Solo la variación del DÍA va en verde/rojo, con su monto en $ */}
+            <p className="text-xs">
+              <span className={isUp ? "text-emerald-600" : "text-red-600"}>
+                {isUp ? "+" : ""}
+                {portfolio.dayChangePct.toFixed(2)}% hoy
+                {portfolio.dayChangeAmountArs !== 0 && (
+                  <>
+                    {" "}
+                    ({isUp ? "+" : "-"}
+                    {formatARS(Math.abs(portfolio.dayChangeAmountArs))})
+                  </>
+                )}
+              </span>
             </p>
           </CardContent>
         </Card>
@@ -328,33 +337,29 @@ export function DashboardPage() {
                       </div>
                       <p className="mt-0.5 truncate text-xs text-muted-foreground">{pos.name}</p>
                     </div>
-                    <span
-                      className={`shrink-0 text-sm font-semibold tabular-nums ${
-                        gainPositive ? "text-emerald-600" : "text-red-600"
-                      }`}
-                    >
-                      {gainPositive ? "▲" : "▼"} {gainPositive ? "+" : ""}
-                      {pos.gainLossPct.toFixed(2)}%
-                    </span>
                   </div>
 
-                  {/* Nivel 2: valor bruto (HERO) + variación diaria */}
+                  {/* Nivel 2: rendimiento del día (HERO) */}
                   <div className="mt-3 rounded-lg bg-muted/50 px-3 py-2.5">
                     <div className="flex items-baseline justify-between">
-                      <span className="text-xl font-bold tabular-nums">
-                        {formatARS(pos.totalValue)}
+                      <span
+                        className={`text-xl font-bold tabular-nums ${
+                          gainPositive ? "text-emerald-600" : "text-red-600"
+                        }`}
+                      >
+                        {gainPositive ? "" : "-"}
+                        {formatARS(Math.abs(pos.gainLossAmount))}
                       </span>
                       <span
                         className={`text-xs font-medium tabular-nums ${
                           gainPositive ? "text-emerald-600" : "text-red-600"
                         }`}
                       >
-                        {gainPositive ? "+" : "-"}
-                        {formatARS(Math.abs(pos.gainLossAmount))}
+                        {pos.gainLossPct.toFixed(2)}%
                       </span>
                     </div>
                     <p className="mt-0.5 flex items-center justify-between text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                      <span>Valor bruto</span>
+                      <span>Rendimiento hoy</span>
                       <span
                         className={`normal-case tracking-normal ${
                           pos.dayChangePct >= 0 ? "text-emerald-600" : "text-red-600"
@@ -384,9 +389,9 @@ export function DashboardPage() {
                     </div>
                     <div className="rounded-md border px-1 py-1.5">
                       <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                        P. compra
+                        Valor bruto
                       </p>
-                      <p className="text-sm font-medium tabular-nums">{formatARS(pos.avgPrice)}</p>
+                      <p className="text-sm font-medium tabular-nums">{formatARS(pos.totalValue)}</p>
                     </div>
                   </div>
                 </div>
@@ -441,11 +446,13 @@ export function DashboardPage() {
                   render: (pos) => <span className="tabular-nums">{formatARS(pos.avgPrice)}</span>,
                 },
                 {
-                  key: "rendimiento",
-                  header: "Rendimiento",
+                  key: "rendimiento-hoy",
+                  header: "Rendimiento hoy",
                   align: "right",
                   render: (pos) => {
                     const gainPositive = pos.gainLossPct >= 0;
+                    const dayUp = pos.dayChangePct >= 0;
+                    // Estilo IOL: % sin "+" en positivos, monto con $ y signo
                     return (
                       <div className="text-right">
                         <div
@@ -453,28 +460,18 @@ export function DashboardPage() {
                             gainPositive ? "text-emerald-600" : "text-red-600"
                           }`}
                         >
-                          {gainPositive ? "+" : ""}
                           {pos.gainLossPct.toFixed(2)}%
                         </div>
-                        <div className="text-xs text-muted-foreground tabular-nums">
-                          {gainPositive ? "+" : "-"}
-                          {formatARS(Math.abs(pos.gainLossAmount))}
-                        </div>
-                      </div>
-                    );
-                  },
-                },
-                {
-                  key: "valor-bruto",
-                  header: "Valor bruto",
-                  align: "right",
-                  render: (pos) => {
-                    const dayUp = pos.dayChangePct >= 0;
-                    return (
-                      <div className="text-right">
-                        <div className="font-medium tabular-nums">{formatARS(pos.totalValue)}</div>
                         <div
                           className={`text-xs tabular-nums ${
+                            gainPositive ? "text-emerald-600" : "text-red-600"
+                          }`}
+                        >
+                          {gainPositive ? "" : "-"}
+                          {formatARS(Math.abs(pos.gainLossAmount))}
+                        </div>
+                        <div
+                          className={`text-[11px] tabular-nums ${
                             dayUp ? "text-emerald-600" : "text-red-600"
                           }`}
                         >
@@ -484,6 +481,14 @@ export function DashboardPage() {
                       </div>
                     );
                   },
+                },
+                {
+                  key: "valorizado",
+                  header: "Valorizado",
+                  align: "right",
+                  render: (pos) => (
+                    <span className="font-medium tabular-nums">{formatARS(pos.totalValue)}</span>
+                  ),
                 },
               ]}
               data={portfolio.positions}

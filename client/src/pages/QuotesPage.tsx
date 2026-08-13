@@ -157,6 +157,38 @@ export function QuotesPage() {
 
   const panelIsUp = (summary?.totalVariationPct ?? 0) >= 0;
 
+  /** Controles de paginación (reutilizados arriba y abajo de la tabla) */
+  function PaginationControls({ align }: { align?: "end" }) {
+    if (totalPages <= 1) return null;
+    return (
+      <div className={`flex items-center gap-1 ${align === "end" ? "justify-end" : ""}`}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 cursor-pointer px-2"
+          onClick={() => loadPanel(market, assetType, page - 1, searched || undefined)}
+          disabled={page <= 1 || loading}
+          aria-label="Página anterior"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <span className="min-w-16 text-center text-xs font-medium tabular-nums text-muted-foreground">
+          {page} / {totalPages}
+        </span>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 cursor-pointer px-2"
+          onClick={() => loadPanel(market, assetType, page + 1, searched || undefined)}
+          disabled={page >= totalPages || loading}
+          aria-label="Página siguiente"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -265,34 +297,8 @@ export function QuotesPage() {
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            {/* Paginación */}
-            {totalPages > 1 && (
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 cursor-pointer px-2"
-                  onClick={() => loadPanel(market, assetType, page - 1, searched || undefined)}
-                  disabled={page <= 1 || loading}
-                  aria-label="Página anterior"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="min-w-16 text-center text-xs font-medium tabular-nums text-muted-foreground">
-                  {page} / {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 cursor-pointer px-2"
-                  onClick={() => loadPanel(market, assetType, page + 1, searched || undefined)}
-                  disabled={page >= totalPages || loading}
-                  aria-label="Página siguiente"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
+            {/* Paginación (arriba) */}
+            <PaginationControls />
             <Button
               variant="ghost"
               size="icon"
@@ -503,6 +509,13 @@ export function QuotesPage() {
                   }
                 />
               </div>
+
+              {/* Paginación (abajo) — misma navegación al final de la lista */}
+              {!loading && sortedQuotes.length > 0 && (
+                <div className="mt-4 border-t pt-4">
+                  <PaginationControls align="end" />
+                </div>
+              )}
             </>
           )}
         </CardContent>
