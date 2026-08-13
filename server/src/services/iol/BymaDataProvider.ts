@@ -146,7 +146,8 @@ export class BymaDataProvider implements IolProvider {
     market: string,
     assetType: string,
     page = 1,
-    pageSize = 25
+    pageSize = 25,
+    q?: string
   ): Promise<{ summary: PanelSummary; quotes: PanelQuote[]; total?: number }> {
     // Mapear tipo de activo → endpoint de BYMADATA
     let endpoint: string;
@@ -178,9 +179,20 @@ export class BymaDataProvider implements IolProvider {
       .map((i) => this.mapInstrument(i, market, assetType))
       .filter((q) => q.lastPrice > 0); // descartar sin precio
 
-    const total = allQuotes.length;
+    // Búsqueda server-side: filtra por símbolo o nombre ANTES de paginar,
+    // así "NVDA" aparece aunque viva en la página 20 del panel completo.
+    const query = q?.trim().toUpperCase();
+    const filtered = query
+      ? allQuotes.filter(
+          (quote) =>
+            quote.symbol.toUpperCase().includes(query) ||
+            quote.name.toUpperCase().includes(query)
+        )
+      : allQuotes;
+
+    const total = filtered.length;
     const start = (page - 1) * pageSize;
-    const quotes = allQuotes.slice(start, start + pageSize);
+    const quotes = filtered.slice(start, start + pageSize);
 
     const avgVariation =
       quotes.length > 0

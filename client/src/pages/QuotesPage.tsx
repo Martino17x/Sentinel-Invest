@@ -92,11 +92,11 @@ export function QuotesPage() {
 
   const PAGE_SIZE = 25;
 
-  const loadPanel = useCallback(async (mkt: string, type: string, pg: number) => {
+  const loadPanel = useCallback(async (mkt: string, type: string, pg: number, query?: string) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await quotesApi.getPanel(mkt, type, pg, PAGE_SIZE);
+      const res = await quotesApi.getPanel(mkt, type, pg, PAGE_SIZE, query);
       setSummary(res.summary);
       setQuotes(res.quotes);
       setTotal(res.total ?? 0);
@@ -109,39 +109,32 @@ export function QuotesPage() {
     }
   }, []);
 
-  // Cargar panel al cambiar mercado o tipo (resetear a página 1)
-  useEffect(() => {
-    loadPanel(market, assetType, 1);
-  }, [market, assetType, loadPanel]);
+  // Búsqueda SERVER-SIDE con debounce (350ms): el server filtra el catálogo
+  // completo ANTES de paginar, así "NVDA" aparece aunque no esté en la página 1.
+  const [searched, setSearched] = useState("");
 
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-
-  // Buscador con debounce (300ms) — no dispara búsqueda en cada tecla
-  const filteredQuotes = useMemo(() => {
-    const q = search.trim().toUpperCase();
-    let result = quotes;
-    if (q) {
-      result = quotes.filter(
-        (quote) => quote.symbol.toUpperCase().includes(q) || quote.name.toUpperCase().includes(q)
-      );
-    }
-    // Filtro "solo favoritas"
-    if (onlyFavorites) {
-      result = result.filter((quote) => favorites.has(quote.symbol));
-    }
-    return result;
-  }, [quotes, search, onlyFavorites, favorites]);
-
-  // Aplicar filtro de favoritos con debounce
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      // no-op: solo para demostrar el patrón debounce en búsqueda futura
-    }, 300);
+      setSearched(search.trim());
+    }, 350);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [search]);
+
+  // Cargar panel: al cambiar mercado/tipo o la búsqueda efectiva (página 1)
+  useEffect(() => {
+    loadPanel(market, assetType, 1, searched || undefined);
+  }, [searched, market, assetType, loadPanel]);
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  // Filtro client-side SOLO para favoritas (la búsqueda ya es server-side)
+  const filteredQuotes = useMemo(() => {
+    if (!onlyFavorites) return quotes;
+    return quotes.filter((quote) => favorites.has(quote.symbol));
+  }, [quotes, onlyFavorites, favorites]);
 
   function toggleFavorite(symbol: string) {
     setFavorites((prev) => {
@@ -279,7 +272,7 @@ export function QuotesPage() {
                   variant="outline"
                   size="sm"
                   className="h-8 cursor-pointer px-2"
-                  onClick={() => loadPanel(market, assetType, page - 1)}
+                  onClick={() => loadPanel(market, assetType, page - 1, searched || undefined)}
                   disabled={page <= 1 || loading}
                   aria-label="Página anterior"
                 >
@@ -292,7 +285,7 @@ export function QuotesPage() {
                   variant="outline"
                   size="sm"
                   className="h-8 cursor-pointer px-2"
-                  onClick={() => loadPanel(market, assetType, page + 1)}
+                  onClick={() => loadPanel(market, assetType, page + 1, searched || undefined)}
                   disabled={page >= totalPages || loading}
                   aria-label="Página siguiente"
                 >
@@ -303,7 +296,7 @@ export function QuotesPage() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => loadPanel(market, assetType, page)}
+              onClick={() => loadPanel(market, assetType, page, searched || undefined)}
               title="Actualizar"
             >
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />

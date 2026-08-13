@@ -163,7 +163,8 @@ export class MockIolProvider implements IolProvider {
     market: string,
     assetType: string,
     page = 1,
-    pageSize = 25
+    pageSize = 25,
+    q?: string
   ): Promise<{ summary: PanelSummary; quotes: PanelQuote[]; total?: number }> {
     await delay(400);
 

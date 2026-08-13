@@ -264,7 +264,8 @@ export class IolApiProvider implements IolProvider {
     market: string,
     assetType: string,
     page?: number,
-    pageSize?: number
+    pageSize?: number,
+    q?: string
   ): Promise<{ summary: PanelSummary; quotes: PanelQuote[]; total?: number }> {
     // NOTA: los endpoints /api/v2/PanelCotizaciones y /api/v2/Paneles de IOL
     // devuelven HTTP 500 incluso con token válido (verificado 13/08/2026).

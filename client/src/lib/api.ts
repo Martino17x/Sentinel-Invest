@@ -328,9 +328,11 @@ export const quotesApi = {
     market: string,
     assetType: string,
     page = 1,
-    pageSize = 25
+    pageSize = 25,
+    q?: string
   ): Promise<PanelResponse> {
-    return apiFetch(`/quotes/panel/${market}/${assetType}?page=${page}&pageSize=${pageSize}`);
+    const query = q ? `&q=${encodeURIComponent(q)}` : "";
+    return apiFetch(`/quotes/panel/${market}/${assetType}?page=${page}&pageSize=${pageSize}${query}`);
   },
 
   async getQuote(symbol: string, market: string): Promise<{ quote: Quote }> {

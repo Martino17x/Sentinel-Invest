@@ -87,11 +87,13 @@ router.get("/panel/:market/:assetType", async (req: Request, res: Response) => {
   // Paginación: page empieza en 1, pageSize entre 10 y 100
   const page = Math.max(1, Number(req.query.page ?? 1));
   const pageSize = Math.min(100, Math.max(10, Number(req.query.pageSize ?? 25)));
+  // Búsqueda server-side por símbolo/nombre (filtra ANTES de paginar)
+  const q = (req.query.q as string | undefined)?.trim() || undefined;
 
   try {
     const creds = await getIolCredentials(req.user!.id);
     const provider = getIolProvider();
-    const panel = await provider.getPanel(creds, market, assetType, page, pageSize);
+    const panel = await provider.getPanel(creds, market, assetType, page, pageSize, q);
     res.json(panel);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Error al consultar el panel";

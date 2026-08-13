@@ -78,10 +78,25 @@ class QuoteFallbackProvider implements IolProvider {
   }
 
   async getQuote(creds: IolCredentials, symbol: string, market: string): Promise<Quote> {
-    return this.withFallback(
-      () => this.accountProvider.getQuote(creds, symbol, market),
-      () => this.byma.getQuote(creds, symbol, market)
-    );
+    const mode = this.quoteMode;
+    if (mode === "byma") {
+      return this.byma.getQuote(creds, symbol, market);
+    }
+    try {
+      const result = await this.accountProvider.getQuote(creds, symbol, market);
+      // IOL devuelve lastPrice 0 SIN lanzar cuando sus endpoints de mercado
+      // están caídos (bug conocido del lado de IOL). En modo auto eso es un
+      // fallo silencioso → hacer fallback a BYMADATA.
+      if (mode === "auto" && (result.lastPrice <= 0 || Number.isNaN(result.lastPrice))) {
+        return this.byma.getQuote(creds, symbol, market);
+      }
+      return result;
+    } catch (err) {
+      if (mode === "auto") {
+        return this.byma.getQuote(creds, symbol, market);
+      }
+      throw err;
+    }
   }
 
   async getQuoteHistory(
@@ -109,11 +124,12 @@ class QuoteFallbackProvider implements IolProvider {
     market: string,
     assetType: string,
     page?: number,
-    pageSize?: number
+    pageSize?: number,
+    q?: string
   ): Promise<{ summary: PanelSummary; quotes: PanelQuote[]; total?: number }> {
     return this.withFallback(
-      () => this.accountProvider.getPanel(creds, market, assetType, page, pageSize),
-      () => this.byma.getPanel(creds, market, assetType, page, pageSize)
+      () => this.accountProvider.getPanel(creds, market, assetType, page, pageSize, q),
+      () => this.byma.getPanel(creds, market, assetType, page, pageSize, q)
     );
   }
 

@@ -46,13 +46,15 @@ export interface IolProvider {
     days: number
   ): Promise<{ date: string; close: number }[]>;
 
-  /** Panel completo de cotizaciones (tabla de mercado) + resumen */
+  /** Panel completo de cotizaciones (tabla de mercado) + resumen.
+   *  q?: filtro por símbolo/nombre (búsqueda server-side, ANTES de paginar). */
   getPanel(
     credentials: IolCredentials,
     market: string,
     assetType: string,
     page?: number,
-    pageSize?: number
+    pageSize?: number,
+    q?: string
   ): Promise<{ summary: PanelSummary; quotes: PanelQuote[]; total?: number }>;
 
   /** Lista de cierres mensuales (comparativa histórica) */

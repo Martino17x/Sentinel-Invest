@@ -38,6 +38,12 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  /* Paleta de gráficos — vibrante, consistente con el donut del Inicio */
+  --chart-1: oklch(0.72 0.15 165); /* esmeralda  */
+  --chart-2: oklch(0.62 0.23 290); /* violeta   */
+  --chart-3: oklch(0.62 0.22 255); /* azul      */
+  --chart-4: oklch(0.78 0.16 75);  /* ámbar     */
+  --chart-5: oklch(0.71 0.13 220); /* cyan      */
 }
 
 .dark {
@@ -59,11 +65,12 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  /* Paleta de gráficos — misma vibrante que en light */
+  --chart-1: oklch(0.72 0.15 165);
+  --chart-2: oklch(0.62 0.23 290);
+  --chart-3: oklch(0.62 0.22 255);
+  --chart-4: oklch(0.78 0.16 75);
+  --chart-5: oklch(0.71 0.13 220);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
