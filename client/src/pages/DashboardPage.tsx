@@ -4,8 +4,8 @@ import { TrendingUp, TrendingDown, Wallet, PiggyBank, Landmark } from "lucide-re
 import { Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { ResponsiveTable } from "@/components/ui/responsive-table";
+import { AssetTypeBadge } from "@/components/ui/asset-type-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   portfolioApi,
@@ -42,17 +42,6 @@ const PIE_COLORS = [
   "var(--chart-4)",
   "var(--chart-5)",
 ];
-
-const ASSET_TYPE_LABELS: Record<string, string> = {
-  bono: "Bono",
-  accion: "Acción",
-  cedear: "CEDEAR",
-  fci: "FCI",
-  caucion: "Caución",
-  futuro: "Futuro",
-  opcion: "Opción",
-  moneda: "Moneda",
-};
 
 export function DashboardPage() {
   const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
@@ -335,9 +324,7 @@ export function DashboardPage() {
                         >
                           {pos.symbol}
                         </Link>
-                        <Badge variant="secondary" className="font-mono text-[10px]">
-                          {ASSET_TYPE_LABELS[pos.assetType] ?? pos.assetType.toUpperCase()}
-                        </Badge>
+                        <AssetTypeBadge type={pos.assetType} className="font-mono text-[10px]" />
                       </div>
                       <p className="mt-0.5 truncate text-xs text-muted-foreground">{pos.name}</p>
                     </div>
@@ -351,11 +338,8 @@ export function DashboardPage() {
                     </span>
                   </div>
 
-                  {/* Nivel 2: valorizado (HERO) */}
+                  {/* Nivel 2: valor bruto (HERO) + variación diaria */}
                   <div className="mt-3 rounded-lg bg-muted/50 px-3 py-2.5">
-                    <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                      Valorizado
-                    </p>
                     <div className="flex items-baseline justify-between">
                       <span className="text-xl font-bold tabular-nums">
                         {formatARS(pos.totalValue)}
@@ -369,6 +353,17 @@ export function DashboardPage() {
                         {formatARS(Math.abs(pos.gainLossAmount))}
                       </span>
                     </div>
+                    <p className="mt-0.5 flex items-center justify-between text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                      <span>Valor bruto</span>
+                      <span
+                        className={`normal-case tracking-normal ${
+                          pos.dayChangePct >= 0 ? "text-emerald-600" : "text-red-600"
+                        }`}
+                      >
+                        {pos.dayChangePct >= 0 ? "▲" : "▼"} {pos.dayChangePct >= 0 ? "+" : ""}
+                        {pos.dayChangePct.toFixed(2)}% hoy
+                      </span>
+                    </p>
                   </div>
 
                   {/* Nivel 3: detalles compactos */}
@@ -423,11 +418,7 @@ export function DashboardPage() {
                 {
                   key: "tipo",
                   header: "Tipo",
-                  render: (pos) => (
-                    <Badge variant="secondary" className="font-mono text-xs">
-                      {ASSET_TYPE_LABELS[pos.assetType] ?? pos.assetType.toUpperCase()}
-                    </Badge>
-                  ),
+                  render: (pos) => <AssetTypeBadge type={pos.assetType} />,
                 },
                 {
                   key: "cantidad",
@@ -474,12 +465,25 @@ export function DashboardPage() {
                   },
                 },
                 {
-                  key: "valorizado",
-                  header: "Valorizado",
+                  key: "valor-bruto",
+                  header: "Valor bruto",
                   align: "right",
-                  render: (pos) => (
-                    <span className="font-medium tabular-nums">{formatARS(pos.totalValue)}</span>
-                  ),
+                  render: (pos) => {
+                    const dayUp = pos.dayChangePct >= 0;
+                    return (
+                      <div className="text-right">
+                        <div className="font-medium tabular-nums">{formatARS(pos.totalValue)}</div>
+                        <div
+                          className={`text-xs tabular-nums ${
+                            dayUp ? "text-emerald-600" : "text-red-600"
+                          }`}
+                        >
+                          {dayUp ? "▲" : "▼"} {dayUp ? "+" : ""}
+                          {pos.dayChangePct.toFixed(2)}% hoy
+                        </div>
+                      </div>
+                    );
+                  },
                 },
               ]}
               data={portfolio.positions}

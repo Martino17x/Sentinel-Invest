@@ -1,17 +1,19 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { portfolioApi, type PortfolioSummary } from "@/lib/api";
+import { portfolioApi, ratesApi, type DolarQuote, type PortfolioSummary } from "@/lib/api";
 import { HomeHero } from "@/components/home/HomeHero";
 import { AvailableCard } from "@/components/home/AvailableCard";
 import { QuickActions } from "@/components/home/QuickActions";
 import { InvestmentsDonut } from "@/components/home/InvestmentsDonut";
+import { DolarCard } from "@/components/home/DolarCard";
 
 /**
  * Página INICIO — experiencia estilo home de la app IOL (mobile-first):
- * hero total valorizado → disponible → acciones rápidas → mis inversiones → búsqueda.
+ * hero total valorizado (ARS = pesos + dólares convertidos al dólar bolsa)
+ * → disponible → acciones rápidas → dólar hoy → mis inversiones.
  *
- * Orquesta los 5 componentes home. Maneja loading/error/empty.
+ * Orquesta los componentes home. Maneja loading/error/empty.
  * El panel detallado sigue en /portfolio (renombrado de /dashboard).
  */
 export function HomePage() {
@@ -19,6 +21,8 @@ export function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [dolares, setDolares] = useState<DolarQuote[] | null>(null);
+  const [ratesLoading, setRatesLoading] = useState(true);
 
   const load = useCallback(async (isSync = false) => {
     if (isSync) setSyncing(true);
@@ -38,6 +42,31 @@ export function HomePage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Cotizaciones del dólar (dolarapi.com vía server) — para la conversión
+  // del Total valorizado y la card "Dólar hoy".
+  useEffect(() => {
+    ratesApi
+      .getDolares()
+      .then((r) => setDolares(r.dolares))
+      .catch(() => setDolares(null))
+      .finally(() => setRatesLoading(false));
+  }, []);
+
+  // Dólar de referencia para conversión: "bolsa" (CCL) — el estándar
+  // para valorizar carteras. Usamos la PUNTA COMPRA (lo que recibís
+  // al vender tus USD).
+  const usdRate = useMemo(
+    () => dolares?.find((d) => d.casa === "bolsa") ?? null,
+    [dolares]
+  );
+
+  // Total valorizado en ARS = pesos + dólares convertidos
+  const totalArsConverted = useMemo(() => {
+    if (!portfolio) return 0;
+    if (!usdRate) return portfolio.totalArs;
+    return portfolio.totalArs + portfolio.totalUsd * usdRate.compra;
+  }, [portfolio, usdRate]);
 
   if (loading) {
     return (
@@ -68,16 +97,19 @@ export function HomePage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="space-y-4">
           <HomeHero
-            totalArs={portfolio.totalArs}
+            totalArs={totalArsConverted}
             totalUsd={portfolio.totalUsd}
             dayChangeAmountArs={portfolio.dayChangeAmountArs}
             dayChangeAmountUsd={portfolio.dayChangeAmountUsd}
             dayChangePct={portfolio.dayChangePct}
+            usdRate={usdRate}
           />
 
           <AvailableCard cashArs={portfolio.cashArs} cashUsd={portfolio.cashUsd} hidden={false} />
 
           <QuickActions syncing={syncing} onSync={() => load(true)} />
+
+          <DolarCard dolares={dolares} loading={ratesLoading} />
         </div>
 
         <InvestmentsDonut
@@ -90,7 +122,8 @@ export function HomePage() {
 
       {/* Footer legal sutil */}
       <p className="pt-2 text-center text-xs text-muted-foreground">
-        Sentinel es solo lectura — no ejecuta operaciones. Los datos provienen de IOL/BYMA.
+        Sentinel es solo lectura — no ejecuta operaciones. Los datos provienen de IOL/BYMA y
+        dolarapi.com.
       </p>
     </div>
   );

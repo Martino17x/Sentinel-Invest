@@ -35,6 +35,8 @@ import type {
 
 const API_BASE = "https://open.bymadata.com.ar/vanoms-be-core/rest/api/bymadata/free";
 
+import { INSTRUMENT_NAMES } from "./instrumentNames.js";
+
 interface BymaResponse {
   content?: {
     page_number: number;
@@ -125,7 +127,7 @@ export class BymaDataProvider implements IolProvider {
 
     return {
       symbol,
-      name: i.description ?? i.name ?? symbol,
+      name: (i.description || i.name || INSTRUMENT_NAMES[symbol] || symbol).trim(),
       assetType: mapAssetType(assetType, symbol),
       market: mapMarket(market),
       lastPrice,
@@ -246,6 +248,7 @@ export class BymaDataProvider implements IolProvider {
           ? ((Number(found.trade) - Number(found.previousClosingPrice)) / Number(found.previousClosingPrice)) * 100
           : 0,
       currency: found.denominationCcy === "USD" ? "USD" : "ARS",
+      name: (found.description || found.name || INSTRUMENT_NAMES[target] || undefined)?.trim() || undefined,
       updatedAt: new Date().toISOString(),
     };
   }

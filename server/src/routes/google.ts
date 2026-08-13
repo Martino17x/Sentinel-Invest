@@ -181,7 +181,7 @@ router.get("/google/callback", async (req: Request, res: Response) => {
     setRefreshCookie(res, refreshToken);
 
     // Redirigir al dashboard; el frontend restaura la sesión con /me
-    res.redirect(`${FRONTEND_URL}/dashboard?oauth=success`);
+    res.redirect(`${FRONTEND_URL}/inicio?oauth=success`);
   } catch (err) {
     console.error("Google OAuth callback error:", err);
     res.redirect(`${FRONTEND_URL}/login?error=oauth_failed`);

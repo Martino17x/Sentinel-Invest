@@ -232,6 +232,7 @@ export class IolApiProvider implements IolProvider {
         lastPrice: Number(data.ultimoPrecio ?? 0),
         variationPct: Number(data.variacionPorcentual ?? 0),
         currency: data.moneda?.includes("dolar") ? "USD" : "ARS",
+        name: data.descripcion ?? undefined,
         updatedAt: new Date().toISOString(),
       };
     } catch {

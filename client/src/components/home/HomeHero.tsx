@@ -3,6 +3,7 @@ import { Eye, EyeOff, TrendingUp, TrendingDown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatArsNoDecimals, formatUsd, formatChangeAmount, maskAmount } from "@/lib/format";
+import type { DolarQuote } from "@/lib/api";
 
 interface HomeHeroProps {
   totalArs: number;
@@ -10,13 +11,16 @@ interface HomeHeroProps {
   dayChangeAmountArs: number;
   dayChangeAmountUsd: number;
   dayChangePct: number;
+  /** Dólar de referencia usado para convertir USD → ARS en el total (bolsa/CCL) */
+  usdRate?: DolarQuote | null;
 }
 
 /**
  * HERO de la página Inicio (estilo IOL):
- * "Tu total valorizado" en grande, selector de moneda ARS/USD (SIN conversión FX:
- * cada moneda muestra sus propios totales — decisión Opción B del SDD),
- * botón ojo para ocultar montos, y variación del día ▲/▼.
+ * "Tu total valorizado" en grande, selector de moneda ARS/USD.
+ * En ARS el total YA viene convertido por HomePage (pesos + dólares
+ * al dólar bolsa); en USD se muestra la tenencia directa sin conversión.
+ * Botón ojo para ocultar montos, y variación del día ▲/▼.
  */
 export function HomeHero({
   totalArs,
@@ -24,6 +28,7 @@ export function HomeHero({
   dayChangeAmountArs,
   dayChangeAmountUsd,
   dayChangePct,
+  usdRate,
 }: HomeHeroProps) {
   const [currency, setCurrency] = useState<"ARS" | "USD">("ARS");
   const [hidden, setHidden] = useState(false);
@@ -33,6 +38,7 @@ export function HomeHero({
 
   const total = currency === "ARS" ? totalArs : totalUsd;
   const dayChangeAmount = currency === "ARS" ? dayChangeAmountArs : dayChangeAmountUsd;
+  const usdConverted = usdRate ? totalUsd * usdRate.compra : 0;
 
   return (
     <Card>
@@ -70,6 +76,18 @@ export function HomeHero({
             {hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
           </button>
         </div>
+
+        {/* Nota de conversión (solo en ARS, cuando hay dólar y USD > 0) */}
+        {!hidden && currency === "ARS" && usdRate && totalUsd > 0 && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            Incluye {formatUsd(totalUsd)} convertidos al dólar bolsa{" "}
+            {usdRate.compra.toLocaleString("es-AR", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+            {usdConverted > 0 && <> ({formatArsNoDecimals(usdConverted)})</>}
+          </p>
+        )}
 
         {/* Variación del día */}
         <div

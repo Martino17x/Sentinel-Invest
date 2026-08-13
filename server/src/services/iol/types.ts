@@ -94,9 +94,10 @@ export interface Quote {
   symbol: string;
   market: Market;
   lastPrice: number;
-  variationPct: number; // variación respecto al cierre anterior
+  variationPct: number; // variaci�n respecto al cierre anterior
   currency: Currency;
   updatedAt: string; // ISO
+  name?: string; // nombre/descripci�n del instrumento (si el proveedor lo conoce)
 }
 
 /** Fila de un panel de cotizaciones (tabla de mercado) */

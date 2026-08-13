@@ -123,6 +123,9 @@ export function QuoteDetailPage() {
               />
             </button>
           </div>
+          {quote.name && (
+            <p className="mt-0.5 text-sm text-muted-foreground">{quote.name}</p>
+          )}
         </div>
         <Badge variant="secondary" className="font-mono text-xs">
           {quote.market.toUpperCase()}

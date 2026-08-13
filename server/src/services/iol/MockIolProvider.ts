@@ -1,3 +1,4 @@
+import { INSTRUMENT_NAMES } from "./instrumentNames.js";
 import type { IolProvider } from "./IolProvider.js";
 import type {
   IolCredentials,
@@ -126,6 +127,7 @@ export class MockIolProvider implements IolProvider {
     return {
       symbol,
       market: market as Quote["market"],
+      name: INSTRUMENT_NAMES[symbol] ?? undefined,
       lastPrice: basePrices[symbol] ?? 100,
       variationPct: (Math.random() - 0.45) * 3, // entre -1.35% y +1.65%
       currency: market === "bcba" || market === "bonds" ? "ARS" : "USD",

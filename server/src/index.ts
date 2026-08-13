@@ -11,6 +11,7 @@ import profileRouter from "./routes/profile.js";
 import portfolioRouter from "./routes/portfolio.js";
 import operationsRouter from "./routes/operations.js";
 import quotesRouter from "./routes/quotes.js";
+import ratesRouter from "./routes/rates.js";
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 3001);
@@ -43,10 +44,13 @@ app.use("/api/profile", profileRouter);
 app.use("/api/portfolio", portfolioRouter);
 app.use("/api/operations", operationsRouter);
 app.use("/api/quotes", quotesRouter);
+app.use("/api/rates", ratesRouter);
 
 app.listen(PORT, () => {
   console.log(`🚀 API escuchando en http://localhost:${PORT}`);
 });
+
+
 
 
 

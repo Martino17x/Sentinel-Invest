@@ -355,7 +355,23 @@ export interface Quote {
   variationPct: number;
   currency: string;
   updatedAt: string;
+  name?: string;
 }
+
+export interface DolarQuote {
+  moneda: string;
+  casa: string;
+  nombre: string;
+  compra: number;
+  venta: number;
+  fechaActualizacion: string;
+}
+
+export const ratesApi = {
+  async getDolares(): Promise<{ dolares: DolarQuote[] }> {
+    return apiFetch("/rates/dolares");
+  },
+};
 
 export const reportsApi = {
   async getMonthlyCloses(): Promise<{ closes: MonthClose[] }> {
