@@ -1,4 +1,3 @@
-import { ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatArs, formatUsd, maskAmount } from "@/lib/format";
 
@@ -10,7 +9,8 @@ interface AvailableCardProps {
 
 /**
  * Card de liquidez (estilo IOL): "Disponible para invertir" con
- * dos filas separadas — Pesos y Dólares, cada una clickeable.
+ * dos filas — Pesos y Dólares. Informativas, sin chevron engañoso:
+ * el detalle completo vive en el Portafolio.
  */
 export function AvailableCard({ cashArs, cashUsd, hidden }: AvailableCardProps) {
   return (
@@ -19,43 +19,29 @@ export function AvailableCard({ cashArs, cashUsd, hidden }: AvailableCardProps) 
         <p className="text-sm font-medium text-muted-foreground">Disponible para invertir</p>
 
         <div className="mt-3 space-y-1">
-          <button
-            type="button"
-            className="flex w-full cursor-pointer items-center justify-between rounded-lg px-2 py-2.5 text-left transition-colors hover:bg-accent/50"
-            aria-label="Pesos disponibles"
-          >
+          <div className="flex items-center justify-between rounded-lg px-2 py-2.5">
             <span className="flex items-center gap-2">
               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-bold">
                 $
               </span>
               <span className="text-sm font-medium">Pesos</span>
             </span>
-            <span className="flex items-center gap-1">
-              <span className="text-sm font-semibold tabular-nums">
-                {hidden ? maskAmount(cashArs) : formatArs(cashArs)}
-              </span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-semibold tabular-nums">
+              {hidden ? maskAmount(cashArs) : formatArs(cashArs)}
             </span>
-          </button>
+          </div>
 
-          <button
-            type="button"
-            className="flex w-full cursor-pointer items-center justify-between rounded-lg px-2 py-2.5 text-left transition-colors hover:bg-accent/50"
-            aria-label="Dólares disponibles"
-          >
+          <div className="flex items-center justify-between rounded-lg px-2 py-2.5">
             <span className="flex items-center gap-2">
               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-bold">
                 US$
               </span>
               <span className="text-sm font-medium">Dólares</span>
             </span>
-            <span className="flex items-center gap-1">
-              <span className="text-sm font-semibold tabular-nums">
-                {hidden ? maskAmount(cashUsd) : formatUsd(cashUsd)}
-              </span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-semibold tabular-nums">
+              {hidden ? maskAmount(cashUsd) : formatUsd(cashUsd)}
             </span>
-          </button>
+          </div>
         </div>
       </CardContent>
     </Card>

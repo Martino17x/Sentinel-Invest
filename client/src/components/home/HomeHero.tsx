@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Eye, EyeOff, ChevronDown, TrendingUp, TrendingDown } from "lucide-react";
+import { Eye, EyeOff, TrendingUp, TrendingDown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatArsNoDecimals, formatUsd, formatChangeAmount, maskAmount } from "@/lib/format";
@@ -43,7 +43,6 @@ export function HomeHero({
           <Select value={currency} onValueChange={(v) => setCurrency(v as "ARS" | "USD")}>
             <SelectTrigger className="h-7 w-auto gap-1 px-2 text-xs font-medium">
               <SelectValue />
-              <ChevronDown className="h-3 w-3 opacity-60" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ARS">ARS</SelectItem>

@@ -5,13 +5,22 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatArs, formatUsd, maskAmount } from "@/lib/format";
 import type { DistributionByTypeItem } from "@/lib/api";
 
-const PIE_COLORS = [
-  "var(--chart-1)",
-  "var(--chart-2)",
-  "var(--chart-3)",
-  "var(--chart-4)",
-  "var(--chart-5)",
-];
+// Paleta vibrante por categoría (estilo IOL: cada tipo con su color)
+const TYPE_COLORS: Record<string, string> = {
+  bono: "#10b981", // esmeralda — Bonos
+  cedear: "#8b5cf6", // violeta — CEDEARs
+  accion: "#3b82f6", // azul — Acciones
+  fci: "#f59e0b", // ámbar — FCI
+  caucion: "#06b6d4", // cyan — Cauciones
+  futuro: "#ef4444", // rojo — Futuros
+  opcion: "#ec4899", // rosa — Opciones
+  moneda: "#84cc16", // lima — Monedas
+  efectivo: "#64748b", // slate — Efectivo
+};
+
+function colorForType(type: string): string {
+  return TYPE_COLORS[type] ?? "#94a3b8";
+}
 
 interface InvestmentsDonutProps {
   distribution: DistributionByTypeItem[];
@@ -38,9 +47,9 @@ export function InvestmentsDonut({
     return distribution.reduce((s, d) => s + d.amountUsd, 0);
   }, [distribution, currency]);
 
-  const chartData = distribution.map((d, i) => ({
+  const chartData = distribution.map((d) => ({
     ...d,
-    fill: PIE_COLORS[i % PIE_COLORS.length],
+    fill: colorForType(d.type),
   }));
 
   const formatAmount = (item: DistributionByTypeItem) => {
@@ -83,8 +92,8 @@ export function InvestmentsDonut({
                     paddingAngle={2}
                     strokeWidth={0}
                   >
-                    {chartData.map((entry, i) => (
-                      <Cell key={entry.type} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                    {chartData.map((entry) => (
+                      <Cell key={entry.type} fill={colorForType(entry.type)} />
                     ))}
                   </Pie>
                 </PieChart>
@@ -101,12 +110,12 @@ export function InvestmentsDonut({
 
             {/* Desglose por categoría */}
             <div className="mt-5 space-y-2">
-              {chartData.map((item, i) => (
+              {chartData.map((item) => (
                 <div key={item.type} className="flex items-center justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-2">
                     <span
                       className="h-2.5 w-2.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }}
+                      style={{ backgroundColor: colorForType(item.type) }}
                     />
                     <span className="truncate text-sm font-medium">{item.label}</span>
                   </div>

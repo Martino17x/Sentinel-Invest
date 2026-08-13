@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { TrendingUp, TrendingDown, Wallet, PiggyBank, Landmark } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -328,7 +329,12 @@ export function DashboardPage() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-base font-semibold">{pos.symbol}</span>
+                        <Link
+                          to={`/quotes/${pos.symbol}`}
+                          className="text-base font-semibold text-foreground transition-colors hover:text-primary"
+                        >
+                          {pos.symbol}
+                        </Link>
                         <Badge variant="secondary" className="font-mono text-[10px]">
                           {ASSET_TYPE_LABELS[pos.assetType] ?? pos.assetType.toUpperCase()}
                         </Badge>
@@ -402,7 +408,12 @@ export function DashboardPage() {
                   header: "Activo",
                   render: (pos) => (
                     <div className="min-w-0">
-                      <div className="font-medium">{pos.symbol}</div>
+                      <Link
+                        to={`/quotes/${pos.symbol}`}
+                        className="font-medium text-foreground transition-colors hover:text-primary"
+                      >
+                        {pos.symbol}
+                      </Link>
                       <div className="max-w-48 truncate text-xs text-muted-foreground">
                         {pos.name}
                       </div>

@@ -19,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/context/AuthContext";
 
 function getInitials(name: string | null | undefined, email: string): string {
@@ -88,6 +88,9 @@ export function Navigation() {
               aria-label="Menú de usuario"
             >
               <Avatar className="h-9 w-9 sm:h-8 sm:w-8">
+                {user?.avatarUrl && (
+                  <AvatarImage src={user.avatarUrl} alt={displayName} />
+                )}
                 <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
                   {getInitials(user?.fullName, user?.email ?? "U")}
                 </AvatarFallback>

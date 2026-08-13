@@ -6,7 +6,6 @@ import { HomeHero } from "@/components/home/HomeHero";
 import { AvailableCard } from "@/components/home/AvailableCard";
 import { QuickActions } from "@/components/home/QuickActions";
 import { InvestmentsDonut } from "@/components/home/InvestmentsDonut";
-import { HomeSearch } from "@/components/home/HomeSearch";
 
 /**
  * Página INICIO — experiencia estilo home de la app IOL (mobile-first):
@@ -64,27 +63,30 @@ export function HomePage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4 sm:p-6 lg:max-w-2xl lg:p-8">
-      <HomeSearch />
+    <div className="mx-auto max-w-lg space-y-4 p-4 sm:p-6 lg:max-w-5xl lg:p-8">
+      {/* Mobile: apilado. Desktop (md+): dos columnas */}
+      <div className="grid gap-4 md:grid-cols-2 md:items-start">
+        <div className="space-y-4">
+          <HomeHero
+            totalArs={portfolio.totalArs}
+            totalUsd={portfolio.totalUsd}
+            dayChangeAmountArs={portfolio.dayChangeAmountArs}
+            dayChangeAmountUsd={portfolio.dayChangeAmountUsd}
+            dayChangePct={portfolio.dayChangePct}
+          />
 
-      <HomeHero
-        totalArs={portfolio.totalArs}
-        totalUsd={portfolio.totalUsd}
-        dayChangeAmountArs={portfolio.dayChangeAmountArs}
-        dayChangeAmountUsd={portfolio.dayChangeAmountUsd}
-        dayChangePct={portfolio.dayChangePct}
-      />
+          <AvailableCard cashArs={portfolio.cashArs} cashUsd={portfolio.cashUsd} hidden={false} />
 
-      <AvailableCard cashArs={portfolio.cashArs} cashUsd={portfolio.cashUsd} hidden={false} />
+          <QuickActions syncing={syncing} onSync={() => load(true)} />
+        </div>
 
-      <QuickActions syncing={syncing} onSync={() => load(true)} />
-
-      <InvestmentsDonut
-        distribution={portfolio.distributionByType}
-        currency="ARS"
-        hidden={false}
-        loading={false}
-      />
+        <InvestmentsDonut
+          distribution={portfolio.distributionByType}
+          currency="ARS"
+          hidden={false}
+          loading={false}
+        />
+      </div>
 
       {/* Footer legal sutil */}
       <p className="pt-2 text-center text-xs text-muted-foreground">

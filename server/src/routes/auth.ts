@@ -78,7 +78,7 @@ router.post("/register", async (req: Request, res: Response) => {
   setRefreshCookie(res, refreshToken);
 
   res.status(201).json({
-    user: { id: user.id, email: user.email, fullName: user.fullName },
+    user: { id: user.id, email: user.email, fullName: user.fullName, avatarUrl: user.avatarUrl ?? null },
     accessToken,
   });
 });
@@ -109,7 +109,7 @@ router.post("/login", async (req: Request, res: Response) => {
   setRefreshCookie(res, refreshToken);
 
   res.json({
-    user: { id: user.id, email: user.email, fullName: user.fullName },
+    user: { id: user.id, email: user.email, fullName: user.fullName, avatarUrl: user.avatarUrl ?? null },
     accessToken,
   });
 });
@@ -143,7 +143,7 @@ router.post("/refresh", async (req: Request, res: Response) => {
     setRefreshCookie(res, refreshToken);
 
     res.json({
-      user: { id: user.id, email: user.email, fullName: user.fullName },
+      user: { id: user.id, email: user.email, fullName: user.fullName, avatarUrl: user.avatarUrl ?? null },
       accessToken,
     });
   } catch {
@@ -181,7 +181,7 @@ router.get("/me", async (req: Request, res: Response) => {
       const payload = verifyAccessToken(header.slice("Bearer ".length));
       if (payload.type === "access") {
         const [user] = await db
-          .select({ id: schema.users.id, email: schema.users.email, fullName: schema.users.fullName })
+          .select({ id: schema.users.id, email: schema.users.email, fullName: schema.users.fullName, avatarUrl: schema.users.avatarUrl })
           .from(schema.users)
           .where(eq(schema.users.id, payload.sub));
         if (user) {
@@ -201,7 +201,7 @@ router.get("/me", async (req: Request, res: Response) => {
       const payload = verifyRefreshToken(refreshToken);
       if (payload.type === "refresh") {
         const [user] = await db
-          .select({ id: schema.users.id, email: schema.users.email, fullName: schema.users.fullName })
+          .select({ id: schema.users.id, email: schema.users.email, fullName: schema.users.fullName, avatarUrl: schema.users.avatarUrl })
           .from(schema.users)
           .where(eq(schema.users.id, payload.sub));
         if (user) {

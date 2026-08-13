@@ -10,7 +10,7 @@
 const BASE_URL = "/api";
 
 interface AuthResponse {
-  user: { id: string; email: string; fullName: string | null };
+  user: User;
   accessToken: string;
 }
 
@@ -114,6 +114,7 @@ export interface User {
   id: string;
   email: string;
   fullName: string | null;
+  avatarUrl: string | null;
 }
 
 export interface Position {

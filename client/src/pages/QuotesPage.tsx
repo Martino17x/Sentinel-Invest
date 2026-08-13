@@ -189,23 +189,27 @@ export function QuotesPage() {
 
       {/* Selector de mercado + tipo de activo */}
       <Tabs value={market} onValueChange={setMarket}>
-        <TabsList>
-          {MARKETS.map((m) => (
-            <TabsTrigger key={m.value} value={m.value}>
-              {m.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        <div className="overflow-x-auto pb-1">
+          <TabsList className="w-max">
+            {MARKETS.map((m) => (
+              <TabsTrigger key={m.value} value={m.value}>
+                {m.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
       </Tabs>
 
       <Tabs value={assetType} onValueChange={setAssetType}>
-        <TabsList>
-          {(ASSET_TYPES[market] ?? []).map((t) => (
-            <TabsTrigger key={t.value} value={t.value}>
-              {t.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        <div className="overflow-x-auto pb-1">
+          <TabsList className="w-max">
+            {(ASSET_TYPES[market] ?? []).map((t) => (
+              <TabsTrigger key={t.value} value={t.value}>
+                {t.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
       </Tabs>
 
       {/* Resumen del panel + buscador + filtro favoritas */}
