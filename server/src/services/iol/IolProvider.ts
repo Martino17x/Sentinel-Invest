@@ -50,8 +50,10 @@ export interface IolProvider {
   getPanel(
     credentials: IolCredentials,
     market: string,
-    assetType: string
-  ): Promise<{ summary: PanelSummary; quotes: PanelQuote[] }>;
+    assetType: string,
+    page?: number,
+    pageSize?: number
+  ): Promise<{ summary: PanelSummary; quotes: PanelQuote[]; total?: number }>;
 
   /** Lista de cierres mensuales (comparativa histórica) */
   getMonthlyCloses(

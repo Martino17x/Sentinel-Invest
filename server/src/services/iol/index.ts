@@ -58,9 +58,15 @@ class QuoteFallbackProvider implements IolProvider {
       return bymaFn();
     }
 
-    // "iol" o "auto": intentar IOL primero
+    // "iol" o "auto": intentar IOL primero.
+    // En modo auto, si IOL devuelve un panel VACÍO (endpoints caídos que
+    // no fallan sino que devuelven []), también se hace fallback a BYMA.
     try {
-      return await iolFn();
+      const result = await iolFn();
+      if (mode === "auto" && isPanelEmpty(result)) {
+        return bymaFn();
+      }
+      return result;
     } catch (err) {
       if (mode === "auto") {
         // Fallback automático a BYMA
@@ -101,11 +107,13 @@ class QuoteFallbackProvider implements IolProvider {
   async getPanel(
     creds: IolCredentials,
     market: string,
-    assetType: string
-  ): Promise<{ summary: PanelSummary; quotes: PanelQuote[] }> {
+    assetType: string,
+    page?: number,
+    pageSize?: number
+  ): Promise<{ summary: PanelSummary; quotes: PanelQuote[]; total?: number }> {
     return this.withFallback(
-      () => this.accountProvider.getPanel(creds, market, assetType),
-      () => this.byma.getPanel(creds, market, assetType)
+      () => this.accountProvider.getPanel(creds, market, assetType, page, pageSize),
+      () => this.byma.getPanel(creds, market, assetType, page, pageSize)
     );
   }
 
@@ -125,4 +133,11 @@ class QuoteFallbackProvider implements IolProvider {
   getMonthlyReport(creds: IolCredentials, accountNumber: string, month: string) {
     return this.accountProvider.getMonthlyReport(creds, accountNumber, month);
   }
+}
+
+/** Detecta si el resultado de getPanel es un panel vacío (para el fallback) */
+function isPanelEmpty(result: unknown): boolean {
+  if (!result || typeof result !== "object") return false;
+  const r = result as { quotes?: unknown };
+  return Array.isArray(r.quotes) && r.quotes.length === 0;
 }

@@ -50,16 +50,21 @@ interface BymaInstrument {
   symbol?: string;
   name?: string;
   description?: string;
-  lastPrice?: number;
-  openPrice?: number;
-  closePrice?: number;
-  highPrice?: number;
-  lowPrice?: number;
-  volume?: number;
-  nominalVolume?: number;
-  changePercentage?: number;
-  bid?: number;
-  offer?: number;
+  // Estructura REAL de BYMADATA (verificado 13/08/2026 con mercado abierto):
+  trade?: number; // último precio operado
+  previousClosingPrice?: number; // cierre anterior (para calcular variación)
+  previousSettlementPrice?: number;
+  openingPrice?: number; // apertura
+  tradingHighPrice?: number; // máximo
+  tradingLowPrice?: number; // mínimo
+  bidPrice?: number; // precio compra
+  offerPrice?: number; // precio venta
+  tradeVolume?: number; // volumen operado
+  volumeAmount?: number; // monto operado
+  denominationCcy?: string; // moneda (ARS/USD)
+  securityType?: string; // tipo de instrumento
+  securitySubType?: string;
+  tradeHour?: string;
   ticker?: string;
   [key: string]: unknown;
 }
@@ -74,7 +79,14 @@ export class BymaDataProvider implements IolProvider {
   private async postPanel(endpoint: string): Promise<BymaInstrument[]> {
     const res = await fetch(`${API_BASE}/${endpoint}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json, text/plain, */*",
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+        Referer: "https://open.bymadata.com.ar/",
+        Origin: "https://open.bymadata.com.ar",
+      },
       body: JSON.stringify(REQUEST_BODY),
     });
 
@@ -82,7 +94,13 @@ export class BymaDataProvider implements IolProvider {
       throw new Error(`BYMADATA ${endpoint}: HTTP ${res.status}`);
     }
 
-    const json = (await res.json()) as BymaResponse;
+    const json = (await res.json()) as BymaResponse | BymaInstrument[];
+    // La respuesta de BYMADATA es un ARRAY DIRECTO de instrumentos
+    // (NO un objeto {data: [...]} — eso es del wrapper de paginación
+    //  que usan otros endpoints)
+    if (Array.isArray(json)) {
+      return json;
+    }
     return json.data ?? [];
   }
 
@@ -98,29 +116,38 @@ export class BymaDataProvider implements IolProvider {
 
   private mapInstrument(i: BymaInstrument, market: string, assetType: string): PanelQuote {
     const symbol = (i.symbol ?? i.ticker ?? "").toUpperCase();
+    const lastPrice = Number(i.trade ?? 0);
+    const prevClose = Number(i.previousClosingPrice ?? i.previousSettlementPrice ?? 0);
+    const variationPct =
+      prevClose > 0 && lastPrice > 0
+        ? ((lastPrice - prevClose) / prevClose) * 100
+        : 0;
+
     return {
       symbol,
       name: i.description ?? i.name ?? symbol,
       assetType: mapAssetType(assetType, symbol),
       market: mapMarket(market),
-      lastPrice: Number(i.lastPrice ?? 0),
-      variationPct: Number(i.changePercentage ?? 0),
-      bid: i.bid != null ? Number(i.bid) : null,
-      ask: i.offer != null ? Number(i.offer) : null,
-      open: i.openPrice != null ? Number(i.openPrice) : null,
-      low: i.lowPrice != null ? Number(i.lowPrice) : null,
-      high: i.highPrice != null ? Number(i.highPrice) : null,
-      close: i.closePrice != null ? Number(i.closePrice) : null,
-      volume: Number(i.volume ?? i.nominalVolume ?? 0),
-      currency: "ARS",
+      lastPrice,
+      variationPct,
+      bid: i.bidPrice != null ? Number(i.bidPrice) : null,
+      ask: i.offerPrice != null ? Number(i.offerPrice) : null,
+      open: i.openingPrice != null ? Number(i.openingPrice) : null,
+      low: i.tradingLowPrice != null ? Number(i.tradingLowPrice) : null,
+      high: i.tradingHighPrice != null ? Number(i.tradingHighPrice) : null,
+      close: prevClose > 0 ? prevClose : null,
+      volume: Number(i.tradeVolume ?? 0),
+      currency: i.denominationCcy === "USD" ? "USD" : "ARS",
     };
   }
 
   async getPanel(
     _creds: IolCredentials,
     market: string,
-    assetType: string
-  ): Promise<{ summary: PanelSummary; quotes: PanelQuote[] }> {
+    assetType: string,
+    page = 1,
+    pageSize = 25
+  ): Promise<{ summary: PanelSummary; quotes: PanelQuote[]; total?: number }> {
     // Mapear tipo de activo → endpoint de BYMADATA
     let endpoint: string;
     switch (assetType) {
@@ -130,9 +157,13 @@ export class BymaDataProvider implements IolProvider {
       case "bono":
         endpoint = "public-bonds";
         break;
-      case "accion":
-        endpoint = "leading-equity";
+      case "on": // Obligaciones Negociables
+        endpoint = "negociable-obligations";
         break;
+      case "caucion":
+        endpoint = "cauciones";
+        break;
+      case "accion":
       default:
         endpoint = "leading-equity";
     }
@@ -140,10 +171,16 @@ export class BymaDataProvider implements IolProvider {
     const instruments = await this.postPanel(endpoint);
     const marketOpen = await this.getMarketOpen();
 
-    const quotes = instruments
+    // Paginación local: BYMADATA pagina en bloques, nosotros tomamos la
+    // página del array completo (consistente entre endpoints)
+    const allQuotes = instruments
       .filter((i) => (i.symbol ?? i.ticker ?? "") !== "")
       .map((i) => this.mapInstrument(i, market, assetType))
       .filter((q) => q.lastPrice > 0); // descartar sin precio
+
+    const total = allQuotes.length;
+    const start = (page - 1) * pageSize;
+    const quotes = allQuotes.slice(start, start + pageSize);
 
     const avgVariation =
       quotes.length > 0
@@ -159,6 +196,7 @@ export class BymaDataProvider implements IolProvider {
         isRealtime: marketOpen,
       },
       quotes,
+      total,
     };
   }
 
@@ -190,9 +228,12 @@ export class BymaDataProvider implements IolProvider {
     return {
       symbol: target,
       market: mapMarket(market),
-      lastPrice: Number(found.lastPrice ?? 0),
-      variationPct: Number(found.changePercentage ?? 0),
-      currency: "ARS",
+      lastPrice: Number(found.trade ?? 0),
+      variationPct:
+        Number(found.previousClosingPrice ?? 0) > 0 && Number(found.trade ?? 0) > 0
+          ? ((Number(found.trade) - Number(found.previousClosingPrice)) / Number(found.previousClosingPrice)) * 100
+          : 0,
+      currency: found.denominationCcy === "USD" ? "USD" : "ARS",
       updatedAt: new Date().toISOString(),
     };
   }
@@ -268,6 +309,8 @@ function mapAssetType(assetType: string, symbol: string): PanelQuote["assetType"
   if (assetType === "cedear") return "cedear";
   if (assetType === "bono") return "bono";
   if (assetType === "accion") return "accion";
+  if (assetType === "on") return "bono"; // ONs se muestran como bonos
+  if (assetType === "caucion") return "caucion";
   // fallback por símbolo
   if (symbol.startsWith("CEDEAR")) return "cedear";
   return assetType as PanelQuote["assetType"];

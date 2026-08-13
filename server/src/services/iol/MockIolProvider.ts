@@ -152,8 +152,10 @@ export class MockIolProvider implements IolProvider {
   async getPanel(
     _creds: IolCredentials,
     market: string,
-    assetType: string
-  ): Promise<{ summary: PanelSummary; quotes: PanelQuote[] }> {
+    assetType: string,
+    page = 1,
+    pageSize = 25
+  ): Promise<{ summary: PanelSummary; quotes: PanelQuote[]; total?: number }> {
     await delay(400);
 
     // Paneles por mercado + tipo de activo (CEDEARs de la captura real + acciones)
@@ -187,7 +189,11 @@ export class MockIolProvider implements IolProvider {
     };
 
     const key = `${market}|${assetType}`;
-    const quotes = panels[key] ?? [];
+    const allQuotes = panels[key] ?? [];
+
+    const total = allQuotes.length;
+    const start = (page - 1) * pageSize;
+    const quotes = allQuotes.slice(start, start + pageSize);
 
     // Resumen del panel: variación promedio ponderada simple
     const avgVariation =
@@ -204,6 +210,7 @@ export class MockIolProvider implements IolProvider {
         isRealtime: true,
       },
       quotes,
+      total,
     };
   }
 

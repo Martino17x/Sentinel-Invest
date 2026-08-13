@@ -193,6 +193,12 @@ export interface PanelSummary {
   isRealtime: boolean;
 }
 
+export interface PanelResponse {
+  summary: PanelSummary;
+  quotes: PanelQuote[];
+  total?: number;
+}
+
 export interface MonthClose {
   month: string;
   closingValueArs: number;
@@ -308,9 +314,11 @@ export const operationsApi = {
 export const quotesApi = {
   async getPanel(
     market: string,
-    assetType: string
-  ): Promise<{ summary: PanelSummary; quotes: PanelQuote[] }> {
-    return apiFetch(`/quotes/panel/${market}/${assetType}`);
+    assetType: string,
+    page = 1,
+    pageSize = 25
+  ): Promise<PanelResponse> {
+    return apiFetch(`/quotes/panel/${market}/${assetType}?page=${page}&pageSize=${pageSize}`);
   },
 
   async getQuote(symbol: string, market: string): Promise<{ quote: Quote }> {

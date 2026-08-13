@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Search, Star, Zap, RefreshCw } from "lucide-react";
+import { Search, Star, Zap, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,8 @@ const ASSET_TYPES: Record<string, { value: string; label: string }[]> = {
     { value: "cedear", label: "CEDEARs" },
     { value: "accion", label: "Acciones" },
     { value: "bono", label: "Bonos" },
+    { value: "on", label: "Obligaciones Neg." },
+    { value: "caucion", label: "Cauciones" },
   ],
   nyse: [
     { value: "accion", label: "Acciones" },
@@ -75,6 +77,8 @@ export function QuotesPage() {
   const [assetType, setAssetType] = useState("cedear");
   const [summary, setSummary] = useState<PanelSummary | null>(null);
   const [quotes, setQuotes] = useState<PanelQuote[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [onlyFavorites, setOnlyFavorites] = useState(false);
   const [search, setSearch] = useState("");
@@ -83,13 +87,17 @@ export function QuotesPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
 
-  const loadPanel = useCallback(async (mkt: string, type: string) => {
+  const PAGE_SIZE = 25;
+
+  const loadPanel = useCallback(async (mkt: string, type: string, pg: number) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await quotesApi.getPanel(mkt, type);
+      const res = await quotesApi.getPanel(mkt, type, pg, PAGE_SIZE);
       setSummary(res.summary);
       setQuotes(res.quotes);
+      setTotal(res.total ?? 0);
+      setPage(pg);
       setLastUpdated(new Date());
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo cargar el panel");
@@ -98,10 +106,12 @@ export function QuotesPage() {
     }
   }, []);
 
-  // Cargar panel al cambiar mercado o tipo
+  // Cargar panel al cambiar mercado o tipo (resetear a página 1)
   useEffect(() => {
-    loadPanel(market, assetType);
+    loadPanel(market, assetType, 1);
   }, [market, assetType, loadPanel]);
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   // Buscador con debounce (300ms) — no dispara búsqueda en cada tecla
   const filteredQuotes = useMemo(() => {
@@ -251,17 +261,47 @@ export function QuotesPage() {
               {market === "bcba" ? "Argentina" : "EEUU"}
             </CardTitle>
             <CardDescription>
-              {sortedQuotes.length} instrumentos
+              {total > 0 ? `${total} instrumentos en total` : `${sortedQuotes.length} instrumentos`}
             </CardDescription>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => loadPanel(market, assetType)}
-            title="Actualizar"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Paginación */}
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 cursor-pointer px-2"
+                  onClick={() => loadPanel(market, assetType, page - 1)}
+                  disabled={page <= 1 || loading}
+                  aria-label="Página anterior"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="min-w-16 text-center text-xs font-medium tabular-nums text-muted-foreground">
+                  {page} / {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 cursor-pointer px-2"
+                  onClick={() => loadPanel(market, assetType, page + 1)}
+                  disabled={page >= totalPages || loading}
+                  aria-label="Página siguiente"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => loadPanel(market, assetType, page)}
+              title="Actualizar"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (

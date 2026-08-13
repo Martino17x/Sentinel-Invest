@@ -255,8 +255,10 @@ export class IolApiProvider implements IolProvider {
   async getPanel(
     creds: IolCredentials,
     market: string,
-    assetType: string
-  ): Promise<{ summary: PanelSummary; quotes: PanelQuote[] }> {
+    assetType: string,
+    page?: number,
+    pageSize?: number
+  ): Promise<{ summary: PanelSummary; quotes: PanelQuote[]; total?: number }> {
     // NOTA: los endpoints /api/v2/PanelCotizaciones y /api/v2/Paneles de IOL
     // devuelven HTTP 500 incluso con token válido (verificado 13/08/2026).
     // Es un bug del lado de IOL. Hasta que lo arreglen, el frontend muestra
@@ -264,6 +266,8 @@ export class IolApiProvider implements IolProvider {
     void creds;
     void market;
     void assetType;
+    void page;
+    void pageSize;
 
     const quotes: PanelQuote[] = [];
 
@@ -276,6 +280,7 @@ export class IolApiProvider implements IolProvider {
         isRealtime: false,
       },
       quotes,
+      total: 0,
     };
   }
 
