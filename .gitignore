@@ -37,3 +37,6 @@ Sentinel-Tracker/
 .playwright-mcp/
 test-results/
 *.png
+
+# Skills locales de agentes (skills.sh)
+.agents/

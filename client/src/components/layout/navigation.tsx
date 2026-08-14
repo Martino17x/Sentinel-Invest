@@ -6,6 +6,7 @@ import {
   LineChart,
   BarChart3,
   Link2,
+  Plug,
   User,
   LogOut,
 } from "lucide-react";
@@ -116,6 +117,12 @@ export function Navigation() {
                 <Link to="/connect">
                   <Link2 className="mr-2 h-4 w-4" />
                   Conectar IOL
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/agent-connect">
+                  <Plug className="mr-2 h-4 w-4" />
+                  Conectalo con tu Agente
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>

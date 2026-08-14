@@ -1,5 +1,6 @@
 import { createToolRegistry, type ToolRegistry } from "../registry.js";
 import type { ToolDefinition } from "../types.js";
+import { searchKnowledgeTool } from "../knowledge/knowledgeTool.js";
 import { getDollarRatesTool } from "./dollarRates.js";
 import { placeOrderTool } from "./placeOrder.js";
 import { getPortfolioTool } from "./portfolio.js";
@@ -12,7 +13,7 @@ import { getMonthlyReportsTool } from "./reports.js";
 // Compartido entre el engine (chat loop) y la capa MCP (fase G).
 // Matriz de permisos (spec §1):
 //   get_portfolio / get_quote / search_instruments /
-//   get_dollar_rates / get_monthly_reports → allow
+//   get_dollar_rates / get_monthly_reports / search_knowledge → allow
 //   place_order → exclude (stub de contrato, NUNCA ejecuta)
 //
 // La validación fail-fast del registry corre en el módulo:
@@ -25,6 +26,7 @@ const DOMAIN_TOOLS: ToolDefinition[] = [
   searchInstrumentsTool,
   getDollarRatesTool,
   getMonthlyReportsTool,
+  searchKnowledgeTool,
   placeOrderTool,
 ];
 

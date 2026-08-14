@@ -18,6 +18,7 @@ import { PrivacyPage } from "@/pages/PrivacyPage";
 import { TermsPage } from "@/pages/TermsPage";
 import { ConnectIolPage } from "@/pages/ConnectIolPage";
 import { ProfilePage } from "@/pages/ProfilePage";
+import { AgentConnectPage } from "@/pages/AgentConnectPage";
 import { cn } from "@/lib/utils";
 
 // Rutas que requieren sesión — redirigen a /login si no hay usuario
@@ -43,7 +44,7 @@ function ProtectedLayout() {
   // - Desktop (md+): solo en páginas secundarias (perfil, conectar IOL)
   // - Mobile (<md): en todas las demás páginas
   const hasOwnNav = pathname.startsWith("/quotes/");
-  const isSecondary = pathname === "/profile" || pathname === "/connect";
+  const isSecondary = pathname === "/profile" || pathname === "/connect" || pathname === "/agent-connect";
   const showBack = pathname !== "/inicio" && pathname !== "/portfolio" && !hasOwnNav;
   const backClasses = cn(!isSecondary && "md:hidden"); // en desktop se oculta si no es página secundaria
 
@@ -113,6 +114,7 @@ function App() {
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/connect" element={<ConnectIolPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/agent-connect" element={<AgentConnectPage />} />
           </Route>
 
           <Route path="/" element={<Navigate to="/inicio" replace />} />
