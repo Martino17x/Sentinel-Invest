@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface CodeBlockProps {
   code: string;
@@ -34,11 +35,22 @@ export function CodeBlock({ code, label }: CodeBlockProps) {
           onClick={() => void handleCopy()}
         >
           {copied ? (
-            <Check className="h-3.5 w-3.5 text-emerald-600" />
+            <Check
+              key="copied"
+              className="h-3.5 w-3.5 animate-in fade-in-0 duration-150 motion-reduce:animate-none text-emerald-600"
+            />
           ) : (
-            <Copy className="h-3.5 w-3.5" />
+            <Copy key="copy" className="h-3.5 w-3.5" />
           )}
-          <span className="ml-1.5">{copied ? "Copiado" : "Copiar"}</span>
+          <span
+            key={copied ? "copied-label" : "copy-label"}
+            className={cn(
+              "ml-1.5 animate-in fade-in-0 duration-150 motion-reduce:animate-none",
+              copied && "text-emerald-600"
+            )}
+          >
+            {copied ? "Copiado" : "Copiar"}
+          </span>
         </Button>
       </div>
       <pre className="overflow-x-auto p-3 font-mono text-xs leading-relaxed text-foreground">

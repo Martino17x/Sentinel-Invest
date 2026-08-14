@@ -32,7 +32,7 @@ export function WelcomePrompts({
   variant?: "default" | "modal";
 }) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-5 px-6 text-center">
+    <div className="flex h-full flex-col items-center justify-center gap-5 px-6 text-center animate-in fade-in-0 duration-300 motion-reduce:animate-none">
       <div
         className={cn(
           "flex items-center justify-center",
@@ -65,17 +65,18 @@ export function WelcomePrompts({
         </p>
       </div>
       <div className="grid w-full grid-cols-2 gap-2">
-        {SUGGESTED_PROMPTS.map(({ label, prompt }) => (
+        {SUGGESTED_PROMPTS.map(({ label, prompt }, i) => (
           <Button
             key={label}
             type="button"
             variant={variant === "modal" ? "ghost" : "outline"}
             onClick={() => onPrompt(prompt)}
             className={cn(
-              "h-auto min-h-9 whitespace-normal px-3 py-2 text-xs",
+              "h-auto min-h-9 whitespace-normal px-3 py-2 text-xs animate-in fade-in-0 duration-300 motion-reduce:animate-none",
               variant === "modal" &&
                 "rounded-full border border-white/10 bg-white/[0.08] text-white/90 hover:bg-white/[0.16]"
             )}
+            style={{ animationDelay: `${150 + i * 50}ms` }}
           >
             {label}
           </Button>

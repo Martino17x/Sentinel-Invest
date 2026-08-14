@@ -11,7 +11,7 @@ import type {
   Position,
   Quote,
 } from "./types.js";
-import { computeDayChange, buildDistributionByType } from "./portfolioMath.js";
+import { computeDayChange, buildDistributionByType, computeGainLossPct } from "./portfolioMath.js";
 import { eq } from "drizzle-orm";
 import { db, schema } from "../../db/index.js";
 import { buildMonthlyCloses, buildMonthlyReport } from "../reports/reportBuilder.js";
@@ -161,6 +161,8 @@ export class IolApiProvider implements IolProvider {
     const totalArs = cashArs + positionsValueArs;
     const totalUsd = cashUsd + positionsValueUsd;
 
+    const gainLossArs = positions.reduce((s, p) => s + p.gainLossAmount, 0);
+
     // Ganancia del día REAL: ponderada por la variación diaria de cada posición
     const dayChange = computeDayChange(positions);
 
@@ -172,8 +174,9 @@ export class IolApiProvider implements IolProvider {
       positionsValueUsd,
       totalArs,
       totalUsd,
-      gainLossArs: positions.reduce((s, p) => s + p.gainLossAmount, 0),
+      gainLossArs,
       gainLossUsd: 0,
+      gainLossPct: computeGainLossPct(gainLossArs, totalArs),
       dayChangePct: dayChange.pct,
       dayChangeAmountArs: dayChange.amountArs,
       dayChangeAmountUsd: dayChange.amountUsd,

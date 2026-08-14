@@ -45,6 +45,9 @@ export interface PortfolioSummary {
   // Ganancia/pérdida por moneda
   gainLossArs: number;
   gainLossUsd: number;
+  // Ganancia/pérdida TOTAL en % — base = capital invertido (totalArs - gainLossArs).
+  // Estilo IOL: se muestra sin "+" en positivos, coloreado según signo.
+  gainLossPct: number;
   // Variación del día (porcentaje)
   dayChangePct: number;
   // Ganancia/pérdida del día en dinero (real, ponderada por posición)

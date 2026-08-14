@@ -28,6 +28,12 @@ Stack: Express + Drizzle + Postgres (Docker) + Vite + React + TypeScript + shadc
 - Lógica de datos/API en `client/src/lib/` (api.ts, contexts). Componentes de UI en `client/src/components/ui/` (shadcn). Páginas en `client/src/pages/`. Componentes de layout en `client/src/components/layout/`.
 - **Autocarga de Skills**: al trabajar con componentes React complejos, cargar `react-solid-rules` (`.agents/skills/react-solid-rules/SKILL.md`).
 
+## Animaciones de UI (CRÍTICO)
+- TODOS los componentes que aparecen/desaparecen (modales, drawers, dropdowns, popovers, tooltips, banners, listas nuevas, acordeones) DEBEN tener animaciones de entrada Y salida.
+- Usar `tw-animate-css` (ya importado en `client/src/index.css`): clases `animate-in`/`animate-out` con `fade-in`/`zoom-in`/`slide-in-from-*` según el caso, SIEMPRE respetando `prefers-reduced-motion` (`motion-reduce:animate-none` / `motion-reduce:transition-none`).
+- Acordeones/expansiones: transición de altura con `grid-rows-[0fr]` → `grid-rows-[1fr]` manteniendo el contenido montado (así la salida también anima).
+- Componentes sin animación = bug de UI.
+
 ## Skills de calidad OBLIGATORIAS según contexto
 
 Si el contexto aplica, **CARGAR OBLIGATORIAMENTE la skill ANTES de escribir código o ejecutar git**.

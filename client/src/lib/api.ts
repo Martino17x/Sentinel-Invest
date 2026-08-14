@@ -147,6 +147,7 @@ export interface PortfolioSummary {
   totalUsd: number;
   gainLossArs: number;
   gainLossUsd: number;
+  gainLossPct: number;
   dayChangePct: number;
   dayChangeAmountArs: number;
   dayChangeAmountUsd: number;

@@ -72,7 +72,7 @@ export function ChatComposer({
           aria-label="Detener respuesta"
           onClick={onStop}
           className={cn(
-            "flex shrink-0 items-center justify-center transition-colors",
+            "flex shrink-0 items-center justify-center transition-colors animate-in fade-in-0 duration-150 motion-reduce:animate-none",
             variant === "default"
               ? "size-8 rounded-lg border border-input bg-background text-foreground hover:bg-muted"
               : "size-10 rounded-full bg-red-500/90 text-white hover:bg-red-500"
@@ -87,7 +87,7 @@ export function ChatComposer({
           disabled={!input.trim()}
           onClick={onSend}
           className={cn(
-            "flex shrink-0 items-center justify-center transition-colors",
+            "flex shrink-0 items-center justify-center transition-colors animate-in fade-in-0 duration-150 motion-reduce:animate-none",
             variant === "default"
               ? "size-8 rounded-lg bg-primary text-primary-foreground hover:bg-primary/80"
               : "size-10 rounded-full bg-white text-[var(--synara-panel-bg-from)] hover:bg-white/90",

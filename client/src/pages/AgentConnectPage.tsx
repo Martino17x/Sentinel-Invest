@@ -301,8 +301,12 @@ export function AgentConnectPage() {
           </p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {AGENTS.map((agent) => (
-            <Card key={agent.id} className="h-full">
+          {AGENTS.map((agent, i) => (
+            <Card
+              key={agent.id}
+              className="h-full animate-in fade-in-0 duration-300 motion-reduce:animate-none"
+              style={{ animationDelay: `${i * 60}ms` }}
+            >
               <CardContent className="flex h-full flex-col gap-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted p-2 text-muted-foreground">
                   <agent.icon className="h-5 w-5" />
@@ -319,7 +323,10 @@ export function AgentConnectPage() {
       </section>
 
       {/* Qué puede hacer tu agente */}
-      <Card>
+      <Card
+        className="animate-in fade-in-0 duration-300 motion-reduce:animate-none"
+        style={{ animationDelay: "300ms" }}
+      >
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Wrench className="h-5 w-5 text-primary" />
@@ -355,8 +362,14 @@ export function AgentConnectPage() {
                       )}
                     />
                   </button>
-                  {isOpen && (
-                    <div className="space-y-3 border-t px-4 py-3">
+                  <div
+                    className={cn(
+                      "grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none",
+                      isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                    )}
+                  >
+                    <div className="overflow-hidden">
+                      <div className="space-y-3 border-t px-4 py-3">
                       <div className="space-y-1">
                         <p className="text-xs font-semibold text-muted-foreground">Qué devuelve</p>
                         <code className="block overflow-x-auto rounded-md bg-muted/50 px-2 py-1.5 font-mono text-xs">
@@ -375,8 +388,9 @@ export function AgentConnectPage() {
                           {tool.scope === "trade" ? "read + trade" : "read"}
                         </Badge>
                       </div>
+                      </div>
                     </div>
-                  )}
+                  </div>
                 </li>
               );
             })}
@@ -388,7 +402,10 @@ export function AgentConnectPage() {
       <AgentApiKeysCard />
 
       {/* Skills recomendadas */}
-      <Card>
+      <Card
+        className="animate-in fade-in-0 duration-300 motion-reduce:animate-none"
+        style={{ animationDelay: "420ms" }}
+      >
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />

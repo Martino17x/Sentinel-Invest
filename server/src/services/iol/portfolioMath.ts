@@ -7,6 +7,19 @@ import type { Position } from "./types.js";
 // se calculen SIEMPRE igual, sin duplicar lógica.
 // ============================================================
 
+/**
+ * Ganancia/pérdida TOTAL como porcentaje del capital invertido.
+ *
+ * Fórmula: gainLossPct = gainLossArs / (totalArs - gainLossArs) * 100
+ * (base = capital invertido = valor actual − ganancia acumulada).
+ * Si la base no es positiva → 0 (guard división por cero).
+ */
+export function computeGainLossPct(gainLossArs: number, totalArs: number): number {
+  const base = totalArs - gainLossArs;
+  if (base <= 0) return 0;
+  return round2((gainLossArs / base) * 100);
+}
+
 export interface DayChangeResult {
   amountArs: number; // ganancia/pérdida del día en ARS
   amountUsd: number; // ganancia/pérdida del día en USD

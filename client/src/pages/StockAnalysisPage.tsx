@@ -356,7 +356,7 @@ export function StockAnalysisPage() {
   if (error || !analysis) {
     return (
       <div className="p-4 sm:p-6 lg:p-8">
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="animate-in fade-in-0 duration-200 motion-reduce:animate-none">
           <TriangleAlert className="h-4 w-4" />
           <AlertDescription>
             {error ?? "Activo no encontrado"}
@@ -411,7 +411,7 @@ export function StockAnalysisPage() {
       </div>
 
       {/* Precio + variación */}
-      <Card>
+      <Card className="animate-in fade-in slide-in-from-bottom-1 duration-300 motion-reduce:animate-none">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium">Último cierre</CardTitle>
         </CardHeader>
@@ -443,7 +443,11 @@ export function StockAnalysisPage() {
       </Card>
 
       {/* Señal */}
-      {signal ? (
+      <div
+        className="animate-in fade-in slide-in-from-bottom-1 duration-300 motion-reduce:animate-none"
+        style={{ animationDelay: "60ms" }}
+      >
+        {signal ? (
         <SignalCard signal={signal} />
       ) : (
         <Card>
@@ -457,19 +461,35 @@ export function StockAnalysisPage() {
           </CardContent>
         </Card>
       )}
+      </div>
 
       {/* Fundamentales */}
-      <FundamentalsGrid fundamentals={analysis.fundamentals} />
+      <div
+        className="animate-in fade-in slide-in-from-bottom-1 duration-300 motion-reduce:animate-none"
+        style={{ animationDelay: "120ms" }}
+      >
+        <FundamentalsGrid fundamentals={analysis.fundamentals} />
+      </div>
 
       {/* Técnicos + sparkline */}
-      <TechnicalsCard analysis={analysis} />
+      <div
+        className="animate-in fade-in slide-in-from-bottom-1 duration-300 motion-reduce:animate-none"
+        style={{ animationDelay: "180ms" }}
+      >
+        <TechnicalsCard analysis={analysis} />
+      </div>
 
       {/* Rango 52 semanas */}
-      <Range52wBar analysis={analysis} />
+      <div
+        className="animate-in fade-in slide-in-from-bottom-1 duration-300 motion-reduce:animate-none"
+        style={{ animationDelay: "240ms" }}
+      >
+        <Range52wBar analysis={analysis} />
+      </div>
 
       {/* Detalle textual del server (summary) */}
       {analysis.summary && (
-        <p className="whitespace-pre-line text-xs leading-relaxed text-muted-foreground">
+        <p className="animate-in fade-in-0 duration-300 motion-reduce:animate-none whitespace-pre-line text-xs leading-relaxed text-muted-foreground">
           <LineChart className="mr-1 inline h-3.5 w-3.5" />
           {analysis.summary}
         </p>

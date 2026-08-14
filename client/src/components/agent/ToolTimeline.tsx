@@ -153,33 +153,40 @@ export function ToolTimeline({
         />
       </button>
 
-      {!collapsed && (
-        <ul className="space-y-1 border-t border-white/10 px-2.5 py-2">
-          {tools.map((tool) => (
-            <li key={tool.id} className="flex items-center gap-2">
-              <ToolStatusIcon tool={tool} live={live} tone={tone} />
-              <span
-                className={cn(
-                  "min-w-0 truncate",
-                  tone === "modal" ? "text-white/80" : "text-muted-foreground"
-                )}
-              >
-                {toolLabel(tool.name)}
-              </span>
-              {tool.summary && (
+      <div
+        className={cn(
+          "grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none",
+          !collapsed ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        )}
+      >
+        <div className="overflow-hidden">
+          <ul className="space-y-1 border-t border-white/10 px-2.5 py-2">
+            {tools.map((tool) => (
+              <li key={tool.id} className="flex min-w-0 items-center gap-2">
+                <ToolStatusIcon tool={tool} live={live} tone={tone} />
                 <span
                   className={cn(
-                    "ml-auto shrink-0 truncate pl-2",
-                    tone === "modal" ? "text-white/40" : "text-muted-foreground/70"
+                    "min-w-0 flex-1 truncate",
+                    tone === "modal" ? "text-white/80" : "text-muted-foreground"
                   )}
                 >
-                  {tool.summary}
+                  {toolLabel(tool.name)}
                 </span>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+                {tool.summary && (
+                  <span
+                    className={cn(
+                      "max-w-[55%] shrink-0 truncate pl-2",
+                      tone === "modal" ? "text-white/40" : "text-muted-foreground/70"
+                    )}
+                  >
+                    {tool.summary}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
     </div>
   );
 }

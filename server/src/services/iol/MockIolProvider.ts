@@ -12,7 +12,7 @@ import type {
   Position,
   Quote,
 } from "./types.js";
-import { computeDayChange, buildDistributionByType } from "./portfolioMath.js";
+import { computeDayChange, buildDistributionByType, computeGainLossPct } from "./portfolioMath.js";
 
 /**
  * Proveedor MOCK — devuelve datos falsos pero realistas.
@@ -65,6 +65,7 @@ export class MockIolProvider implements IolProvider {
       totalUsd: MOCK_CASH_USD,
       gainLossArs,
       gainLossUsd: 0,
+      gainLossPct: computeGainLossPct(gainLossArs, positionsValueArs + MOCK_CASH_ARS),
       dayChangePct: dayChange.pct,
       dayChangeAmountArs: dayChange.amountArs,
       dayChangeAmountUsd: dayChange.amountUsd,

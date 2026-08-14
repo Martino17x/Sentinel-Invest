@@ -413,7 +413,7 @@ function AgentChatInner({
           {/* Cuerpo: historial de sesiones O conversación */}
           <div className="min-h-0 flex-1 overflow-hidden">
             {showHistory ? (
-              <div className="h-full overflow-y-auto p-2">
+              <div className="custom-scrollbar h-full animate-in fade-in-0 duration-200 motion-reduce:animate-none overflow-y-auto overflow-x-hidden p-2">
                 {sessions === null && (
                   <div className="flex justify-center py-8">
                     <Loader2 className="size-5 animate-spin text-muted-foreground" />
@@ -424,7 +424,7 @@ function AgentChatInner({
                     Todavía no tenés conversaciones.
                   </p>
                 )}
-                <ul className="space-y-0.5">
+                <ul className="animate-in fade-in-0 duration-300 motion-reduce:animate-none space-y-0.5">
                   {sessions?.map((session) => (
                     <li key={session.id} className="group flex items-center gap-1 rounded-lg">
                       <button
@@ -459,19 +459,22 @@ function AgentChatInner({
                 <Loader2 className="size-5 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <div ref={scrollRef} className="h-full space-y-3 overflow-y-auto px-4 py-4">
+              <div
+                ref={scrollRef}
+                className="custom-scrollbar h-full animate-in fade-in-0 duration-200 motion-reduce:animate-none space-y-3 overflow-y-auto overflow-x-hidden px-4 py-4"
+              >
                 {welcomeVisible && <WelcomePrompts onPrompt={(p) => void sendMessage(p)} />}
                 {items.map((item) => (
                   <div
                     key={item.id}
                     className={cn(
-                      "flex w-full",
+                      "flex w-full min-w-0",
                       item.role === "user" ? "justify-end" : "justify-start"
                     )}
                   >
                     {/* El wrapper pone la cota de ancho (ancho definido);
                         la burbuja es w-fit → se ajusta al contenido */}
-                    <div className="flex max-w-[85%] flex-col items-start gap-1.5">
+                    <div className="flex min-w-0 max-w-[85%] flex-col items-start gap-1.5">
                       {item.content.trim() !== "" && (
                         <MessageBubble
                           role={item.role}

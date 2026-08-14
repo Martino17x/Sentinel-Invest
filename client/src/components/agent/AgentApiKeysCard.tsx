@@ -98,7 +98,10 @@ export function AgentApiKeysCard() {
   }
 
   return (
-    <Card>
+    <Card
+      className="animate-in fade-in-0 duration-300 motion-reduce:animate-none"
+      style={{ animationDelay: "360ms" }}
+    >
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <KeyRound className="h-5 w-5 text-primary" />
@@ -111,7 +114,7 @@ export function AgentApiKeysCard() {
       </CardHeader>
       <CardContent className="space-y-4">
         {keysError && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="animate-in fade-in-0 duration-200 motion-reduce:animate-none">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{keysError}</AlertDescription>
           </Alert>
@@ -151,7 +154,9 @@ export function AgentApiKeysCard() {
         </form>
 
         {newSecret && (
-          <Alert className="border-amber-500/40 bg-amber-500/10">
+          <Alert
+            className="animate-in fade-in-0 slide-in-from-top-1 duration-300 motion-reduce:animate-none border-amber-500/40 bg-amber-500/10"
+          >
             <AlertTitle className="text-amber-700">Copiá tu key — se muestra una sola vez</AlertTitle>
             <AlertDescription className="mt-2 space-y-2">
               <code className="block overflow-x-auto rounded-md bg-background px-2 py-1.5 text-xs text-foreground">
@@ -183,7 +188,7 @@ export function AgentApiKeysCard() {
             Todavía no tenés keys. Creá una para conectar un agente externo.
           </p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="animate-in fade-in-0 duration-300 motion-reduce:animate-none space-y-2">
             {keys.map((key) => (
               <li key={key.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
                 <div className="min-w-0">

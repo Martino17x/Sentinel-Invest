@@ -135,10 +135,56 @@
   html {
     @apply font-sans;
     /* El scroll del documento ocurre en html — reservar SIEMPRE el
-       espacio del scrollbar → cero layout shift con overlays/dropdowns */
+       espacio del scrollbar → cero layout shift con overlays/dropdowns.
+       overflow-y: scroll fuerza la barra SIEMPRE: Radix pone
+       body[data-scroll-locked] { overflow: hidden } al abrir menus/
+       dialogs y ese overflow del body se PROPAGA al viewport, apagando
+       el scrollbar y corriendo la app a la izquierda. Con el scrollbar
+       del html siempre presente el gutter nunca cambia de ancho. */
     scrollbar-gutter: stable;
+    overflow-y: scroll;
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* ============================================================
+   Scrollbar custom delgado — 7px, track transparente, thumb
+   translúcido redondeado. Uso variables CSS para adaptar el color:
+   la variante base es para temas claros (drawer) y
+   .custom-scrollbar-on-dark para superficies oscuras (modal Synara).
+   ============================================================ */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb, rgb(0 0 0 / 0.18)) transparent;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb, rgb(0 0 0 / 0.18));
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover, rgb(0 0 0 / 0.35));
+}
+
+/* Superficies oscuras (modal del chat, fondo verde Synara) */
+.custom-scrollbar-on-dark {
+  --scrollbar-thumb: rgb(255 255 255 / 0.2);
+  --scrollbar-thumb-hover: rgb(255 255 255 / 0.4);
+}
+
+/* Animaciones de entrada/salida (tw-animate-css): respetar
+   prefers-reduced-motion de forma global */
+@media (prefers-reduced-motion: reduce) {
+  .animate-in,
+  .animate-out {
+    animation: none;
   }
 }

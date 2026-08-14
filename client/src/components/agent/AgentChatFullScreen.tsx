@@ -1,15 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { History, Loader2, Plus, Settings, Trash2, X } from "lucide-react";
+import { Check, Columns2, History, Loader2, Maximize2, Plus, Settings, Trash2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { MessageBubble } from "@/components/agent/MessageBubble";
 import { ThinkingIndicator } from "@/components/agent/ThinkingIndicator";
 import { ToolTimeline } from "@/components/agent/ToolTimeline";
@@ -92,8 +85,10 @@ export function AgentChatFullScreen({
 }: AgentChatFullScreenProps) {
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [viewMenuOpen, setViewMenuOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const viewMenuRef = useRef<HTMLDivElement | null>(null);
 
   // Mount/unmount + animaciones de entrada/salida
   useEffect(() => {
@@ -121,6 +116,11 @@ export function AgentChatFullScreen({
   useEffect(() => {
     if (!visible) return;
     const onKey = (e: KeyboardEvent) => {
+      // Si el menú de vista está abierto, Escape cierra solo el menú
+      if (viewMenuOpen) {
+        if (e.key === "Escape") setViewMenuOpen(false);
+        return;
+      }
       if (e.key === "Escape") onOpenChange(false);
     };
     window.addEventListener("keydown", onKey);
@@ -129,7 +129,17 @@ export function AgentChatFullScreen({
       window.removeEventListener("keydown", onKey);
       clearTimeout(t);
     };
-  }, [visible, onOpenChange]);
+  }, [visible, onOpenChange, viewMenuOpen]);
+
+  // Cerrar el menú de vista al hacer click fuera de él
+  useEffect(() => {
+    if (!viewMenuOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (!viewMenuRef.current?.contains(e.target as Node)) setViewMenuOpen(false);
+    };
+    window.addEventListener("pointerdown", onPointerDown);
+    return () => window.removeEventListener("pointerdown", onPointerDown);
+  }, [viewMenuOpen]);
 
   // Autoscroll al fondo en cada actualización
   useEffect(() => {
@@ -217,26 +227,65 @@ export function AgentChatFullScreen({
           >
             <History className="size-4" />
           </button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
+          {/* Menú de vista — menú propio (el DropdownMenu de Radix quedaba
+              con position:static dentro del portal del modal → invisible).
+              Al elegir una opción: onViewChange hace setView + persistencia
+              (setChatViewPreference) y el modal se desmonta al cambiar a drawer. */}
+          <div ref={viewMenuRef} className="relative">
+            <button
+              type="button"
+              aria-label="Preferencias de vista del chat"
+              aria-expanded={viewMenuOpen}
+              onClick={() => setViewMenuOpen((v) => !v)}
+              className={cn(
+                "rounded-full p-2 transition-colors hover:bg-white/10",
+                viewMenuOpen ? "bg-white/15 text-white" : "text-white/80 hover:text-white"
+              )}
+            >
+              <Settings className="size-4" />
+            </button>
+            {viewMenuOpen && (
+              <div
+                role="menu"
                 aria-label="Preferencias de vista del chat"
-                className="rounded-full p-2 text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+                className="absolute right-0 top-full z-50 mt-2 min-w-44 rounded-xl border border-white/10 bg-[var(--synara-panel-bg-from)] p-1 shadow-2xl animate-in fade-in-0 zoom-in-95"
               >
-                <Settings className="size-4" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuRadioGroup
-                value={view}
-                onValueChange={(v) => onViewChange(v as ChatView)}
-              >
-                <DropdownMenuRadioItem value="drawer">Panel lateral</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="modal">Pantalla completa</DropdownMenuRadioItem>
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                {(
+                  [
+                    { value: "drawer", label: "Panel lateral", icon: Columns2 },
+                    { value: "modal", label: "Pantalla completa", icon: Maximize2 },
+                  ] as const
+                ).map((option) => {
+                  const active = view === option.value;
+                  const Icon = option.icon;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={active}
+                      onClick={() => {
+                        onViewChange(option.value);
+                        setViewMenuOpen(false);
+                      }}
+                      className={cn(
+                        "flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left text-sm transition-colors",
+                        active
+                          ? "bg-white/15 font-medium text-white"
+                          : "text-white/70 hover:bg-white/10 hover:text-white"
+                      )}
+                    >
+                      <span className="flex min-w-0 items-center gap-2">
+                        <Icon className="size-4 shrink-0" />
+                        <span className="truncate">{option.label}</span>
+                      </span>
+                      {active && <Check className="size-3.5 shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </header>
 
         {/* Cuerpo: sidebar de sesiones + conversación */}
@@ -251,7 +300,7 @@ export function AgentChatFullScreen({
                 <Plus className="size-4" />
                 Nueva conversación
               </Button>
-              <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+              <div className="custom-scrollbar custom-scrollbar-on-dark min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-1">
                 {sessions === null && (
                   <div className="flex justify-center py-8">
                     <Loader2 className="size-5 animate-spin text-white/50" />
@@ -299,7 +348,7 @@ export function AgentChatFullScreen({
               showHistory ? "hidden md:flex" : "flex"
             )}
           >
-            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 md:p-6">
+            <div className="custom-scrollbar custom-scrollbar-on-dark min-h-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden p-4 md:p-6">
               {loadingSession ? (
                 <div className="flex h-full items-center justify-center">
                   <Loader2 className="size-5 animate-spin text-white/50" />
@@ -313,11 +362,11 @@ export function AgentChatFullScreen({
                     <div
                       key={item.id}
                       className={cn(
-                        "flex w-full",
+                        "flex w-full min-w-0",
                         item.role === "user" ? "justify-end" : "justify-start"
                       )}
                     >
-                      <div className="flex max-w-[85%] flex-col items-start gap-1.5 md:max-w-[68%]">
+                      <div className="flex min-w-0 max-w-[85%] flex-col items-start gap-1.5 md:max-w-[68%]">
                         {item.content.trim() !== "" && (
                           <MessageBubble
                             role={item.role}

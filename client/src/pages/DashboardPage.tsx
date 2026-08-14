@@ -98,6 +98,14 @@ export function DashboardPage() {
   const isUp = portfolio.dayChangePct >= 0;
   const ChangeIcon = isUp ? TrendingUp : TrendingDown;
 
+  // % total de ganancia/pérdida sobre el capital invertido. El server lo
+  // manda como gainLossPct; si falta (server viejo), se calcula acá.
+  const gainLossPct =
+    portfolio.gainLossPct ??
+    (portfolio.totalArs - portfolio.gainLossArs > 0
+      ? (portfolio.gainLossArs / (portfolio.totalArs - portfolio.gainLossArs)) * 100
+      : 0);
+
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col gap-1">
@@ -115,9 +123,21 @@ export function DashboardPage() {
             <ChangeIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {/* El monto grande es la ganancia ACUMULADA — se muestra neutro
-                (no es el balance del día; colorearlo confunde). */}
-            <div className="text-xl font-bold">{formatARS(portfolio.gainLossArs)}</div>
+            {/* El monto grande es la ganancia ACUMULADA, con su % TOTAL al lado
+                (estilo IOL: el % sin "+" en positivos, coloreado según signo).
+                No es el balance del día — solo el % total lleva color. */}
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+              <div className="text-xl font-bold">{formatARS(portfolio.gainLossArs)}</div>
+              {gainLossPct !== 0 && (
+                <span
+                  className={`text-lg font-bold tabular-nums ${
+                    gainLossPct >= 0 ? "text-emerald-600" : "text-red-600"
+                  }`}
+                >
+                  {gainLossPct.toFixed(2)}%
+                </span>
+              )}
+            </div>
             {/* Solo la variación del DÍA va en verde/rojo, con su monto en $ */}
             <p className="text-xs">
               <span className={isUp ? "text-emerald-600" : "text-red-600"}>
