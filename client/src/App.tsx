@@ -13,6 +13,7 @@ import { DashboardPage } from "@/pages/DashboardPage";
 import { OperationsPage } from "@/pages/OperationsPage";
 import { QuotesPage } from "@/pages/QuotesPage";
 import { QuoteDetailPage } from "@/pages/QuoteDetailPage";
+import { StockAnalysisPage } from "@/pages/StockAnalysisPage";
 import { ReportsPage } from "@/pages/ReportsPage";
 import { PrivacyPage } from "@/pages/PrivacyPage";
 import { TermsPage } from "@/pages/TermsPage";
@@ -40,10 +41,11 @@ function ProtectedLayout() {
 
   // Regla de visibilidad del botón "Volver":
   // - Nunca en /inicio (es el home), /portfolio, ni páginas con navegación propia
-  //   (/quotes/:symbol ya tiene su breadcrumb)
+  //   (/quotes/:symbol ya tiene su breadcrumb, /analysis/:symbol idem)
   // - Desktop (md+): solo en páginas secundarias (perfil, conectar IOL)
   // - Mobile (<md): en todas las demás páginas
-  const hasOwnNav = pathname.startsWith("/quotes/");
+  const hasOwnNav =
+    pathname.startsWith("/quotes/") || pathname.startsWith("/analysis/");
   const isSecondary = pathname === "/profile" || pathname === "/connect" || pathname === "/agent-connect";
   const showBack = pathname !== "/inicio" && pathname !== "/portfolio" && !hasOwnNav;
   const backClasses = cn(!isSecondary && "md:hidden"); // en desktop se oculta si no es página secundaria
@@ -111,6 +113,7 @@ function App() {
             <Route path="/operations" element={<OperationsPage />} />
             <Route path="/quotes" element={<QuotesPage />} />
             <Route path="/quotes/:symbol" element={<QuoteDetailPage />} />
+            <Route path="/analysis/:symbol" element={<StockAnalysisPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/connect" element={<ConnectIolPage />} />
             <Route path="/profile" element={<ProfilePage />} />

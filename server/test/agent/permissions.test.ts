@@ -62,8 +62,8 @@ test("toolsVisibleForScope: read oculta place_order, trade lo lista", () => {
   const read = toolsVisibleForScope(agentRegistry, "read");
   const trade = toolsVisibleForScope(agentRegistry, "trade");
 
-  assert.equal(read.length, 5);
-  assert.equal(trade.length, 6);
+  assert.equal(read.length, 7);
+  assert.equal(trade.length, 8);
   assert.equal(read.some((t) => t.name === "place_order"), false);
   assert.equal(trade.some((t) => t.name === "place_order"), true);
   for (const t of read) {

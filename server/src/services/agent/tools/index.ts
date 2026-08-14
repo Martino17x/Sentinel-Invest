@@ -6,6 +6,7 @@ import { placeOrderTool } from "./placeOrder.js";
 import { getPortfolioTool } from "./portfolio.js";
 import { getQuoteTool, searchInstrumentsTool } from "./quotes.js";
 import { getMonthlyReportsTool } from "./reports.js";
+import { analyzeStockTool } from "./analyzeStock.js";
 
 // ============================================================
 // Registry de tools del agente — fuente ÚNICA de definiciones
@@ -13,7 +14,8 @@ import { getMonthlyReportsTool } from "./reports.js";
 // Compartido entre el engine (chat loop) y la capa MCP (fase G).
 // Matriz de permisos (spec §1):
 //   get_portfolio / get_quote / search_instruments /
-//   get_dollar_rates / get_monthly_reports / search_knowledge → allow
+//   get_dollar_rates / get_monthly_reports / analyze_stock /
+//   search_knowledge → allow
 //   place_order → exclude (stub de contrato, NUNCA ejecuta)
 //
 // La validación fail-fast del registry corre en el módulo:
@@ -26,6 +28,7 @@ const DOMAIN_TOOLS: ToolDefinition[] = [
   searchInstrumentsTool,
   getDollarRatesTool,
   getMonthlyReportsTool,
+  analyzeStockTool,
   searchKnowledgeTool,
   placeOrderTool,
 ];

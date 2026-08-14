@@ -1,6 +1,7 @@
 import { and, asc, eq, gte, lt } from "drizzle-orm";
 import { db, schema } from "../../db/index.js";
 import type { IolProvider } from "../iol/IolProvider.js";
+import { fetchChart } from "../market/yahoo.js";
 import type {
   IolCredentials,
   MonthClose,
@@ -80,6 +81,11 @@ function dietzPct(bmv: number, emv: number, cf: number): number {
 
 // ============================================================
 // YAHOO FINANCE — Merval y dólar oficial (público, sin auth)
+//
+// Usa el cliente compartido services/market/yahoo.ts (cache SWR
+// 15min, nunca lanza → envelope con status). Acá se preserva el
+// contrato original: si Yahoo falla (401/429/red) se devuelve []
+// para que el reporte se degrade (benchmark plano, fx 0).
 // ============================================================
 
 interface YahooPoint {
@@ -87,49 +93,23 @@ interface YahooPoint {
   close: number;
 }
 
-const YAHOO_CACHE_TTL_MS = 30 * 60 * 1000; // 30 min
-const yahooCache = new Map<string, { expiresAt: number; data: YahooPoint[] }>();
-
 /**
  * Serie diaria de cierre del símbolo de Yahoo (range=1y, interval=1d).
  * Nunca lanza: si Yahoo falla (401/429/red) devuelve [] para que el
  * reporte se degrade (benchmark plano, fx 0) en lugar de romper.
  */
 export async function fetchYahooDaily(symbol: string): Promise<YahooPoint[]> {
-  const cached = yahooCache.get(symbol);
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.data;
+  const result = await fetchChart(symbol);
+  if (result.status !== "ok" || !result.data) return [];
+
+  const { dates, closes } = result.data;
+  const points: YahooPoint[] = [];
+  for (let i = 0; i < dates.length; i++) {
+    const close = closes[i];
+    if (close == null || !Number.isFinite(close)) continue;
+    points.push({ date: dates[i], close });
   }
-
-  try {
-    const res = await fetch(
-      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1y&interval=1d`,
-      { headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" } }
-    );
-    if (!res.ok) return [];
-
-    const json = (await res.json()) as {
-      chart?: { result?: { timestamp?: number[]; indicators?: { quote?: { close?: (number | null)[] }[] } }[] };
-    };
-    const result = json.chart?.result?.[0];
-    const timestamps = result?.timestamp ?? [];
-    const closes = result?.indicators?.quote?.[0]?.close ?? [];
-
-    const data: YahooPoint[] = [];
-    for (let i = 0; i < timestamps.length; i++) {
-      const close = closes[i];
-      if (close == null || !Number.isFinite(close)) continue;
-      data.push({
-        date: toLocalDateKey(new Date(timestamps[i] * 1000)),
-        close,
-      });
-    }
-
-    yahooCache.set(symbol, { expiresAt: Date.now() + YAHOO_CACHE_TTL_MS, data });
-    return data;
-  } catch {
-    return [];
-  }
+  return points;
 }
 
 const MERVAL_SYMBOL = "^MERV";

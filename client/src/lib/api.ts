@@ -378,6 +378,85 @@ export const ratesApi = {
   },
 };
 
+// ============================================================
+// Análisis profundo — GET /api/analysis/:symbol?market=
+// (técnico + fundamental + señal, fuente Yahoo Finance)
+// ============================================================
+
+export type AnalysisMarket = "bcba" | "nyse" | "nasdaq";
+
+export interface AnalysisMacd {
+  macd: number;
+  signal: number;
+  histogram: number;
+  prevHistogram: number | null;
+}
+
+export interface AnalysisTechnicals {
+  price: number | null;
+  sma20: number | null;
+  sma50: number | null;
+  sma200: number | null;
+  rsi: number | null;
+  macd: AnalysisMacd | null;
+  volumeRatio: number | null;
+  position52w: number | null;
+  trend: number | null;
+}
+
+export interface AnalysisFundamentals {
+  pe: number | null;
+  eps: number | null;
+  beta: number | null;
+  margin: number | null;
+  roe: number | null;
+  debtEquity: number | null;
+  dividendYield: number | null;
+  marketCap: number | null;
+}
+
+export interface AnalysisSignalFactor {
+  id: string;
+  label: string;
+  weight: number;
+  score: number;
+  detail: string;
+}
+
+export interface AnalysisSignal {
+  score: number;
+  verdict: "bullish" | "neutral" | "bearish";
+  breakdown: AnalysisSignalFactor[];
+}
+
+export interface Analysis {
+  symbol: string;
+  tickerYahoo: string;
+  market: AnalysisMarket | null;
+  name: string | null;
+  status: "ok" | "symbol_not_found" | "rate_limited" | "down";
+  price: number | null;
+  changePct: number | null;
+  currency: string | null;
+  range52w: { low: number | null; high: number | null };
+  isMarketClosed: boolean;
+  lastCloseDate: string | null;
+  cached: boolean;
+  stale?: boolean;
+  technicals: AnalysisTechnicals | null;
+  fundamentals: AnalysisFundamentals | null;
+  signal: AnalysisSignal | null;
+  series: { date: string; close: number }[];
+  summary: string;
+}
+
+export const analysisApi = {
+  async getAnalysis(symbol: string, market?: AnalysisMarket): Promise<{ analysis: Analysis }> {
+    const query = market ? `?market=${market}` : "";
+    return apiFetch(`/analysis/${encodeURIComponent(symbol)}${query}`);
+  },
+};
+
 export const reportsApi = {
   async getMonthlyCloses(): Promise<{ closes: MonthClose[] }> {
     return apiFetch("/portfolio/reports");

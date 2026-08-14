@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Star } from "lucide-react";
 import { useSmartBack } from "@/lib/use-smart-back";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TradingViewWidget } from "@/components/ui/tradingview-widget";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -127,9 +128,16 @@ export function QuoteDetailPage() {
             <p className="mt-0.5 text-sm text-muted-foreground">{quote.name}</p>
           )}
         </div>
-        <Badge variant="secondary" className="font-mono text-xs">
-          {quote.market.toUpperCase()}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Link to={`/analysis/${quote.symbol}`}>
+            <Button variant="outline" size="sm" className="cursor-pointer">
+              Ver análisis
+            </Button>
+          </Link>
+          <Badge variant="secondary" className="font-mono text-xs">
+            {quote.market.toUpperCase()}
+          </Badge>
+        </div>
       </div>
 
       {/* Cards de datos */}

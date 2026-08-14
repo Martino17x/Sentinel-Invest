@@ -12,6 +12,7 @@ import profileRouter from "./routes/profile.js";
 import portfolioRouter from "./routes/portfolio.js";
 import operationsRouter from "./routes/operations.js";
 import quotesRouter from "./routes/quotes.js";
+import analysisRouter from "./routes/analysis.js";
 import ratesRouter from "./routes/rates.js";
 import agentRouter from "./routes/agent.js";
 import apiKeysRouter from "./routes/api-keys.js";
@@ -52,6 +53,7 @@ app.use("/api/profile", profileRouter);
 app.use("/api/portfolio", portfolioRouter);
 app.use("/api/operations", operationsRouter);
 app.use("/api/quotes", quotesRouter);
+app.use("/api/analysis", analysisRouter);
 app.use("/api/rates", ratesRouter);
 // API keys — infraestructura de credenciales para agentes externos
 // (el consumo MCP se monta/desmonta con AGENT_ENABLED en fase G).
