@@ -40,3 +40,5 @@ test-results/
 
 # Skills locales de agentes (skills.sh)
 .agents/
+agent/
+skills-lock.json
