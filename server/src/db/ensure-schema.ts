@@ -17,12 +17,81 @@ const SNAPSHOT_COLUMN_MIGRATIONS = [
 ];
 
 /**
+ * Tipos enum del motor de agente (idempotentes: Postgres no tiene
+ * CREATE TYPE IF NOT EXISTS, así que el DO block traga duplicate_object).
+ */
+const AGENT_ENUM_MIGRATIONS = [
+  sql`DO $$ BEGIN
+        CREATE TYPE chat_role AS ENUM ('user', 'assistant', 'tool');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$`,
+  sql`DO $$ BEGIN
+        CREATE TYPE api_key_scope AS ENUM ('read', 'trade');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$`,
+];
+
+/**
+ * Tablas del motor de agente — ADDITIVE, sin tocar tablas existentes.
+ * Espejan server/src/db/schema.ts (ai_chat_sessions, ai_chat_messages,
+ * api_keys, agent_actions). Re-correr N veces = no-op.
+ */
+const AGENT_TABLE_MIGRATIONS = [
+  sql`CREATE TABLE IF NOT EXISTS ai_chat_sessions (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        title text,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now()
+      )`,
+  sql`CREATE INDEX IF NOT EXISTS ai_chat_sessions_user_idx ON ai_chat_sessions (user_id)`,
+  sql`CREATE TABLE IF NOT EXISTS ai_chat_messages (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        session_id uuid NOT NULL REFERENCES ai_chat_sessions(id) ON DELETE CASCADE,
+        role chat_role NOT NULL,
+        content text,
+        tool_calls jsonb,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )`,
+  sql`CREATE INDEX IF NOT EXISTS ai_chat_messages_session_idx ON ai_chat_messages (session_id, created_at)`,
+  sql`CREATE TABLE IF NOT EXISTS api_keys (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name text NOT NULL,
+        prefix text NOT NULL,
+        key_hash text NOT NULL UNIQUE,
+        scope api_key_scope NOT NULL DEFAULT 'read',
+        enabled boolean NOT NULL DEFAULT true,
+        last_used_at timestamptz,
+        expires_at timestamptz,
+        revoked_at timestamptz,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )`,
+  sql`CREATE INDEX IF NOT EXISTS api_keys_user_idx ON api_keys (user_id)`,
+  sql`CREATE TABLE IF NOT EXISTS agent_actions (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        tool text NOT NULL,
+        args_sanitized jsonb,
+        result_status text NOT NULL,
+        client_name text NOT NULL DEFAULT 'chat',
+        error_message text,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )`,
+  sql`CREATE INDEX IF NOT EXISTS agent_actions_user_idx ON agent_actions (user_id, created_at)`,
+];
+
+/**
  * Aplica las migraciones idempotentes. Llamar al boot del server.
  * Nunca debe romper el arranque: cualquier fallo queda registrado
  * como warning (los reportes se degradan, la app sigue viva).
  */
 export async function ensureSchema(): Promise<void> {
-  for (const statement of SNAPSHOT_COLUMN_MIGRATIONS) {
+  for (const statement of [
+    ...SNAPSHOT_COLUMN_MIGRATIONS,
+    ...AGENT_ENUM_MIGRATIONS,
+    ...AGENT_TABLE_MIGRATIONS,
+  ]) {
     await db.execute(statement);
   }
 }

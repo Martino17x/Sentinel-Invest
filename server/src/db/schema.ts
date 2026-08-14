@@ -7,6 +7,7 @@ import {
   numeric,
   integer,
   boolean,
+  jsonb,
   index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
@@ -23,6 +24,10 @@ export const operationTypeEnum = pgEnum("operation_type", ["buy", "sell", "subsc
 export const operationStatusEnum = pgEnum("operation_status", ["pending", "accepted", "rejected", "cancelled"]);
 
 export const currencyEnum = pgEnum("currency", ["ARS", "USD"]);
+
+export const chatRoleEnum = pgEnum("chat_role", ["user", "assistant", "tool"]);
+
+export const apiKeyScopeEnum = pgEnum("api_key_scope", ["read", "trade"]);
 
 // ============================================================
 // USERS — el corazón del multitenant
@@ -42,6 +47,9 @@ export const users = pgTable("users", {
 export const usersRelations = relations(users, ({ many }) => ({
   iolConnections: many(iolConnections),
   accounts: many(accounts),
+  aiChatSessions: many(aiChatSessions),
+  apiKeys: many(apiKeys),
+  agentActions: many(agentActions),
 }));
 
 // ============================================================
@@ -231,3 +239,112 @@ export const priceHistory = pgTable(
 );
 
 export const priceHistoryRelations = relations(priceHistory, () => ({}));
+
+// ============================================================
+// AI CHAT SESSIONS — sesiones del asistente conversacional
+// (motor de agente, dominio aislado por usuario)
+// ============================================================
+
+export const aiChatSessions = pgTable(
+  "ai_chat_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // Título auto-derivado de la primera oración del primer mensaje
+    title: text("title"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("ai_chat_sessions_user_idx").on(table.userId)]
+);
+
+export const aiChatSessionsRelations = relations(aiChatSessions, ({ one, many }) => ({
+  user: one(users, { fields: [aiChatSessions.userId], references: [users.id] }),
+  messages: many(aiChatMessages),
+}));
+
+// ============================================================
+// AI CHAT MESSAGES — mensajes de una sesión (historial LLM)
+// ============================================================
+
+export const aiChatMessages = pgTable(
+  "ai_chat_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => aiChatSessions.id, { onDelete: "cascade" }),
+    role: chatRoleEnum("role").notNull(),
+    content: text("content"),
+    // Tool calls crudas del LLM — SIEMPRE sanitizadas antes de persistir
+    toolCalls: jsonb("tool_calls"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("ai_chat_messages_session_idx").on(table.sessionId, table.createdAt)]
+);
+
+export const aiChatMessagesRelations = relations(aiChatMessages, ({ one }) => ({
+  session: one(aiChatSessions, { fields: [aiChatMessages.sessionId], references: [aiChatSessions.id] }),
+}));
+
+// ============================================================
+// API KEYS — claves personales para agentes externos (MCP)
+// (solo se guarda el hash SHA-256; el secreto se muestra UNA vez)
+// ============================================================
+
+export const apiKeys = pgTable(
+  "api_keys",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    // Prefijo público: "sk-sentinel-" + 4 chars (identifica la key sin exponerla)
+    prefix: text("prefix").notNull(),
+    keyHash: text("key_hash").notNull(),
+    scope: apiKeyScopeEnum("scope").default("read").notNull(),
+    enabled: boolean("enabled").default(true).notNull(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("api_keys_user_idx").on(table.userId),
+    uniqueIndex("api_keys_key_hash_unique").on(table.keyHash),
+  ]
+);
+
+export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
+  user: one(users, { fields: [apiKeys.userId], references: [users.id] }),
+}));
+
+// ============================================================
+// AGENT ACTIONS — auditoría de cada tool call del agente
+// (chat UI o MCP: clientName "chat" | "mcp:*")
+// ============================================================
+
+export const agentActions = pgTable(
+  "agent_actions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tool: text("tool").notNull(),
+    // Args con campos PII reemplazados por "***" — nunca loguear lo sensible
+    argsSanitized: jsonb("args_sanitized"),
+    resultStatus: text("result_status").notNull(),
+    clientName: text("client_name").default("chat").notNull(),
+    errorMessage: text("error_message"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("agent_actions_user_idx").on(table.userId, table.createdAt)]
+);
+
+export const agentActionsRelations = relations(agentActions, ({ one }) => ({
+  user: one(users, { fields: [agentActions.userId], references: [users.id] }),
+}));

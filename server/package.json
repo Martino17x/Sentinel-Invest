@@ -7,6 +7,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "mcp": "tsx src/mcp/stdio.ts",
+    "test": "tsx --test \"test/agent/*.test.ts\"",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio"
@@ -19,8 +21,12 @@
     "drizzle-orm": "^0.45.2",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.3",
+    "@modelcontextprotocol/express": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "openai": "^7.4.0",
     "pg": "^8.16.0",
-    "zod": "^3.25.0"
+    "zod": "^3.25.0",
+    "zod4": "npm:zod@^4"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",

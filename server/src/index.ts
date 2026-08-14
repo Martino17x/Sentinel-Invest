@@ -13,9 +13,16 @@ import portfolioRouter from "./routes/portfolio.js";
 import operationsRouter from "./routes/operations.js";
 import quotesRouter from "./routes/quotes.js";
 import ratesRouter from "./routes/rates.js";
+import agentRouter from "./routes/agent.js";
+import apiKeysRouter from "./routes/api-keys.js";
+import { mountMcpHttp } from "./mcp/http.js";
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 3001);
+
+// Kill switch del agente (AI): AGENT_ENABLED=false desmonta /api/agent
+// y /mcp — rollback de 2 líneas, sin tocar el resto de la API.
+const agentEnabled = process.env.AGENT_ENABLED !== "false";
 
 app.use(
   cors({
@@ -46,6 +53,17 @@ app.use("/api/portfolio", portfolioRouter);
 app.use("/api/operations", operationsRouter);
 app.use("/api/quotes", quotesRouter);
 app.use("/api/rates", ratesRouter);
+// API keys — infraestructura de credenciales para agentes externos
+// (el consumo MCP se monta/desmonta con AGENT_ENABLED en fase G).
+// Se monta SIEMPRE: el usuario debe poder gestionar sus keys aunque
+// el agente esté deshabilitado (rollback del chat no rompe el perfil).
+app.use("/api/apikeys", apiKeysRouter);
+if (agentEnabled) {
+  app.use("/api/agent", agentRouter);
+  // MCP (stdio + Streamable HTTP): se monta/desmonta con el mismo flag —
+  // clientes externos dejan de existir con AGENT_ENABLED=false.
+  mountMcpHttp(app);
+}
 
 app.listen(PORT, () => {
   console.log(`🚀 API escuchando en http://localhost:${PORT}`);

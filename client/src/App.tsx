@@ -5,6 +5,7 @@ import { Navigation } from "@/components/layout/navigation";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { IolConnectReminder } from "@/components/layout/IolConnectReminder";
 import { BackButton } from "@/components/layout/BackButton";
+import { AgentChatDrawer } from "@/components/agent/AgentChatDrawer";
 import { LoginPage } from "@/pages/LoginPage";
 import { RegisterPage } from "@/pages/RegisterPage";
 import { HomePage } from "@/pages/HomePage";
@@ -61,6 +62,7 @@ function ProtectedLayout() {
         <Outlet />
       </main>
       <BottomNav />
+      <AgentChatDrawer />
     </div>
   );
 }

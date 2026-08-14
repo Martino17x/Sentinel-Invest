@@ -1,50 +1,15 @@
 import { Router, type Request, type Response } from "express";
-import { eq } from "drizzle-orm";
-import { db, schema } from "../db/index.js";
 import { requireAuth } from "../middleware/auth.js";
 import { getIolProvider } from "../services/iol/index.js";
 import { getIolCredentials } from "../lib/iol-credentials.js";
+import { getAccountForUser } from "../services/agent/account.js";
 import { saveDailySnapshot } from "../services/reports/reportBuilder.js";
 
 const router = Router();
 router.use(requireAuth);
 
-type AccountResult =
-  | { ok: true; account: { id: string; iolAccountNumber: string; currency: string } }
-  | { ok: false; status: number; message: string };
-
-/**
- * Helper: busca la cuenta del usuario.
- * - En modo MOCK: si no hay cuenta, usa "demo" para mostrar datos.
- * - En modo API: usa la cuenta real del usuario.
- */
-async function getAccountForUser(userId: string, accountId?: string): Promise<AccountResult> {
-  if (accountId) {
-    const [account] = await db
-      .select()
-      .from(schema.accounts)
-      .where(eq(schema.accounts.id, accountId));
-    if (!account || account.userId !== userId) {
-      return { ok: false, status: 404, message: "Cuenta no encontrada" };
-    }
-    return { ok: true, account };
-  }
-
-  const accounts = await db.select().from(schema.accounts).where(eq(schema.accounts.userId, userId));
-  if (accounts.length === 0) {
-    if (process.env.IOL_PROVIDER !== "api") {
-      return { ok: true, account: { id: "demo", iolAccountNumber: "demo-0001", currency: "ARS" } };
-    }
-    return { ok: false, status: 404, message: "No tenés cuentas registradas. Conectá tu cuenta IOL primero." };
-  }
-
-  // En modo API, preferir la cuenta con posiciones (la de EEUU donde viven CEDEARs/bonos)
-  if (process.env.IOL_PROVIDER === "api") {
-    const withPositions = accounts.find((a) => a.iolAccountNumber.includes("-EEUU"));
-    return { ok: true, account: withPositions ?? accounts[0] };
-  }
-  return { ok: true, account: accounts[0] };
-}
+// getAccountForUser vive en services/agent/account.ts (helper compartido
+// con los tools del agente): mismo gate multitenant en toda la app.
 
 // ============================================================
 // GET /api/portfolio — resumen del portafolio
