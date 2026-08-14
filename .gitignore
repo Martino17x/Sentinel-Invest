@@ -38,10 +38,8 @@ Sentinel-Tracker/
 test-results/
 *.png
 
-# Skills locales de agentes (skills.sh)
-# OJO: anclado a la raíz (/agent/) — un patrón suelto "agent/" matchea
-# CUALQUIER directorio con ese nombre en el árbol y rompe el scanner de
-# Tailwind (excluía client/src/components/agent/ → clases sin generar).
-.agents/
+# Duplicado creado por el instalador de skills (npx skills add) — .agents/skills es la fuente.
+# NOTA: anclado a la raíz — un patrón suelto "agent/" rompe el scanner de Tailwind
+# (excluía client/src/components/agent/ → clases sin generar).
 /agent/
 skills-lock.json
