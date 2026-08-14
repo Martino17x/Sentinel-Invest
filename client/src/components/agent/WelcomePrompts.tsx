@@ -1,10 +1,15 @@
 import { Bot } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 // ============================================================
 // WelcomePrompts — estado inicial del chat: saludo + grilla de
 // prompts sugeridos. Al hacer click se envía como mensaje.
+//
+// Variantes:
+//   default → tema de la app (drawer)
+//   modal   → tema oscuro Synara (pantalla completa)
 // ============================================================
 
 export interface SuggestedPrompt {
@@ -21,19 +26,40 @@ const SUGGESTED_PROMPTS: SuggestedPrompt[] = [
 
 export function WelcomePrompts({
   onPrompt,
+  variant = "default",
 }: {
   onPrompt: (prompt: string) => void;
+  variant?: "default" | "modal";
 }) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-5 px-6 text-center">
-      <div className="flex size-12 items-center justify-center rounded-full bg-primary/10">
-        <Bot className="size-6 text-primary" />
+      <div
+        className={cn(
+          "flex items-center justify-center",
+          variant === "modal" ? "size-16 rounded-2xl bg-white/10" : "size-12 rounded-full bg-primary/10"
+        )}
+      >
+        <Bot
+          className={cn(
+            variant === "modal" ? "size-8 text-white" : "size-6 text-primary"
+          )}
+        />
       </div>
       <div className="space-y-1.5">
-        <h2 className="font-heading text-base font-medium">
+        <h2
+          className={cn(
+            "font-heading text-base font-medium",
+            variant === "modal" && "text-white"
+          )}
+        >
           ¡Hola! Soy tu asistente de inversiones
         </h2>
-        <p className="text-sm text-muted-foreground">
+        <p
+          className={cn(
+            "text-sm",
+            variant === "modal" ? "text-white/60" : "text-muted-foreground"
+          )}
+        >
           Preguntame por tu cartera, cotizaciones, el dólar o tus reportes.
           Todo lo que ves en la app, en una conversación.
         </p>
@@ -43,9 +69,13 @@ export function WelcomePrompts({
           <Button
             key={label}
             type="button"
-            variant="outline"
+            variant={variant === "modal" ? "ghost" : "outline"}
             onClick={() => onPrompt(prompt)}
-            className="h-auto min-h-9 whitespace-normal px-3 py-2 text-xs"
+            className={cn(
+              "h-auto min-h-9 whitespace-normal px-3 py-2 text-xs",
+              variant === "modal" &&
+                "rounded-full border border-white/10 bg-white/[0.08] text-white/90 hover:bg-white/[0.16]"
+            )}
           >
             {label}
           </Button>

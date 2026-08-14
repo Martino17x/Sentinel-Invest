@@ -27,7 +27,13 @@ function usePrefersReducedMotion(): boolean {
   return reduced;
 }
 
-export function ThinkingIndicator({ className }: { className?: string }) {
+export function ThinkingIndicator({
+  className,
+  variant = "default",
+}: {
+  className?: string;
+  variant?: "default" | "modal";
+}) {
   const reduced = usePrefersReducedMotion();
   const [phraseIndex, setPhraseIndex] = useState(0);
 
@@ -42,7 +48,13 @@ export function ThinkingIndicator({ className }: { className?: string }) {
 
   return (
     <div
-      className={cn("flex items-center gap-2 text-sm text-muted-foreground", className)}
+      className={cn(
+        "flex w-fit items-center gap-2 text-sm",
+        variant === "modal"
+          ? "rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-white/90"
+          : "text-muted-foreground",
+        className
+      )}
       role="status"
       aria-live="polite"
     >

@@ -37,12 +37,30 @@ const STATUS_ICONS: Partial<Record<AgentToolStatus, LucideIcon>> = {
   account_error: XCircle,
 };
 
-function ToolStatusIcon({ tool, live }: { tool: TimelineTool; live: boolean }) {
+function ToolStatusIcon({
+  tool,
+  live,
+  tone,
+}: {
+  tool: TimelineTool;
+  live: boolean;
+  tone: "default" | "modal";
+}) {
   if (!tool.status) {
     return live ? (
-      <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground motion-reduce:animate-none" />
+      <Loader2
+        className={cn(
+          "size-3.5 shrink-0 animate-spin motion-reduce:animate-none",
+          tone === "modal" ? "text-white/60" : "text-muted-foreground"
+        )}
+      />
     ) : (
-      <Wrench className="size-3.5 shrink-0 text-muted-foreground" />
+      <Wrench
+        className={cn(
+          "size-3.5 shrink-0",
+          tone === "modal" ? "text-white/60" : "text-muted-foreground"
+        )}
+      />
     );
   }
   const Icon = STATUS_ICONS[tool.status] ?? XCircle;
@@ -50,13 +68,21 @@ function ToolStatusIcon({ tool, live }: { tool: TimelineTool; live: boolean }) {
     <Icon
       className={cn(
         "size-3.5 shrink-0",
-        tool.status === "success" && "text-emerald-600",
-        tool.status === "needs_approval" && "text-amber-600",
-        tool.status === "excluded" && "text-muted-foreground",
-        tool.status !== "success" &&
-          tool.status !== "needs_approval" &&
-          tool.status !== "excluded" &&
-          "text-destructive"
+        tone === "modal"
+          ? tool.status === "success"
+            ? "text-emerald-300"
+            : tool.status === "needs_approval"
+              ? "text-amber-300"
+              : tool.status === "excluded"
+                ? "text-white/40"
+                : "text-red-300"
+          : tool.status === "success"
+            ? "text-emerald-600"
+            : tool.status === "needs_approval"
+              ? "text-amber-600"
+              : tool.status === "excluded"
+                ? "text-muted-foreground"
+                : "text-destructive"
       )}
     />
   );
@@ -79,10 +105,12 @@ export function ToolTimeline({
   tools,
   live = false,
   className,
+  tone = "default",
 }: {
   tools: TimelineTool[];
   live?: boolean;
   className?: string;
+  tone?: "default" | "modal";
 }) {
   const [collapsed, setCollapsed] = useState(tools.length > 2);
 
@@ -98,14 +126,20 @@ export function ToolTimeline({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-xl border bg-background/60 text-xs",
+        "overflow-hidden rounded-xl border text-xs",
+        tone === "modal" ? "border-white/10 bg-white/10" : "bg-background/60",
         className
       )}
     >
       <button
         type="button"
         onClick={() => setCollapsed((c) => !c)}
-        className="flex w-full items-center justify-between gap-2 px-2.5 py-1.5 text-muted-foreground transition-colors hover:text-foreground"
+        className={cn(
+          "flex w-full items-center justify-between gap-2 px-2.5 py-1.5 transition-colors",
+          tone === "modal"
+            ? "text-white/60 hover:text-white"
+            : "text-muted-foreground hover:text-foreground"
+        )}
         aria-expanded={!collapsed}
       >
         <span className="font-medium">
@@ -120,15 +154,25 @@ export function ToolTimeline({
       </button>
 
       {!collapsed && (
-        <ul className="space-y-1 border-t px-2.5 py-2">
+        <ul className="space-y-1 border-t border-white/10 px-2.5 py-2">
           {tools.map((tool) => (
             <li key={tool.id} className="flex items-center gap-2">
-              <ToolStatusIcon tool={tool} live={live} />
-              <span className="min-w-0 truncate text-muted-foreground">
+              <ToolStatusIcon tool={tool} live={live} tone={tone} />
+              <span
+                className={cn(
+                  "min-w-0 truncate",
+                  tone === "modal" ? "text-white/80" : "text-muted-foreground"
+                )}
+              >
                 {toolLabel(tool.name)}
               </span>
               {tool.summary && (
-                <span className="ml-auto shrink-0 truncate pl-2 text-muted-foreground/70">
+                <span
+                  className={cn(
+                    "ml-auto shrink-0 truncate pl-2",
+                    tone === "modal" ? "text-white/40" : "text-muted-foreground/70"
+                  )}
+                >
                   {tool.summary}
                 </span>
               )}

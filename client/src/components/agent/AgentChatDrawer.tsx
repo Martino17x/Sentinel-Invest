@@ -2,10 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import {
   History,
   Loader2,
+  Maximize2,
   MessageSquare,
   Plus,
-  Send,
-  Square,
   Trash2,
   X,
 } from "lucide-react";
@@ -16,6 +15,8 @@ import { MessageBubble } from "@/components/agent/MessageBubble";
 import { ThinkingIndicator } from "@/components/agent/ThinkingIndicator";
 import { ToolTimeline, type TimelineTool } from "@/components/agent/ToolTimeline";
 import { WelcomePrompts } from "@/components/agent/WelcomePrompts";
+import { ChatComposer } from "@/components/agent/ChatComposer";
+import { AgentChatFullScreen } from "@/components/agent/AgentChatFullScreen";
 import {
   AgentChatError,
   streamAgentChat,
@@ -23,38 +24,40 @@ import {
 } from "@/lib/agent-chat";
 import { agentApi, type AgentChatMessage, type AgentSession } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { formatSessionDate } from "@/components/agent/chat-shared";
+import {
+  CHAT_VIEW_CHANGED_EVENT,
+  getChatViewPreference,
+  setChatViewPreference,
+  type ChatView,
+} from "@/lib/chat-view";
 
 // ============================================================
 // AgentChatDrawer — chat global del asistente (FAB + drawer).
 // Montado en ProtectedLayout → disponible en toda la app.
 //
 // - FAB flotante (bottom-right, arriba del BottomNav en mobile)
+// - DOS vistas con el MISMO estado (patrón Equarys / Synara):
+//     drawer → panel lateral (radix Dialog), botón "Expandir"
+//     modal  → pantalla completa (AgentChatFullScreen, portal)
+//   El estado del chat vive en AgentChatInner, que renderiza
+//   UNA de las dos vistas según `view`.
+// - La preferencia de vista persiste en localStorage
+//   ('sentinel-chat-view') y se sincroniza vía custom event
+//   'sentinel:chat-view-changed'.
 // - Streaming SSE: los deltas se anexan a la última burbuja del
 //   asistente; el timeline de tools se actualiza en vivo
 // - Sesiones: nueva, historial, restauración, borrado
 // - Abort al cerrar el drawer / botón stop
 // ============================================================
 
-interface ChatItem {
+export interface ChatItem {
   id: string;
   role: "user" | "assistant" | "error";
   content: string;
   tools: TimelineTool[];
   streaming?: boolean;
-}
-
-function formatSessionDate(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  const today = new Date();
-  const sameDay =
-    date.getDate() === today.getDate() &&
-    date.getMonth() === today.getMonth() &&
-    date.getFullYear() === today.getFullYear();
-  if (sameDay) {
-    return date.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
-  }
-  return date.toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
+  createdAt?: string;
 }
 
 function toolsFromHistory(toolCalls: unknown): TimelineTool[] {
@@ -76,7 +79,13 @@ function messagesToItems(messages: AgentChatMessage[]): ChatItem[] {
   for (const msg of messages) {
     if (msg.role === "tool") continue;
     if (msg.role === "user") {
-      items.push({ id: msg.id, role: "user", content: msg.content ?? "", tools: [] });
+      items.push({
+        id: msg.id,
+        role: "user",
+        content: msg.content ?? "",
+        tools: [],
+        createdAt: msg.createdAt ?? undefined,
+      });
     } else {
       // Turnos de tool-call sin texto: el timeline lleva la info
       items.push({
@@ -84,6 +93,7 @@ function messagesToItems(messages: AgentChatMessage[]): ChatItem[] {
         role: "assistant",
         content: msg.content ?? "",
         tools: toolsFromHistory(msg.toolCalls),
+        createdAt: msg.createdAt ?? undefined,
       });
     }
   }
@@ -92,6 +102,39 @@ function messagesToItems(messages: AgentChatMessage[]): ChatItem[] {
 
 export function AgentChatDrawer() {
   const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      {/* FAB — botón flotante del asistente (arriba del BottomNav en mobile) */}
+      <Button
+        type="button"
+        aria-label="Abrir chat con el asistente"
+        onClick={() => setOpen(true)}
+        className="fixed right-4 bottom-20 z-40 size-12 rounded-full shadow-lg md:right-6 md:bottom-6 md:size-11"
+      >
+        <MessageSquare className="size-5" />
+      </Button>
+
+      <AgentChatInner open={open} onOpenChange={setOpen} />
+    </>
+  );
+}
+
+// ============================================================
+// AgentChatInner — TODO el estado del chat vive acá y renderiza
+// UNA de las dos vistas (drawer | modal) con el mismo estado.
+// Al alternar vista no se pierde nada: mensajes, sesión activa,
+// streaming y handlers son compartidos.
+// ============================================================
+
+function AgentChatInner({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (next: boolean) => void;
+}) {
+  const [view, setView] = useState<ChatView>(getChatViewPreference);
   const [sessions, setSessions] = useState<AgentSession[] | null>(null);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [activeTitle, setActiveTitle] = useState("Nueva conversación");
@@ -104,19 +147,33 @@ export function AgentChatDrawer() {
 
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // Cargar sesiones al abrir el drawer
+  // Sincronizar la preferencia de vista entre instancias
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<ChatView>).detail;
+      if (detail === "drawer" || detail === "modal") setView(detail);
+    };
+    window.addEventListener(CHAT_VIEW_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(CHAT_VIEW_CHANGED_EVENT, handler);
+  }, []);
+
+  // Cargar sesiones al abrir el chat (cualquiera de las dos vistas)
   useEffect(() => {
     if (!open) return;
     refreshSessions();
   }, [open]);
 
-  // Auto-scroll al fondo en cada actualización de mensajes
+  // Auto-scroll del drawer al fondo en cada actualización de mensajes
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [items, streaming]);
+
+  function switchView(next: ChatView) {
+    setView(next);
+    setChatViewPreference(next);
+  }
 
   async function refreshSessions() {
     try {
@@ -167,7 +224,7 @@ export function AgentChatDrawer() {
 
   function handleOpenChange(next: boolean) {
     if (!next) abortRef.current?.abort();
-    setOpen(next);
+    onOpenChange(next);
   }
 
   function appendDelta(text: string) {
@@ -218,14 +275,19 @@ export function AgentChatDrawer() {
 
     setInput("");
     setListError(null);
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-    }
 
+    const now = new Date().toISOString();
     setItems((prev) => [
       ...prev,
-      { id: `user-${Date.now()}`, role: "user", content: text, tools: [] },
-      { id: `assistant-${Date.now()}`, role: "assistant", content: "", tools: [], streaming: true },
+      { id: `user-${Date.now()}`, role: "user", content: text, tools: [], createdAt: now },
+      {
+        id: `assistant-${Date.now()}`,
+        role: "assistant",
+        content: "",
+        tools: [],
+        streaming: true,
+        createdAt: now,
+      },
     ]);
     setStreaming(true);
 
@@ -297,29 +359,15 @@ export function AgentChatDrawer() {
     }
   }
 
-  function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
-    setInput(e.target.value);
-    const ta = e.target;
-    ta.style.height = "auto";
-    ta.style.height = `${Math.min(ta.scrollHeight, 128)}px`;
-  }
-
   const welcomeVisible = !loadingSession && items.length === 0 && !streaming;
 
-  return (
-    <>
-      {/* FAB — botón flotante del asistente (arriba del BottomNav en mobile) */}
-      <Button
-        type="button"
-        aria-label="Abrir chat con el asistente"
-        onClick={() => setOpen(true)}
-        className="fixed right-4 bottom-20 z-40 size-12 rounded-full shadow-lg md:right-6 md:bottom-6 md:size-11"
-      >
-        <MessageSquare className="size-5" />
-      </Button>
-
+  // ============================================================
+  // Vista 1 — DRAWER lateral
+  // ============================================================
+  if (view === "drawer") {
+    return (
       <Drawer open={open} onOpenChange={handleOpenChange}>
-        <DrawerContent className="w-full max-w-md">
+        <DrawerContent className="w-full sm:max-w-[640px] md:max-w-[820px] lg:max-w-[920px]">
           {/* Header: título de sesión + acciones */}
           <div className="flex items-center justify-between gap-2 border-b px-4 py-3">
             <DrawerTitle className="min-w-0 truncate">{activeTitle}</DrawerTitle>
@@ -343,6 +391,16 @@ export function AgentChatDrawer() {
                 onClick={() => setShowHistory((v) => !v)}
               >
                 <History />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Expandir a pantalla completa"
+                className="hidden md:inline-flex"
+                onClick={() => switchView("modal")}
+              >
+                <Maximize2 />
               </Button>
               <DrawerClose asChild>
                 <Button type="button" variant="ghost" size="icon-sm" aria-label="Cerrar chat">
@@ -411,9 +469,15 @@ export function AgentChatDrawer() {
                       item.role === "user" ? "justify-end" : "justify-start"
                     )}
                   >
-                    <div className="flex max-w-full flex-col items-start gap-1.5">
+                    {/* El wrapper pone la cota de ancho (ancho definido);
+                        la burbuja es w-fit → se ajusta al contenido */}
+                    <div className="flex max-w-[85%] flex-col items-start gap-1.5">
                       {item.content.trim() !== "" && (
-                        <MessageBubble role={item.role} content={item.content} />
+                        <MessageBubble
+                          role={item.role}
+                          content={item.content}
+                          timestamp={item.createdAt}
+                        />
                       )}
                       {item.tools.length > 0 && (
                         <ToolTimeline tools={item.tools} live={!!item.streaming} />
@@ -432,44 +496,48 @@ export function AgentChatDrawer() {
               {listError && (
                 <p className="mb-2 px-1 text-xs text-destructive">{listError}</p>
               )}
-              <div className="flex items-end gap-2">
-                <textarea
-                  ref={textareaRef}
-                  value={input}
-                  onChange={handleInputChange}
-                  onKeyDown={handleInputKeyDown}
-                  disabled={streaming}
-                  rows={1}
-                  placeholder="Escribí tu mensaje…"
-                  aria-label="Mensaje para el asistente"
-                  className="max-h-32 min-h-9 flex-1 resize-none rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
-                />
-                {streaming ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    aria-label="Detener respuesta"
-                    onClick={stopStreaming}
-                  >
-                    <Square className="fill-current" />
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    size="icon"
-                    aria-label="Enviar mensaje"
-                    disabled={!input.trim()}
-                    onClick={() => void sendMessage()}
-                  >
-                    <Send />
-                  </Button>
-                )}
-              </div>
+              <ChatComposer
+                variant="default"
+                input={input}
+                streaming={streaming}
+                onChange={setInput}
+                onKeyDown={handleInputKeyDown}
+                onSend={() => void sendMessage()}
+                onStop={stopStreaming}
+              />
             </div>
           )}
         </DrawerContent>
       </Drawer>
-    </>
+    );
+  }
+
+  // ============================================================
+  // Vista 2 — MODAL pantalla completa (mismo estado)
+  // ============================================================
+  return (
+    <AgentChatFullScreen
+      open={open}
+      onOpenChange={handleOpenChange}
+      view={view}
+      onViewChange={switchView}
+      activeTitle={activeTitle}
+      sessions={sessions}
+      showHistory={showHistory}
+      onToggleHistory={() => setShowHistory((v) => !v)}
+      items={items}
+      streaming={streaming}
+      loadingSession={loadingSession}
+      listError={listError}
+      welcomeVisible={welcomeVisible}
+      input={input}
+      onInputChange={setInput}
+      onInputKeyDown={handleInputKeyDown}
+      onSend={(raw) => void sendMessage(raw)}
+      onStop={stopStreaming}
+      onNewSession={newSession}
+      onOpenSession={(id) => void openSession(id)}
+      onDeleteSession={(id) => void handleDeleteSession(id)}
+    />
   );
 }

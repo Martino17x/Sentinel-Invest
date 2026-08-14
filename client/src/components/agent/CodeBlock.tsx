@@ -41,7 +41,7 @@ export function CodeBlock({ code, label }: CodeBlockProps) {
           <span className="ml-1.5">{copied ? "Copiado" : "Copiar"}</span>
         </Button>
       </div>
-      <pre className="overflow-x-auto p-3 text-xs leading-relaxed text-foreground">
+      <pre className="overflow-x-auto p-3 font-mono text-xs leading-relaxed text-foreground">
         <code>{code}</code>
       </pre>
     </div>

@@ -44,6 +44,10 @@
   --chart-3: oklch(0.62 0.22 255); /* azul      */
   --chart-4: oklch(0.78 0.16 75);  /* ámbar     */
   --chart-5: oklch(0.71 0.13 220); /* cyan      */
+  /* Chat pantalla completa (modal Synara) — gradiente verde de marca.
+     Contraste ≥ 4.5:1 con texto blanco: from #0b6749 ≈ 6.9:1, to #064028 ≈ 11.9:1 */
+  --synara-panel-bg-from: #0b6749;
+  --synara-panel-bg-to: #064028;
 }
 
 .dark {
