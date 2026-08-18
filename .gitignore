@@ -43,3 +43,10 @@ test-results/
 # (excluía client/src/components/agent/ → clases sin generar).
 /agent/
 skills-lock.json
+
+# Monorepo / turbo
+.turbo/
+coverage/
+pnpm-debug.log*
+*.tsbuildinfo
+.astro/
