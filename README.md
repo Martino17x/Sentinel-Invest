@@ -49,3 +49,7 @@ Cada app mantiene su propio `.env` (gitignored):
 
 - El dashboard usa `oxlint` como linter; `apps/api` y `apps/landing` usan la ESLint config compartida.
 - El proxy de Vite del dashboard redirige `/api` a `http://localhost:3001`.
+
+## CI
+
+GitHub Actions corre en cada push/PR a main: lint, typecheck, test y build vía turbo (.github/workflows/ci.yml).
