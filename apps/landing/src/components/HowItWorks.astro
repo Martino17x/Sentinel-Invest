@@ -1,22 +1,30 @@
----
-const steps = [
-  { n: "01", title: "Creá tu cuenta", desc: "Registrate con tu email o con Google en menos de un minuto." },
-  { n: "02", title: "Conectá tu IOL", desc: "Vinculá tu cuenta de InvertirOnline. Solo lectura, con cifrado AES-256." },
-  { n: "03", title: "Controlá todo", desc: "Mirá tu portafolio, cotizaciones, análisis y reportes en un solo lugar." },
-];
----
 <section class="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
   <div class="mx-auto max-w-2xl text-center">
-    <h2 class="text-3xl font-semibold tracking-tight sm:text-4xl" data-reveal>Empezá en 3 pasos</h2>
+    <h2 class="text-balance text-3xl font-semibold tracking-tight sm:text-4xl" data-reveal>Empezá en 3 pasos</h2>
     <p class="mt-3 text-muted" data-reveal>De la cuenta del broker a tu panel en minutos.</p>
   </div>
-  <ol class="mt-10 grid gap-6 md:grid-cols-3">
-    {steps.map((s) => (
-      <li class="rounded-2xl border border-border bg-background p-6" data-reveal>
-        <span class="text-sm font-semibold text-brand">{s.n}</span>
-        <h3 class="mt-2 text-lg font-semibold">{s.title}</h3>
-        <p class="mt-2 text-sm text-muted">{s.desc}</p>
-      </li>
-    ))}
+  <ol class="mt-12 grid gap-10 md:grid-cols-3 md:gap-0">
+    <li class="flex flex-col items-start gap-3 px-6" data-reveal>
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" class="h-7 w-7 text-brand" aria-hidden="true">
+        <path d="M8 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6Zm0 8c2.8 0 5 1.7 5 4v1H3v-1c0-2.3 2.2-4 5-4Z" />
+      </svg>
+      <h3 class="text-lg font-semibold">Creá tu cuenta</h3>
+      <p class="text-sm text-muted">Registrate con tu email o con Google en menos de un minuto.</p>
+    </li>
+    <li class="flex flex-col items-start gap-3 border-t border-border pt-8 md:border-l md:border-t-0 md:px-6 md:pt-0" data-reveal>
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" class="h-7 w-7 text-brand" aria-hidden="true">
+        <path d="M9 2v3M7 2v3M5 5h6v3a3 3 0 0 1-6 0V5Z" />
+        <path d="M8 11v3" />
+      </svg>
+      <h3 class="text-lg font-semibold">Conectá tu IOL</h3>
+      <p class="text-sm text-muted">Vinculá tu cuenta de InvertirOnline. Solo lectura, con cifrado AES-256.</p>
+    </li>
+    <li class="flex flex-col items-start gap-3 border-t border-border pt-8 md:border-l md:border-t-0 md:px-6 md:pt-0" data-reveal>
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" class="h-7 w-7 text-brand" aria-hidden="true">
+        <path d="M3 13h10M4 13V9m3 4V6m3 7V8" />
+      </svg>
+      <h3 class="text-lg font-semibold">Controlá todo</h3>
+      <p class="text-sm text-muted">Mirá tu portafolio, cotizaciones, análisis y reportes en un solo lugar.</p>
+    </li>
   </ol>
 </section>

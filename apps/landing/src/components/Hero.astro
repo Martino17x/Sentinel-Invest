@@ -1,35 +1,51 @@
 ---
 import { SITE } from "../data/site";
+import LightboxImage from "./lightbox/LightboxImage.astro";
 ---
 <section class="relative overflow-hidden">
-  <div class="mx-auto max-w-6xl px-4 pb-16 pt-16 sm:px-6 sm:pt-24 lg:px-8">
-    <div class="mx-auto max-w-3xl text-center">
-      <p class="text-sm font-medium uppercase tracking-[0.18em] text-brand" data-reveal>Sentinel Invest</p>
-      <h1 class="mt-4 text-4xl font-semibold tracking-tight sm:text-6xl" data-reveal>
-        Tu cartera de inversiones, <span class="text-brand">controlada</span>.
-      </h1>
-      <p class="mx-auto mt-6 max-w-2xl text-lg text-muted" data-reveal>
-        Conectá tu cuenta de InvertirOnline y mirá tu portafolio, cotizaciones, análisis y reportes en un solo lugar. Solo lectura: nunca ejecutamos órdenes.
-      </p>
-      <div class="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row" data-reveal>
-        <a href={SITE.registerUrl} class="w-full rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 sm:w-auto">
-          Crear cuenta gratis
-        </a>
-        <a href="/funcionalidades" class="w-full rounded-lg border border-border bg-background px-6 py-3 text-sm font-medium transition-colors hover:bg-surface sm:w-auto">
-          Ver funcionalidades
-        </a>
-      </div>
-    </div>
-
-    <div class="mt-16" data-reveal>
-      <div class="relative mx-auto max-w-4xl overflow-hidden rounded-2xl border border-border bg-surface shadow-xl">
-        <div class="flex items-center gap-1.5 border-b border-border bg-background px-4 py-3">
-          <span class="h-3 w-3 rounded-full bg-border" />
-          <span class="h-3 w-3 rounded-full bg-border" />
-          <span class="h-3 w-3 rounded-full bg-border" />
-          <span class="ml-3 text-xs text-muted">app.sentinel — Inicio</span>
+  <div
+    aria-hidden="true"
+    class="pointer-events-none absolute inset-y-0 right-0 hidden w-[55%] lg:block bg-[radial-gradient(60%_60%_at_70%_40%,rgba(11,103,73,0.06),transparent_70%)]"
+  />
+  <div class="mx-auto max-w-7xl px-4 pb-20 pt-16 sm:px-6 sm:pt-24 lg:px-8 lg:pb-28 lg:pt-28">
+    <div class="grid items-center gap-12 lg:grid-cols-12 lg:gap-16">
+      <div class="max-w-2xl lg:col-span-5" data-reveal>
+        <h1 class="text-balance text-4xl font-semibold tracking-tight sm:text-5xl xl:text-6xl">
+          Tu cartera de inversiones, <span class="text-brand">controlada</span>.
+        </h1>
+        <p class="mt-6 text-pretty text-lg leading-relaxed text-muted">
+          Conectá tu cuenta de InvertirOnline y mirá portafolio, cotizaciones, análisis y reportes en un solo lugar. Solo lectura: nunca ejecutamos órdenes.
+        </p>
+        <div class="mt-9 flex flex-wrap items-center gap-3">
+          <a
+            href={SITE.registerUrl}
+            class="rounded-lg bg-brand px-6 py-3 text-sm font-medium text-white transition hover:brightness-110 active:scale-[0.98]"
+          >
+            Crear cuenta gratis
+          </a>
+          <a
+            href="/funcionalidades"
+            class="rounded-lg border border-border bg-background px-6 py-3 text-sm font-medium transition-colors hover:border-foreground/25 hover:bg-surface"
+          >
+            Ver funcionalidades
+          </a>
         </div>
-        <img src="/screens/desktop/inicio.png" alt="Pantalla de inicio de Sentinel con el total valorizado" class="w-full" loading="eager" />
+        <p class="mt-9 text-sm text-muted">Solo lectura · Conectá tu IOL · Sin ejecutar órdenes</p>
+      </div>
+
+      <div class="lg:col-span-7" data-reveal>
+        <div class="rounded-[1.75rem] bg-surface p-2 ring-1 ring-border shadow-[0_24px_80px_-32px_rgba(6,64,40,0.25)]">
+          <div class="overflow-hidden rounded-[1.25rem] border border-border/70 bg-white">
+            <LightboxImage
+              src="/screens/desktop/portfolio.png"
+              alt="Panel de portafolio de Sentinel: total valorizado en pesos, KPIs del día y evolución a 90 días"
+              group="hero"
+              label="Ver en pantalla completa"
+              loading="eager"
+              fit="full"
+            />
+          </div>
+        </div>
       </div>
     </div>
   </div>

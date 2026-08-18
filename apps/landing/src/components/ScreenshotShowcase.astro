@@ -1,35 +1,36 @@
 ---
+import LightboxImage from "./lightbox/LightboxImage.astro";
+
 const desktop = [
-  "/screens/desktop/inicio.png",
-  "/screens/desktop/portfolio.png",
-  "/screens/desktop/operations.png",
-  "/screens/desktop/quotes.png",
-  "/screens/desktop/quote-detail.png",
-  "/screens/desktop/analysis.png",
-  "/screens/desktop/reports.png",
-  "/screens/desktop/agent-connect.png",
-  "/screens/desktop/connect.png",
-  "/screens/desktop/profile.png",
-  "/screens/desktop/login.png",
-  "/screens/desktop/register.png",
+  { src: "/screens/desktop/inicio.png", alt: "Inicio de Sentinel con el total valorizado y el dólar del día" },
+  { src: "/screens/desktop/portfolio.png", alt: "Panel de portafolio con KPIs y evolución a 90 días" },
+  { src: "/screens/desktop/operations.png", alt: "Historial de operaciones" },
+  { src: "/screens/desktop/quotes.png", alt: "Cotizaciones en tiempo real de CEDEARs" },
+  { src: "/screens/desktop/quote-detail.png", alt: "Detalle de cotización con gráfico" },
+  { src: "/screens/desktop/analysis.png", alt: "Análisis técnico con señal compuesta" },
+  { src: "/screens/desktop/reports.png", alt: "Reportes mensuales con TWR y comparativa Merval" },
+  { src: "/screens/desktop/agent-connect.png", alt: "Conexión de agentes de IA vía MCP" },
+  { src: "/screens/desktop/connect.png", alt: "Conexión de cuenta IOL" },
+  { src: "/screens/desktop/profile.png", alt: "Perfil con API keys" },
+  { src: "/screens/desktop/login.png", alt: "Pantalla de ingreso" },
+  { src: "/screens/desktop/register.png", alt: "Pantalla de registro" },
 ];
 
 const mobile = [
-  "/screens/mobile/login.png",
-  "/screens/mobile/inicio.png",
-  "/screens/mobile/portfolio.png",
-  "/screens/mobile/operations.png",
-  "/screens/mobile/quotes.png",
-  "/screens/mobile/quote-detail.png",
-  "/screens/mobile/reports.png",
-  "/screens/mobile/agent-connect.png",
+  { src: "/screens/mobile/login.png", alt: "Ingreso móvil" },
+  { src: "/screens/mobile/inicio.png", alt: "Inicio móvil con el total valorizado" },
+  { src: "/screens/mobile/portfolio.png", alt: "Portafolio móvil" },
+  { src: "/screens/mobile/operations.png", alt: "Operaciones móviles" },
+  { src: "/screens/mobile/quotes.png", alt: "Cotizaciones móviles" },
+  { src: "/screens/mobile/quote-detail.png", alt: "Detalle de cotización móvil" },
+  { src: "/screens/mobile/reports.png", alt: "Reportes móviles" },
+  { src: "/screens/mobile/agent-connect.png", alt: "Agente IA móvil" },
 ];
 ---
-<section class="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
+<section class="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
   <div class="mx-auto max-w-2xl text-center">
-    <p class="text-sm font-medium uppercase tracking-[0.18em] text-brand" data-reveal>Pantallas</p>
-    <h2 class="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl" data-reveal>Así se ve Sentinel</h2>
-    <p class="mt-3 text-muted" data-reveal>Capturas reales de la app con datos de ejemplo.</p>
+    <h2 class="text-balance text-3xl font-semibold tracking-tight sm:text-4xl" data-reveal>Así se ve Sentinel</h2>
+    <p class="mt-3 text-muted" data-reveal>Capturas reales de la app con datos de ejemplo. Tocá para verlas en pantalla completa.</p>
   </div>
 
   <div class="mx-auto mt-10 max-w-md">
@@ -46,15 +47,27 @@ const mobile = [
 
     <div class="hidden pt-10 peer-checked/view-desktop:block">
       <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {desktop.map((src) => (
-          <img src={src} alt="" class="w-full rounded-xl border border-border object-cover object-top shadow-sm" loading="lazy" />
+        {desktop.map((s) => (
+          <LightboxImage
+            src={s.src}
+            alt={s.alt}
+            group="screens-desktop"
+            label="Ampliar captura"
+            class="aspect-[16/10] h-full w-full"
+          />
         ))}
       </div>
     </div>
     <div class="hidden pt-10 peer-checked/view-mobile:block">
       <div class="grid grid-cols-2 gap-5 sm:grid-cols-3">
-        {mobile.map((src) => (
-          <img src={src} alt="" class="w-full rounded-xl border border-border object-cover object-top shadow-sm" loading="lazy" />
+        {mobile.map((s) => (
+          <LightboxImage
+            src={s.src}
+            alt={s.alt}
+            group="screens-mobile"
+            label="Ampliar captura"
+            class="aspect-[9/16] h-full w-full"
+          />
         ))}
       </div>
     </div>

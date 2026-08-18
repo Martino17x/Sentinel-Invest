@@ -41,7 +41,7 @@ export const plans: Plan[] = [
       "Soporte prioritario",
     ],
     cta: "Avisame cuando salga",
-    href: "#",
+    href: "/precios#faq",
     highlighted: true,
   },
 ];
