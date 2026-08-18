@@ -1,6 +1,6 @@
 ---
 import { SITE } from "../data/site";
-import LightboxImage from "./lightbox/LightboxImage.astro";
+import HeroGallery from "./HeroGallery.astro";
 ---
 <section class="relative overflow-hidden">
   <div
@@ -35,16 +35,7 @@ import LightboxImage from "./lightbox/LightboxImage.astro";
 
       <div class="lg:col-span-7" data-reveal>
         <div class="rounded-[1.75rem] bg-surface p-2 ring-1 ring-border shadow-[0_24px_80px_-32px_rgba(6,64,40,0.25)]">
-          <div class="overflow-hidden rounded-[1.25rem] border border-border/70 bg-white">
-            <LightboxImage
-              src="/screens/desktop/portfolio.png"
-              alt="Panel de portafolio de Sentinel: total valorizado en pesos, KPIs del día y evolución a 90 días"
-              group="hero"
-              label="Ver en pantalla completa"
-              loading="eager"
-              fit="full"
-            />
-          </div>
+          <HeroGallery />
         </div>
       </div>
     </div>

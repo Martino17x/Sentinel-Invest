@@ -192,3 +192,6 @@
     transform: none;
   }
 }
+
+/* El foco del stage es gestionado (foco inicial + flechas); no mostrar outline verde */
+.lightbox__stage:focus-visible { outline: none; }
