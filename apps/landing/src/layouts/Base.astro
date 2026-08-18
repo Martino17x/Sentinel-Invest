@@ -4,6 +4,7 @@ import { SITE } from "../data/site";
 import Header from "../components/Header.astro";
 import "../styles/global.css";
 import Footer from "../components/Footer.astro";
+import ImageLightbox from "../components/lightbox/ImageLightbox.astro";
 
 interface Props {
   title?: string;
@@ -44,6 +45,7 @@ const canonical = new URL(Astro.url.pathname, SITE.url).toString();
       <slot />
     </main>
     <Footer />
+    <ImageLightbox />
     <script>
       import gsap from "gsap";
       import { ScrollTrigger } from "gsap/ScrollTrigger";

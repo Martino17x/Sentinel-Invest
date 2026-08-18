@@ -1,0 +1,194 @@
+/* ===== Lightbox: trigger (hover overlay) ===== */
+.lightbox-trigger {
+  cursor: zoom-in;
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lightbox-trigger img {
+  transition: transform 300ms ease-out;
+}
+
+.lightbox-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: color-mix(in oklab, var(--color-foreground) 42%, transparent);
+  color: #fafafa;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  opacity: 0;
+  transition: opacity 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lightbox-trigger:hover .lightbox-overlay {
+    opacity: 1;
+  }
+  .lightbox-trigger:hover img {
+    transform: scale(1.03);
+  }
+}
+.lightbox-trigger:focus-visible .lightbox-overlay {
+  opacity: 1;
+}
+
+/* ===== Dialog ===== */
+.lightbox {
+  border: 0;
+  padding: 0;
+  margin: auto;
+  width: min(94vw, 1500px);
+  max-height: 92vh;
+  background: transparent;
+  color: var(--color-foreground);
+  overflow: visible;
+  overscroll-behavior: contain;
+  opacity: 0;
+  transform: scale(0.96);
+  transition:
+    opacity 260ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.lightbox[open] {
+  display: flex;
+}
+.lightbox.is-open {
+  opacity: 1;
+  transform: none;
+}
+.lightbox.is-closing {
+  opacity: 0;
+  transform: scale(0.97);
+  transition:
+    opacity 170ms cubic-bezier(0.4, 0, 1, 1),
+    transform 170ms cubic-bezier(0.4, 0, 1, 1);
+}
+.lightbox::backdrop {
+  background: rgba(12, 15, 18, 0.72);
+  opacity: 0;
+  transition: opacity 200ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.lightbox.is-open::backdrop {
+  opacity: 1;
+}
+.lightbox.is-closing::backdrop {
+  opacity: 0;
+  transition: opacity 150ms ease-in;
+}
+
+.lightbox__frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.lightbox__stage {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 100%;
+  max-height: 88vh;
+}
+.lightbox__stage img {
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: 0.75rem;
+  background: var(--color-surface);
+  box-shadow: 0 24px 64px -12px rgb(0 0 0 / 0.55);
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.lightbox__caption {
+  color: #fafafa;
+  font-size: 0.875rem;
+  text-align: center;
+}
+.lightbox__counter {
+  color: color-mix(in oklab, #fafafa 70%, transparent);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.lightbox__close {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.1);
+  color: #fafafa;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  cursor: pointer;
+  transition:
+    background-color 160ms ease-out,
+    transform 160ms ease-out;
+}
+.lightbox__close:hover {
+  background: rgb(255 255 255 / 0.2);
+}
+.lightbox__close:active {
+  transform: scale(0.95);
+}
+
+.lightbox__nav {
+  position: fixed;
+  top: 50%;
+  translate: 0 -50%;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.1);
+  color: #fafafa;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  cursor: pointer;
+  transition:
+    background-color 160ms ease-out,
+    transform 160ms ease-out;
+}
+.lightbox__nav:hover {
+  background: rgb(255 255 255 / 0.2);
+}
+.lightbox__nav:active {
+  transform: scale(0.95);
+}
+.lightbox__nav--prev {
+  left: 1rem;
+}
+.lightbox__nav--next {
+  right: 1rem;
+}
+
+/* ===== Reduced motion ===== */
+@media (prefers-reduced-motion: reduce) {
+  .lightbox,
+  .lightbox.is-closing,
+  .lightbox::backdrop,
+  .lightbox.is-closing::backdrop,
+  .lightbox-trigger img {
+    transition: opacity 120ms ease-out;
+    transform: none !important;
+  }
+  .lightbox-trigger:hover img {
+    transform: none;
+  }
+}
