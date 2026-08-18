@@ -64,7 +64,7 @@ router.post("/", async (req: Request, res: Response) => {
       refresh_token?: string;
     };
     refreshToken = tokens.refresh_token ?? null;
-  } catch (err) {
+  } catch (_err) {
     res.status(502).json({
       error: "No se pudo conectar con la API de IOL. Verificá tu conexión a internet.",
     });

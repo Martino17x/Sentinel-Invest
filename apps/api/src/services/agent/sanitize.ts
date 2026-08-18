@@ -9,6 +9,7 @@ export const MAX_TOOL_RESULT_CHARS = 8_000;
 
 /** Control chars \u0000-\u001F (+ DEL) — se eliminan siempre */
 export function stripControlChars(input: string): string {
+  // eslint-disable-next-line no-control-regex
   return input.replace(/[\u0000-\u001F\u007F]/g, "");
 }
 

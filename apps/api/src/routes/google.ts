@@ -176,7 +176,7 @@ router.get("/google/callback", async (req: Request, res: Response) => {
     }
 
     // 4. Firmar nuestros tokens y redirigir al frontend
-    const accessToken = signAccessToken(user.id, user.email);
+    const _accessToken = signAccessToken(user.id, user.email);
     const refreshToken = signRefreshToken(user.id);
     setRefreshCookie(res, refreshToken);
 

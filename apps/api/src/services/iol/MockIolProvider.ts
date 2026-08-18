@@ -167,7 +167,7 @@ export class MockIolProvider implements IolProvider {
     assetType: string,
     page = 1,
     pageSize = 25,
-    q?: string
+    _q?: string
   ): Promise<{ summary: PanelSummary; quotes: PanelQuote[]; total?: number }> {
     await delay(400);
 

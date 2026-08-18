@@ -8,9 +8,7 @@ import {
   signRefreshToken,
   verifyAccessToken,
   verifyRefreshToken,
-  REFRESH_TOKEN_TTL,
 } from "../lib/jwt.js";
-import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
 

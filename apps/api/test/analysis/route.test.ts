@@ -82,7 +82,7 @@ function stubYahoo(handler: (url: string, init?: RequestInit) => Response | Prom
 }
 
 function stubChartOk(symbol = "NVDA"): () => void {
-  return stubYahoo((url, init) => {
+  return stubYahoo((url, _init) => {
     if (url.startsWith("https://fc.yahoo.com")) {
       return new Response("Will be right back", {
         status: 404,

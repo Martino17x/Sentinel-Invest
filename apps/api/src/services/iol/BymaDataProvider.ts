@@ -8,7 +8,6 @@ import type {
   PanelSummary,
   PortfolioSummary,
   PortfolioSnapshotPoint,
-  Position,
   Quote,
 } from "./types.js";
 

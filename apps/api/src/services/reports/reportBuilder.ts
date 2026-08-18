@@ -50,11 +50,6 @@ function startOfLocalDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-/** Inicio del mes local (día 1, 00:00) */
-function startOfLocalMonth(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), 1);
-}
-
 function addMonths(d: Date, months: number): Date {
   return new Date(d.getFullYear(), d.getMonth() + months, 1);
 }
