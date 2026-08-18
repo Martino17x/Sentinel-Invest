@@ -8,6 +8,7 @@ export interface Plan {
   cta: string;
   href: string;
   highlighted: boolean;
+  form?: boolean;
 }
 
 export const plans: Plan[] = [
@@ -43,5 +44,6 @@ export const plans: Plan[] = [
     cta: "Avisame cuando salga",
     href: "/precios#faq",
     highlighted: true,
+    form: true,
   },
 ];
