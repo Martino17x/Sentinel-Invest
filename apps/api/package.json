@@ -11,7 +11,9 @@
     "test": "tsx --test \"test/**/*.test.ts\"",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -37,6 +39,9 @@
     "@types/pg": "^8.15.0",
     "drizzle-kit": "^0.31.10",
     "tsx": "^4.19.0",
-    "typescript": "^5.8.0"
+    "typescript": "^5.8.0",
+    "eslint": "^9.0.0",
+    "@sentinel/eslint-config": "workspace:*",
+    "@sentinel/tsconfig": "workspace:*"
   }
 }

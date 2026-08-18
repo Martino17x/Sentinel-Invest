@@ -1,7 +1,7 @@
 # Reglas de Desarrollo para Agentes — Sentinel
 
 Reglas del proyecto Sentinel (app de control de inversiones en InvertirOnline).
-Stack: Express + Drizzle + Postgres (Docker) + Vite + React + TypeScript + shadcn/ui.
+Stack: Monorepo pnpm + Turborepo — apps/dashboard (React + Vite + TypeScript + shadcn/ui), apps/api (Express + Drizzle + Postgres en Docker), apps/landing (Astro). Gestor de paquetes: pnpm (workspaces + turbo).
 
 ## Operaciones Destructivas y Borrado de Datos (CRÍTICO)
 - **PROHIBIDO** ejecutar cualquier proceso, query SQL o comando de borrado destructivo (`DELETE`, `TRUNCATE`, `DROP TABLE`, `Remove-Item`, etc.) en la base de datos o en el sistema de archivos sin antes informarle al usuario de manera clara, explícita y detallada:
@@ -11,26 +11,26 @@ Stack: Express + Drizzle + Postgres (Docker) + Vite + React + TypeScript + shadc
 - **OBLIGATORIO:** Se debe esperar la aprobación explícita y afirmativa del usuario antes de proceder a la ejecución física de cualquier borrado. No se permiten excepciones bajo ningún supuesto (entornos de pruebas, simulación, local, etc.).
 
 ## Migraciones de Base de Datos (CRÍTICO)
-- Las migraciones se generan con **Drizzle Kit**: `npm run db:generate` (en `server/`) — NUNCA editar a mano una migración ya aplicada.
-- El esquema vive en `server/src/db/schema.ts` (TypeScript). Las migraciones generadas van a `server/drizzle/`.
-- Aplicar con `npm run db:migrate`. La BD local corre en Docker (`docker compose up -d db`, puerto 5433).
+- Las migraciones se generan con **Drizzle Kit**: `pnpm --filter @sentinel/api db:generate` (en `apps/api/`) — NUNCA editar a mano una migración ya aplicada.
+- El esquema vive en `apps/api/src/db/schema.ts` (TypeScript). Las migraciones generadas van a `apps/api/drizzle/`.
+- Aplicar con `pnpm --filter @sentinel/api db:migrate`. La BD local corre en Docker (`docker compose up -d db`, puerto 5433).
 - **PROHIBIDO** editar un archivo de migración ya aplicado. Crear siempre una migración incremental nueva.
 
 ## Seguridad (CRÍTICO)
-- Las credenciales de IOL de los usuarios SIEMPRE cifradas con AES-256-GCM (`server/src/lib/crypto.ts`, clave en `ENCRYPTION_KEY` del `.env`). NUNCA en texto plano.
-- Los secretos viven en `server/.env` (gitignored). NUNCA hardcodear keys/tokens en el código.
+- Las credenciales de IOL de los usuarios SIEMPRE cifradas con AES-256-GCM (`apps/api/src/lib/crypto.ts`, clave en `ENCRYPTION_KEY` del `.env`). NUNCA en texto plano.
+- Los secretos viven en `apps/api/.env` (gitignored). NUNCA hardcodear keys/tokens en el código.
 - El refresh token de IOL se rota y se guarda cifrado en `iol_connections`.
 - La app es SOLO LECTURA sobre la cuenta IOL: nunca ejecuta órdenes de compra/venta.
 - Todo recurso del usuario se filtra por `req.user.id` (multitenant) — nunca exponer datos de otros usuarios.
 
 ## Estandarización de Componentes React (CRÍTICO)
 - **SOLID y SRP obligatorios**: componentes con Responsabilidad Única y patrón Container-Presentational cuando aplique.
-- Lógica de datos/API en `client/src/lib/` (api.ts, contexts). Componentes de UI en `client/src/components/ui/` (shadcn). Páginas en `client/src/pages/`. Componentes de layout en `client/src/components/layout/`.
+- Lógica de datos/API en `apps/dashboard/src/lib/` (api.ts, contexts). Componentes de UI en `apps/dashboard/src/components/ui/` (shadcn). Páginas en `apps/dashboard/src/pages/`. Componentes de layout en `apps/dashboard/src/components/layout/`.
 - **Autocarga de Skills**: al trabajar con componentes React complejos, cargar `react-solid-rules` (`.agents/skills/react-solid-rules/SKILL.md`).
 
 ## Animaciones de UI (CRÍTICO)
 - TODOS los componentes que aparecen/desaparecen (modales, drawers, dropdowns, popovers, tooltips, banners, listas nuevas, acordeones) DEBEN tener animaciones de entrada Y salida.
-- Usar `tw-animate-css` (ya importado en `client/src/index.css`): clases `animate-in`/`animate-out` con `fade-in`/`zoom-in`/`slide-in-from-*` según el caso, SIEMPRE respetando `prefers-reduced-motion` (`motion-reduce:animate-none` / `motion-reduce:transition-none`).
+- Usar `tw-animate-css` (ya importado en `apps/dashboard/src/index.css`): clases `animate-in`/`animate-out` con `fade-in`/`zoom-in`/`slide-in-from-*` según el caso, SIEMPRE respetando `prefers-reduced-motion` (`motion-reduce:animate-none` / `motion-reduce:transition-none`).
 - Acordeones/expansiones: transición de altura con `grid-rows-[0fr]` → `grid-rows-[1fr]` manteniendo el contenido montado (así la salida también anima).
 - Componentes sin animación = bug de UI.
 
@@ -53,7 +53,7 @@ Si el contexto aplica, **CARGAR OBLIGATORIAMENTE la skill ANTES de escribir cód
 - Commits en formato **Conventional Commits** (`feat:`, `fix:`, `refactor:`, `docs:`...). NUNCA agregar atribuciones de IA ("Co-Authored-By").
 
 ## Proveedores de datos (IOL)
-- La app consume la API de InvertirOnline a través del adaptador `IolProvider` (`server/src/services/iol/`).
-- `IOL_PROVIDER=mock|api` y `QUOTE_PROVIDER=iol|byma|auto` en `.env` controlan la fuente de datos.
+- La app consume la API de InvertirOnline a través del adaptador `IolProvider` (`apps/api/src/services/iol/`).
+- `IOL_PROVIDER=mock|api` y `QUOTE_PROVIDER=iol|byma|auto` en `apps/api/.env` controlan la fuente de datos.
 - NUNCA mostrar datos falsos como reales: si un proveedor falla, degradar con estado honesto (badge "Mercado cerrado", mensajes claros) — los mocks son SOLO para desarrollo local.
 - Los endpoints de mercado de IOL pueden estar caídos (500/400); el fallback a BYMADATA (`BymaDataProvider`) es la capa de cotizaciones real.
