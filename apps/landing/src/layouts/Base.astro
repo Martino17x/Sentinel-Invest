@@ -1,11 +1,23 @@
 ---
 import { ClientRouter } from "astro:transitions";
+import { SITE } from "../data/site";
+import Header from "../components/Header.astro";
+import "../styles/global.css";
+import Footer from "../components/Footer.astro";
 
 interface Props {
   title?: string;
+  description?: string;
+  ogImage?: string;
 }
 
-const { title = "Sentinel Invest" } = Astro.props;
+const {
+  title = `${SITE.name} — ${SITE.tagline}`,
+  description = SITE.description,
+  ogImage = SITE.ogImage,
+} = Astro.props;
+
+const canonical = new URL(Astro.url.pathname, SITE.url).toString();
 ---
 <!doctype html>
 <html lang="es">
@@ -13,11 +25,46 @@ const { title = "Sentinel Invest" } = Astro.props;
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title}</title>
-    <meta name="description" content="Sentinel Invest — control de inversiones en InvertirOnline." />
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="canonical" href={canonical} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={new URL(ogImage, SITE.url).toString()} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script is:inline>
+      document.documentElement.classList.add("js");
+    </script>
     <ClientRouter />
-    <link rel="stylesheet" href="/styles/global.css" />
   </head>
-  <body>
-    <slot />
+  <body class="flex min-h-svh flex-col">
+    <Header />
+    <main id="main" transition:animate="fade" class="flex-1">
+      <slot />
+    </main>
+    <Footer />
+    <script>
+      import gsap from "gsap";
+      import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+      gsap.registerPlugin(ScrollTrigger);
+
+      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        gsap.utils.toArray<HTMLElement>("[data-reveal]").forEach((el) => {
+          gsap.fromTo(
+            el,
+            { opacity: 0, y: 24 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.7,
+              ease: "power2.out",
+              scrollTrigger: { trigger: el, start: "top 85%" },
+            }
+          );
+        });
+      }
+    </script>
   </body>
 </html>

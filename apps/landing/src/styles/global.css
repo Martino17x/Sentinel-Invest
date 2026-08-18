@@ -1,46 +1,55 @@
-:root {
-  color-scheme: dark;
-  --bg: #0c0f12;
-  --fg: #f2f5f7;
-  --muted: #8b98a3;
-  --accent: #2ecc9a;
+@import "@fontsource-variable/geist";
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: #ffffff;
+  --color-foreground: #0c0f12;
+  --color-muted: #5b6672;
+  --color-primary: #171717;
+  --color-primary-foreground: #fafafa;
+  --color-surface: #f6f7f8;
+  --color-border: #e5e7eb;
+  --color-brand: #0b6749;
+  --color-brand-dark: #064028;
+  --color-positive: #16a34a;
+  --color-negative: #dc2626;
 }
 
-* {
-  margin: 0;
-  box-sizing: border-box;
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--color-brand) 25%, transparent);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
 }
 
-body {
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  background: var(--bg);
-  color: var(--fg);
-  min-height: 100svh;
-  display: grid;
-  place-items: center;
+/* Reveals GSAP: oculto solo si JS está activo y no hay reduced-motion */
+html.js [data-reveal] {
+  opacity: 0;
 }
 
-.hero {
-  text-align: center;
-  padding: 2rem;
-  max-width: 40rem;
-}
-
-.eyebrow {
-  color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-size: 0.8rem;
-  margin-bottom: 1rem;
-}
-
-h1 {
-  font-size: clamp(2rem, 5vw, 3.5rem);
-  line-height: 1.1;
-  margin-bottom: 1rem;
-}
-
-.lead {
-  color: var(--muted);
-  font-size: 1.125rem;
+@media (prefers-reduced-motion: reduce) {
+  html.js [data-reveal] {
+    opacity: 1;
+    transform: none !important;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

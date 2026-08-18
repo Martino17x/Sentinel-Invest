@@ -1,0 +1,42 @@
+---
+import { SITE } from "../data/site";
+
+const year = new Date().getFullYear();
+---
+<footer class="border-t border-border bg-surface/60" transition:persist>
+  <div class="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
+    <div class="grid gap-10 md:grid-cols-[2fr_1fr_1fr]">
+      <div>
+        <a href="/" class="flex items-center gap-2 font-semibold tracking-tight">
+          <img src="/favicon.svg" alt="" width="24" height="24" class="rounded-md" />
+          {SITE.fullName}
+        </a>
+        <p class="mt-3 max-w-xs text-sm text-muted">{SITE.tagline}</p>
+        <p class="mt-4 text-xs text-muted">
+          Sentinel es solo lectura — no ejecuta operaciones. Los datos provienen de IOL/BYMA y dolarapi.com.
+        </p>
+      </div>
+      <div>
+        <h3 class="text-sm font-semibold">Producto</h3>
+        <ul class="mt-3 space-y-2 text-sm text-muted">
+          <li><a href="/funcionalidades" class="transition-colors hover:text-foreground">Funcionalidades</a></li>
+          <li><a href="/pantallas" class="transition-colors hover:text-foreground">Pantallas</a></li>
+          <li><a href="/agente" class="transition-colors hover:text-foreground">Agente IA</a></li>
+          <li><a href="/precios" class="transition-colors hover:text-foreground">Precios</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="text-sm font-semibold">Compañía</h3>
+        <ul class="mt-3 space-y-2 text-sm text-muted">
+          <li><a href="/seguridad" class="transition-colors hover:text-foreground">Seguridad</a></li>
+          <li><a href="/precios#faq" class="transition-colors hover:text-foreground">Preguntas frecuentes</a></li>
+          <li><a href={SITE.termsUrl} class="transition-colors hover:text-foreground">Términos</a></li>
+          <li><a href={SITE.privacyUrl} class="transition-colors hover:text-foreground">Privacidad</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="mt-10 border-t border-border pt-6 text-xs text-muted">
+      © {year} {SITE.fullName}. Hecho para inversores argentinos.
+    </div>
+  </div>
+</footer>
