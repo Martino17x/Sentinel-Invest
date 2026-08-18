@@ -1,0 +1,36 @@
+---
+import { SITE } from "../data/site";
+---
+<section class="relative overflow-hidden">
+  <div class="mx-auto max-w-6xl px-4 pb-16 pt-16 sm:px-6 sm:pt-24 lg:px-8">
+    <div class="mx-auto max-w-3xl text-center">
+      <p class="text-sm font-medium uppercase tracking-[0.18em] text-brand" data-reveal>Sentinel Invest</p>
+      <h1 class="mt-4 text-4xl font-semibold tracking-tight sm:text-6xl" data-reveal>
+        Tu cartera de inversiones, <span class="text-brand">controlada</span>.
+      </h1>
+      <p class="mx-auto mt-6 max-w-2xl text-lg text-muted" data-reveal>
+        Conectá tu cuenta de InvertirOnline y mirá tu portafolio, cotizaciones, análisis y reportes en un solo lugar. Solo lectura: nunca ejecutamos órdenes.
+      </p>
+      <div class="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row" data-reveal>
+        <a href={SITE.registerUrl} class="w-full rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 sm:w-auto">
+          Crear cuenta gratis
+        </a>
+        <a href="/funcionalidades" class="w-full rounded-lg border border-border bg-background px-6 py-3 text-sm font-medium transition-colors hover:bg-surface sm:w-auto">
+          Ver funcionalidades
+        </a>
+      </div>
+    </div>
+
+    <div class="mt-16" data-reveal>
+      <div class="relative mx-auto max-w-4xl overflow-hidden rounded-2xl border border-border bg-surface shadow-xl">
+        <div class="flex items-center gap-1.5 border-b border-border bg-background px-4 py-3">
+          <span class="h-3 w-3 rounded-full bg-border" />
+          <span class="h-3 w-3 rounded-full bg-border" />
+          <span class="h-3 w-3 rounded-full bg-border" />
+          <span class="ml-3 text-xs text-muted">app.sentinel — Inicio</span>
+        </div>
+        <img src="/screens/desktop/inicio.png" alt="Pantalla de inicio de Sentinel con el total valorizado" class="w-full" loading="eager" />
+      </div>
+    </div>
+  </div>
+</section>

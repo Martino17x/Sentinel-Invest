@@ -1,0 +1,22 @@
+---
+const steps = [
+  { n: "01", title: "Creá tu cuenta", desc: "Registrate con tu email o con Google en menos de un minuto." },
+  { n: "02", title: "Conectá tu IOL", desc: "Vinculá tu cuenta de InvertirOnline. Solo lectura, con cifrado AES-256." },
+  { n: "03", title: "Controlá todo", desc: "Mirá tu portafolio, cotizaciones, análisis y reportes en un solo lugar." },
+];
+---
+<section class="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
+  <div class="mx-auto max-w-2xl text-center">
+    <h2 class="text-3xl font-semibold tracking-tight sm:text-4xl" data-reveal>Empezá en 3 pasos</h2>
+    <p class="mt-3 text-muted" data-reveal>De la cuenta del broker a tu panel en minutos.</p>
+  </div>
+  <ol class="mt-10 grid gap-6 md:grid-cols-3">
+    {steps.map((s) => (
+      <li class="rounded-2xl border border-border bg-background p-6" data-reveal>
+        <span class="text-sm font-semibold text-brand">{s.n}</span>
+        <h3 class="mt-2 text-lg font-semibold">{s.title}</h3>
+        <p class="mt-2 text-sm text-muted">{s.desc}</p>
+      </li>
+    ))}
+  </ol>
+</section>

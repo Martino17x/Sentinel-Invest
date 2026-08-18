@@ -1,0 +1,15 @@
+---
+import { metrics } from "../data/social";
+---
+<section class="border-y border-border bg-surface/60">
+  <div class="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
+    <dl class="grid grid-cols-2 gap-8 md:grid-cols-4" data-reveal>
+      {metrics.map((m) => (
+        <div class="text-center">
+          <dt class="mt-1 order-2 text-sm text-muted">{m.label}</dt>
+          <dd class="order-1 text-2xl font-semibold tracking-tight sm:text-3xl">{m.value}</dd>
+        </div>
+      ))}
+    </dl>
+  </div>
+</section>

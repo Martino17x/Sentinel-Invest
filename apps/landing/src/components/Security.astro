@@ -1,0 +1,33 @@
+---
+const items = [
+  { title: "Solo lectura", desc: "Sentinel nunca ejecuta órdenes de compra o venta. Mirás tus datos, no tocamos tu dinero." },
+  { title: "Cifrado AES-256", desc: "Tus credenciales de IOL se guardan cifradas. Al desconectar, se eliminan de inmediato." },
+  { title: "Vos controlás", desc: "Desconectá tu cuenta cuando quieras. Sin permanencia de datos sensibles." },
+];
+---
+<section class="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
+  <div class="grid items-center gap-10 md:grid-cols-2">
+    <div>
+      <p class="text-sm font-medium uppercase tracking-[0.18em] text-brand" data-reveal>Seguridad</p>
+      <h2 class="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl" data-reveal>Tu dinero, siempre tuyo</h2>
+      <div class="mt-8 space-y-6">
+        {items.map((it) => (
+          <div class="flex gap-4" data-reveal>
+            <span class="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand" aria-hidden="true">✓</span>
+            <div>
+              <h3 class="font-semibold">{it.title}</h3>
+              <p class="mt-1 text-sm text-muted">{it.desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+    <img
+      src="/screens/desktop/connect.png"
+      alt="Pantalla de conexión de cuenta IOL"
+      class="w-full rounded-2xl border border-border object-cover object-top shadow-sm"
+      loading="lazy"
+      data-reveal
+    />
+  </div>
+</section>

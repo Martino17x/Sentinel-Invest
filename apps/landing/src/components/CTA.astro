@@ -1,0 +1,19 @@
+---
+import { SITE } from "../data/site";
+---
+<section class="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
+  <div class="rounded-3xl bg-gradient-to-br from-brand to-brand-dark px-6 py-14 text-center text-white sm:px-12" data-reveal>
+    <h2 class="mx-auto max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">
+      Empezá a controlar tus inversiones hoy
+    </h2>
+    <p class="mx-auto mt-4 max-w-xl text-white/85">Gratis, solo lectura y con tu agente de IA si querés.</p>
+    <div class="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+      <a href={SITE.registerUrl} class="w-full rounded-lg bg-white px-6 py-3 text-sm font-semibold text-brand-dark transition-opacity hover:opacity-90 sm:w-auto">
+        Crear cuenta gratis
+      </a>
+      <a href="/precios" class="w-full rounded-lg border border-white/40 px-6 py-3 text-sm font-medium transition-colors hover:bg-white/10 sm:w-auto">
+        Ver precios
+      </a>
+    </div>
+  </div>
+</section>

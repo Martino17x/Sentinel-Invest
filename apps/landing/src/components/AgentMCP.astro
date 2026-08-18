@@ -1,0 +1,49 @@
+---
+import { agents, tools } from "../data/agents";
+---
+<section class="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
+  <div class="mx-auto max-w-2xl text-center">
+    <p class="text-sm font-medium uppercase tracking-[0.18em] text-brand" data-reveal>Agente IA</p>
+    <h2 class="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl" data-reveal>Tu agente lee tu cartera</h2>
+    <p class="mt-3 text-muted" data-reveal>
+      Conectá tu agente de IA favorito vía MCP y pedile que resuma tu cartera, cotizaciones o el dólar en segundos.
+    </p>
+  </div>
+
+  <img
+    src="/screens/desktop/agent-connect.png"
+    alt="Configuración del agente de IA vía MCP"
+    class="mt-10 w-full rounded-2xl border border-border object-cover object-top shadow-sm"
+    loading="lazy"
+    data-reveal
+  />
+
+  <div class="mt-12 grid gap-6 md:grid-cols-2">
+    <div class="rounded-2xl border border-border bg-background p-6" data-reveal>
+      <h3 class="text-lg font-semibold">Agentes soportados</h3>
+      <ul class="mt-4 space-y-3 text-sm">
+        {agents.map((a) => (
+          <li class="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span class="h-2 w-2 rounded-full bg-brand" aria-hidden="true" />
+            <span class="font-medium text-foreground">{a.name}</span>
+            <span class="text-muted">— {a.description}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+    <div class="rounded-2xl border border-border bg-background p-6" data-reveal>
+      <h3 class="text-lg font-semibold">Herramientas de lectura</h3>
+      <ul class="mt-4 space-y-3 text-sm">
+        {tools.map((t) => (
+          <li class="rounded-lg bg-surface px-3 py-2 font-mono text-[13px]">
+            <span class="text-brand">{t.name}</span>
+            <span class="ml-2 text-muted">— {t.description}</span>
+          </li>
+        ))}
+      </ul>
+      <p class="mt-4 text-xs text-muted">
+        Solo lectura: ninguna herramienta puede operar. La ejecución de órdenes llegará con confirmación humana.
+      </p>
+    </div>
+  </div>
+</section>
