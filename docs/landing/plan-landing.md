@@ -1,68 +1,55 @@
-# Plan: Landing de Sentinel Invest (Astro + View Transitions)
+# Plan: Landing de Sentinel Invest (Astro + View Transitions) — v2 con decisiones confirmadas
 
-> Plan para un agente implementador. Contexto completo en `docs/landing/`: `identidad-visual.md`, `funcionalidades.md`, `screens-analizadas.md`, `resumen.md`, `screenshots/{desktop,mobile}/` (20 capturas sanitizadas) y `analisis/*.txt`. También en Engram (proyecto sentinel-invest): obs de preparativos y obs de skills de animación.
+> Plan para un agente implementador. Contexto en `docs/landing/`: `identidad-visual.md`, `funcionalidades.md`, `screens-analizadas.md`, `resumen.md`, `screenshots/{desktop,mobile}/` (20 capturas sanitizadas, demo cuenta `123456`) y `analisis/*.txt`. También en Engram (proyecto sentinel-invest): obs #4966 (preparativos), #4969 (skills de animación), #4971 (este plan).
 
 ## 1. Contexto y estado actual
 - **Monorepo** pnpm + Turborepo: `apps/{api,dashboard,landing}`, `packages/{tsconfig,eslint-config}`. Rama `codex/landing-page-monorepo`.
 - **`apps/landing`** (placeholder listo): Astro 5.18, `src/layouts/Base.astro` con `<ClientRouter />` (View Transitions), `src/pages/index.astro`, `src/styles/global.css`. Scripts: dev/build/check/lint.
-- **Preparativos listos**: 20 capturas (demo: cuenta `123456`, avatar `UD`) en `docs/landing/screenshots/`; análisis con `C:\Users\Martino\.codex\vision.js` (MiMo V2.5); 4 docs de identidad/funcionalidades/pantallas/resumen.
-- **Dev**: `pnpm dev` → api :3001 (`IOL_PROVIDER=mock`), dashboard :5173, landing :4321; DB en Docker (`docker compose up -d db`). Usuario demo: `demo@sentinel.dev` / `Demo1234!`.
-- **Identidad real** (código + capturas): tipografía **Geist**; theme shadcn neutro light/dark (primary casi negro `oklch(0.205 0 0)`); paleta de charts esmeralda/violeta/azul/ámbar/cyan; verde de marca **Synara** `#0b6749 → #064028`; tono **voseo rioplatense** ("Tu cartera de inversiones, controlada"). Leftovers de template a confirmar: favicon "Z" violeta/cian, `--sidebar-primary` dark azul, ícono `TrendingUp` de lucide como logo.
+- **Preparativos listos**: 20 capturas (demo) en `docs/landing/screenshots/`; análisis con `C:\Users\Martino\.codex\vision.js`; 4 docs de identidad/funcionalidades/pantallas/resumen.
+- **Dev**: `pnpm dev` → api :3001 (`IOL_PROVIDER=mock`), dashboard :5173, landing :4321; DB en Docker. Usuario demo: `demo@sentinel.dev` / `Demo1234!`.
+- **Identidad real**: tipografía **Geist**; theme shadcn neutro light/dark (primary casi negro `oklch(0.205 0 0)`); charts esmeralda/violeta/azul/ámbar/cyan; verde de marca **Synara** `#0b6749 → #064028`; tono voseo rioplatense ("Tu cartera de inversiones, controlada").
 
 ## 2. Objetivo
-Landing pública que venda **Sentinel**: control de inversiones en IOL **solo lectura** (nunca ejecuta órdenes), cotizaciones AR/US en tiempo real, análisis técnico con señal compuesta 0–100, reportes mensuales (TWR + comparativa Merval), dólar del día y **agente IA vía MCP**. Astro + View Transitions, responsive, accesible (WCAG AA), SEO, usando las capturas reales (mock demo) para mostrar el producto.
+Landing pública que venda **Sentinel**: control de inversiones en IOL **solo lectura** (nunca ejecuta órdenes), cotizaciones AR/US en tiempo real, análisis técnico con señal compuesta 0–100, reportes mensuales (TWR + comparativa Merval), dólar del día y **agente IA vía MCP**. **Multipágina** con **View Transitions** (por eso el ClientRouter), responsive, accesible (WCAG AA), SEO, con las capturas reales (mock demo).
 
-## 3. Paso 0 — Skills de animación (instalar, con red/escalado)
-```bash
-npx skills add greensock/gsap-skills --skill gsap-core -a codex --copy -y
-npx skills add greensock/gsap-skills --skill gsap-scrolltrigger -a codex --copy -y
-npx skills add greensock/gsap-skills --skill gsap-timeline -a codex --copy -y
-npx skills add emilkowalski/skills --skill review-animations -a codex --copy -y
-npx skills add emilkowalski/skills --skill animation-vocabulary -a codex --copy -y
-# Opcionales:
-npx skills add lottiefiles/motion-design-skill --skill motion-design -a codex --copy -y
-npx skills add mengto/skills --skill animation-on-scroll -a codex --copy -y
-```
-Ya instaladas que aplican: `gpt-taste` (GSAP Motion), `ui-ux-pro-max` (presets GSAP), `impeccable` (comando `animate`), `astro-framework` (referencia `references/view-transitions.md`), `high-end-visual-design`. **No instalar packs enteros** (saturan contexto). No existe `@astrojs/animation` ni skill "astro-animation" madura → usar VT nativas de Astro + GSAP.
+## 3. Paso 0 — Skills de animación (✅ YA INSTALADAS en `.agents/skills/`)
+`gsap-core`, `gsap-scrolltrigger`, `gsap-timeline` (greensock/gsap-skills); `review-animations`, `animation-vocabulary` (emilkowalski/skills); `motion-design` (lottiefiles/motion-design-skill); `animation-on-scroll` (mengto/skills). Ya estaban: `gpt-taste` (GSAP), `ui-ux-pro-max` (presets GSAP), `impeccable` (animate), `astro-framework` (VT), `high-end-visual-design`. No existe `@astrojs/animation` → **VT nativas de Astro + GSAP**.
 
-## 4. Paso 1 — Confirmar identidad con el usuario (bloqueante leve)
-- **Logo/favicon**: ¿reemplazar la "Z" violeta por un mark propio? Default: mark geométrico **verde** (familia Synara) + wordmark "Sentinel" en Geist.
-- **Paleta de charts vibrante**: mantener (default) o tonarla.
-- **Acento de marca de la landing**: verde Synara (default) sobre base neutra clara (y variante oscura opcional).
+## 4. Decisiones confirmadas (por el usuario)
+- **Estilos: Tailwind v4** en la landing (`@tailwindcss/vite` + `@import "tailwindcss"` + tokens en `@theme`, `--font-sans: Geist`).
+- **Multipágina** con View Transitions (páginas definidas abajo).
+- **Favicon/logo**: usar el **logo de la app** — cuadrado redondeado oscuro (primary `≈ #171717`) con ícono de **línea de tendencia ascendente** (TrendingUp de lucide) en blanco, como el del login. Crear `apps/landing/public/favicon.svg` con ese mark y linkearlo en `<head>`.
+- Skills de animación: instaladas (Paso 0).
 
-## 5. Paso 2 — Estructura (single-page + anchors; default)
-1. **Header** sticky (`transition:persist`): logo + nav (Funcionalidades, Pantallas, IA, Seguridad) + CTAs "Ingresar" / "Crear cuenta".
-2. **Hero**: tagline *"Tu cartera de inversiones, controlada."* + subtítulo (control total, solo lectura, todo en una vista) + CTA primario + mockup con `desktop/inicio.png` (reveal animado).
-3. **Confianza/números**: badges — solo lectura, AES-256, Merval, TWR; o métricas del demo (total ~$907.346, dólar, distribución).
-4. **Funcionalidades** (grid): Portafolio, Operaciones, Cotizaciones AR/US, Análisis con señal técnica, Reportes TWR/Merval, Dólar — card con screenshot chica cada una.
-5. **Showcase de pantallas**: galería desktop + mobile con las capturas sanitizadas (tabs o lightbox simple).
-6. **Agente IA (MCP)**: diferencial — "tu agente lee tu cartera" (Claude Code, Cursor, Codex) + `agent-connect.png`.
-7. **Seguridad**: solo lectura, cifrado AES-256, desconexión total + `connect.png`.
-8. **Cómo funciona**: 3 pasos (Creá tu cuenta → Conectá tu IOL → Controlá todo).
-9. **CTA final + Footer**: Términos/Privacidad apuntando a `/terms` y `/privacy` del dashboard.
+## 5. Estructura multipágina (rutas concretas)
+Layout base `src/layouts/Base.astro` (ya con `<ClientRouter />`): Header sticky (`transition:persist`) + Footer; transiciones `transition:animate="fade"` entre páginas.
 
-## 6. Paso 3 — Implementación técnica (solo `apps/landing`)
-- **Estilos**: **Tailwind v4** (default; `@tailwindcss/vite` en `astro.config.mjs` + `@import "tailwindcss"`) con tokens propios en `@theme` (colores de identidad, `--font-sans: Geist`). Alternativa aceptada: CSS puro con variables (estado actual). **Decidir antes de escribir**.
-- **Componentes** Astro: `Header`, `Hero`, `Features`, `Screenshots`, `AgentMCP`, `Security`, `HowItWorks`, `CTA`, `Footer` (+ primitives si hacen falta).
-- **Animaciones**: VT nativas (`transition:animate="fade"` por sección, `transition:persist` en header); reveals con **GSAP ScrollTrigger** en `<script>` global del layout; micro-interacciones hover en CSS. **Respetar `prefers-reduced-motion`** y reglas anti-slop (sin bounce, sin gradientes púrpura, sin cards genéricas).
-- **Assets**: copiar PNGs de `docs/landing/screenshots/` a `apps/landing/public/screens/`; agregar excepción de gitignore (`!apps/landing/public/screens/`) si se quieren versionar.
-- **Screenshots a usar (default)**: hero → `desktop/inicio`; features → `portfolio`, `operations`, `quotes`, `analysis`, `reports`, `quote-detail`; IA → `agent-connect`; seguridad → `connect`; showcase mobile → `mobile/inicio`, `mobile/quotes`, `mobile/operations`.
+1. **`/` (index)** — Hero: tagline *"Tu cartera de inversiones, controlada."* + subtítulo (control total, solo lectura, todo en una vista) + CTAs "Crear cuenta"/"Ingresar" + mockup `desktop/inicio.png` con reveal. Secciones: "Por qué Sentinel" (badges: solo lectura, AES-256, TWR, Merval) → preview de funcionalidades (3-4 cards con screenshots) → "Cómo funciona" (3 pasos: Creá tu cuenta → Conectá tu IOL → Controlá todo) → CTA final.
+2. **`/funcionalidades`** — Grid completo de features con screenshots: Portafolio (`desktop/portfolio`), Operaciones (`desktop/operations`), Cotizaciones AR/US (`desktop/quotes` + `desktop/quote-detail`), Análisis con señal técnica (`desktop/analysis`), Reportes TWR/Merval (`desktop/reports`), Dólar (`desktop/inicio` sección dólar). Detalle breve de cada una (usar `funcionalidades.md`).
+3. **`/pantallas`** — Galería showcase de capturas: desktop + mobile (tabs o grid), con las 20 capturas sanitizadas (hero: `desktop/inicio`, `mobile/inicio`, etc.).
+4. **`/agente`** — Sección IA/MCP (diferencial): "tu agente lee tu cartera en tiempo real" — agentes soportados (Claude Code, Cursor, Codex, opencode, gemini-cli), tools de lectura (`get_portfolio`, `get_quote`, `search_instruments`, `get_dollar_rates`), API Keys, screenshot `desktop/agent-connect.png`.
+5. **`/seguridad`** — Confianza: solo lectura garantizado, cifrado AES-256, desconexión total, múltiples cuentas; screenshot `desktop/connect.png`.
+6. **Footer (todas)**: enlaces a Términos y Privacidad → `/terms` y `/privacy` del dashboard (`http://localhost:5173/terms`, `/privacy`).
+
+## 6. Implementación técnica (solo `apps/landing`)
+- **Tailwind v4**: instalar `@tailwindcss/vite` y agregar al `astro.config.mjs`; `src/styles/global.css` → `@import "tailwindcss"` + `@theme` con tokens (colores de identidad, `--font-sans: "Geist Variable"` vía `@fontsource-variable/geist`).
+- **Componentes** Astro por sección: `Header.astro`, `Footer.astro`, `Hero.astro`, `Features.astro`, `Screenshots.astro`, `AgentMCP.astro`, `Security.astro`, `HowItWorks.astro`, `CTA.astro`.
+- **Animaciones**: VT nativas (`transition:animate="fade"` en `<main>` por página, `transition:persist` en header/footer); reveals con **GSAP ScrollTrigger** en `<script>` global del layout; micro-interacciones hover CSS. **Respetar `prefers-reduced-motion`** y anti-slop (sin bounce, sin gradientes púrpura, sin cards genéricas — ver `kill-ai-slop`, `impeccable`, `review-animations`).
+- **Favicon**: `apps/landing/public/favicon.svg` (cuadrado redondeado `#171717` + polyline trending-up blanco, estilo lucide TrendingUp) + `<link rel="icon" type="image/svg+xml" href="/favicon.svg" />` en `Base.astro`.
+- **Assets**: copiar PNGs de `docs/landing/screenshots/` a `apps/landing/public/screens/`; excepción de gitignore `!apps/landing/public/screens/` para versionarlas.
 - **Enlaces**: CTAs a `http://localhost:5173/register` y `/login` (reemplazar por URL de prod cuando exista).
-- **SEO**: `<title>` y meta description, Open Graph (`og:image` con una captura), `sitemap.xml`, `robots.txt`, JSON-LD `SoftwareApplication`, `lang="es"`.
+- **SEO**: `<title>`/meta description por página, Open Graph (`og:image` con una captura), `sitemap.xml`, `robots.txt`, JSON-LD `SoftwareApplication`, `lang="es"`.
 
-## 7. Paso 4 — Verificación y calidad
-- `pnpm typecheck && pnpm lint && pnpm test && pnpm build` en verde (turbo, escalado: el binario de turbo no es legible en el sandbox).
-- **Visual QA**: capturar la landing (desktop 1440×900, mobile 390×844) con Playwright MCP → `docs/landing/screenshots/landing/` y revisar con `node C:\Users\Martino\.codex\vision.js <img>`; correr `kill-ai-slop` y `impeccable critique` sobre el HTML/CSS.
+## 7. Verificación y calidad
+- `pnpm typecheck && pnpm lint && pnpm test && pnpm build` en verde (turbo; escalado: el binario de turbo no es legible en el sandbox → `require_escalated`).
+- **Visual QA**: capturar la landing (desktop 1440×900, mobile 390×844) con Playwright MCP → `docs/landing/screenshots/landing/`; revisar con `node C:\Users\Martino\.codex\vision.js <img>`; correr `kill-ai-slop` y `impeccable critique` sobre HTML/CSS.
 - **Accesibilidad**: contraste AA, focus visible, `prefers-reduced-motion`.
-- **Commits** convencionales atómicos (git-commit-rules; `git -c safe.directory='...'`).
+- **Commits** convencionales atómicos (git-commit-rules; `git -c safe.directory='C:/Users/Martino/Documents/PROGRAMACION III/Invertir'`).
 
 ## 8. Criterios de aceptación
-- Landing completa, responsive, con VT + reveals suaves, sin over-animación ni datos reales (solo mock demo).
-- Build/tests verdes. Docs de `docs/landing/` actualizadas si cambia algo.
-- CTAs funcionan y apuntan al dashboard.
+- Landing multipágina completa, responsive, con VT + reveals suaves, sin over-animación ni datos reales (solo mock demo).
+- Favicon con el logo de la app (trending-up). Build/tests verdes. CTAs funcionan y apuntan al dashboard.
 
-## 9. Decisiones pendientes (confirmar con el usuario)
-1. Logo/favicon de la landing (¿mark nuevo verde?).
-2. Tailwind v4 vs CSS puro.
-3. Single-page (default) vs multi-página.
-4. ¿Instalar ya las skills del Paso 0?
+## 9. Decisiones restantes (no bloqueantes)
+- URL de producción para CTAs (cuando exista dominio).
+- ¿Variante dark-mode de la landing? (default: clara, consistente con el dashboard light).
