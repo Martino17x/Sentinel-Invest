@@ -1,0 +1,41 @@
+Aquí tienes un análisis detallado y ordenado de la captura de pantalla de la aplicación **Sentinel** (plataforma de control de inversiones del broker **IOL** en Argentina).
+
+### 1. Textos Visibles
+**Encabezado (Header):**
+*   `Sentinel` (nombre de la app)
+*   `Inicio`, `Portafolio`, `Operaciones`, `Cotizaciones`, `Reportes` (menú principal)
+*   `UT` (iniciales del usuario, en círculo)
+
+**Contenido Principal:**
+*   `Cotizaciones` (título principal)
+*   `Mercado argentino y americano — en tiempo real` (subtítulo/descripción)
+*   `AR Argentina`, `us EEUU` (tabs de selección de mercado)
+*   `CEDEARs`, `Acciones`, `Bonos`, `Obligaciones Neg.`, `Cauciones` (tabs de tipo de activo)
+*   `Panel`, `▲ 0.65%` (indicador de variación del panel), `Actualizado 12:12:46` (timestamp)
+*   `☆ Favoritas`, `🔍 Buscar símbolo — ej: NVDA` (campo de búsqueda)
+
+**Tabla de Datos (CEDEARs Argentina):**
+*   `CEDEARs Argentina`, `10 instrumentos en total` (encabezado de la tabla)
+*   Columnas: `Activo`, `Último`, `Variación`, `Compra`, `Venta`, `Mínimo`, `Máximo`, `Volumen`
+*   Datos de cada fila (ejemplo para `AAPL`):
+    *   `AAPL`, `Cedear Apple Inc`
+    *   `$ 21.450,00`
+    *   `▼ 0.78%` (en rojo)
+    *   `$ 21.440,00`, `$ 21.460,00`, `$ 21.380,00`, `$ 21.650,00`
+    *   `45.1k`
+*   (Se repite la estructura para los activos: `ARKK`, `DIA`, `EEM`, `EWZ`, `MELI`, `NVDA`, `QQQ`)
+
+### 2. Elementos de Interfaz de Usuario (UI)
+*   **Navegación Superior (Top Bar):** Horizontal con logo, menú de texto e íconos, y botón de usuario.
+*   **Tabs de Mercado:** Botones con estilo de pestaña (`AR Argentina` seleccionado con fondo gris claro, `us EEUU` inactivo).
+*   **Tabs de Filtros:** Pestañas horizontales (`CEDEARs` seleccionado con fondo gris claro y texto en negrita).
+*   **Indicador de Panel:** Badge/etiqueta verde con porcentaje.
+*   **Campo de Búsqueda:** Input con ícono de lupa y texto placeholder.
+*   **Botón de Favoritas:** Botón con ícono de estrella vacía.
+*   **Tabla de Datos:**
+    *   **Encabezado de Tabla:** Fila con títulos de columna en negrita.
+    *   **Filas de Datos:** Cada fila contiene un ícono de estrella (para añadir a favoritos), datos textuales y de precio.
+    *   **Indicadores de Variación:** Badges coloridos con íconos de triángulo (▲/▼) y porcentaje.
+*   **Botón de Recarga:** Ícono circular con flechas (esquina superior derecha de la tabla).
+*   **Botón de Chat/Soporte:** Ícono de burbuja de chat (esquina inferior derecha, fijo).
+*   **Scrollbar:** Barra

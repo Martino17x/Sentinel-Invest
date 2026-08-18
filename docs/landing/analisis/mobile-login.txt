@@ -1,0 +1,42 @@
+Aquí tienes el análisis detallado de la captura de pantalla de la app Sentinel (IOL, Argentina):
+
+### 1. Layout General
+*   **Estructura:** Pantalla de login o ingreso.
+*   **Distribución:** Diseño centrado vertical y horizontalmente. La interfaz está contenida dentro de una "card" (tarjeta) con bordes redondeados que cubre la mayor parte del ancho de la pantalla.
+*   **Fondo:** Blanco (fuera de la tarjeta).
+
+### 2. Todos los textos visibles (de arriba a abajo)
+1.  **"Ingresá a Sentinel"** (Título principal, negro, tipografía grande/negrita).
+2.  **"Tu cartera de inversiones, controlada"** (Subtítulo descriptivo, gris claro, tipografía mediana).
+3.  **"Email"** (Etiqueta de campo de entrada, negro, negrita).
+4.  **"vos@ejemplo.com"** (Texto de placeholder dentro del campo de email, gris).
+5.  **"Contraseña"** (Etiqueta de campo de entrada, negro, negrita).
+6.  **"********"** (Máscara de caracteres en el campo de contraseña, puntos negros).
+7.  **"Ingresar"** (Texto del botón principal, blanco, negrita).
+8.  **"o continuá con"** (Texto divisor, gris claro, tipografía pequeña).
+9.  **"Continuar con Google"** (Texto del botón secundario, negro).
+10. **"¿No tenés cuenta? Registrate"** (Texto de registro, gris con "Registrate" en negrita).
+11. **"Al continuar aceptás nuestros Términos y nuestra Política de Privacidad"** (Texto legal inferior, gris, con "Términos" y "Política de Privacidad" subrayados en azul).
+
+### 3. Elementos de UI (Interfaz)
+*   **Ícono/App Branding:** Un cuadrado negro redondeado con un icono de línea de tendencia (trending up) en color blanco, ubicado en la parte superior central de la card.
+*   **Campos de entrada (Inputs):**
+    *   Campo de email (rectángulo con borde gris y esquinas ligeramente redondeadas).
+    *   Campo de contraseña (rectángulo con borde gris y esquinas ligeramente redondeadas).
+*   **Botones (Buttons):**
+    *   **Botón primario:** "Ingresar". Estilo *filled* (relleno), fondo negro, texto blanco, esquinas redondeadas.
+    *   **Botón secundario:** "Continuar con Google". Estilo *outlined* (borde negro, fondo blanco), contiene el logo de Google a la izquierda.
+*   **Enlaces/Textos clickeables:** "Registrate", "Términos", "Política de Privacidad".
+
+### 4. Colores Dominantes (Aproximados)
+*   **Fondo general:** Blanco puro (`#FFFFFF` o similar).
+*   **Fondo de la Card:** Blanco (levemente diferenciado del fondo por su sombra o borde).
+*   **Texto principal (Títulos/Labels):** Negro (`#000000`).
+*   **Texto secundario/Placeholders:** Gris medio (`#666666` o `#888888`).
+*   **Botón primario:** Negro (`#1A1A1A`).
+*   **Bordes:** Gris claro (`#DDDDDD`).
+*   **Enlaces:** Azul oscuro o azul estándar de hipervínculo.
+
+### 5. Estado
+*   **Estado de los campos:** Los campos están **parcialmente completados**. El email tiene un texto de ejemplo (placeholder visible como contenido real) y la contraseña está cubierta por asteriscos (estado de foco o con datos precargados/mascarados).
+*   **Estado de la app:** Es la **pantalla de carga inicial/login**. No se muestran gráficos, tablas, datos de inversiones, menús laterales, tabs ni errores. La interfaz está limpia y en estado estático, esperando una interacción del usuario (tanto el bot

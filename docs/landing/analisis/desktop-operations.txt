@@ -1,0 +1,58 @@
+### 1. **Textos visibles**  
+- **App name**: Sentinel  
+- **Navegación superior**:  
+  - Inicio (icono de casa)  
+  - Portafolio (icono de maletín)  
+  - Operaciones (icono de transacción)  
+  - Cotizaciones (icono de gráfico)  
+  - Reportes (icono de documento)  
+- **Encabezado principal**: Operaciones  
+- **Subtítulo**: Historial completo de tus operaciones en IOL  
+- **Sección de tabla**:  
+  - Título: Historial  
+  - Subtítulo: 5 operaciones registradas  
+  - Encabezados de columna: Fecha, Operación, Símbolo, Cantidad, Precio, Total, Comisión, Estado  
+- **Datos en filas**:  
+  - 5 entradas de operaciones, todas del tipo "Compra" y estado "Aceptada"  
+  - Ejemplo de fila: 02/07/2026, Compra, NVDA, 2, $8.900, $17.800, $27, Aceptada  
+- **Ícono inferior derecho**: Mensaje (para chat o soporte)  
+- **Perfil**: UT (iniciales del usuario)  
+
+
+### 2. **Elementos de UI**  
+- **Navegación**: Barra superior con iconos y texto para Inicio, Portafolio, Operaciones, Cotizaciones, Reportes.  
+- **Cards/Contenedores**:  
+  - Sección "Historial" con borde redondeado y fondo blanco.  
+- **Tabla**:  
+  - Encabezados de columna con texto en negrita.  
+  - Filas alternas (posiblemente con fondo ligeramente diferente para legibilidad).  
+- **Badges/Etiquetas**:  
+  - "Compra" (fondo oscuro, texto blanco).  
+  - "Aceptada" (fondo oscuro, texto blanco).  
+- **Ícono de chat**: Botón flotante en la esquina inferior derecha.  
+
+
+### 3. **Colores dominantes (aproximados)**  
+- **Fondo principal**: Blanco (#FFFFFF).  
+- **Texto principal**: Negro (#000000) o gris oscuro (#333333).  
+- **Badges**: Fondo oscuro (#222222), texto blanco (#FFFFFF).  
+- **Bordes y líneas**: Gris claro (#E0E0E0).  
+
+
+### 4. **Layout**  
+- **Estructura vertical**:  
+  1. Barra de navegación superior fija.  
+  2. Encabezado principal con título y subtítulo.  
+  3. Sección de contenido principal con tabla de operaciones.  
+  4. Ícono flotante en la esquina inferior derecha.  
+- **Alineación**: Texto y tablas alineados a la izquierda.  
+
+
+### 5. **Estado**  
+- **Datos cargados**: La tabla muestra 5 operaciones con información completa (fechas, precios, totales, comisiones y estados).  
+- **Sin errores**: No se observan mensajes de error o estados de carga vacíos.  
+- **Interactividad**: La tabla parece ser estática (solo visualización de historial).  
+
+
+### Resumen  
+La pantalla muestra la sección "Operaciones" de la app Sentinel, con una tabla que lista 5 operaciones de compra aceptadas. La interfaz es limpia, con una barra de navegación clara, tabla bien estructurada y badges para destacar el tipo de operación y estado. Los colores son neutros (blanco, negro, grises) para facilitar la legibilidad de los datos financieros.

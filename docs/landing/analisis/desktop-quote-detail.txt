@@ -1,0 +1,40 @@
+Análisis detallado de la captura de pantalla de la aplicación **Sentinel** (plataforma de control de inversiones de IOL, Argentina):
+
+---
+
+### **1. Textos Visibles (todos los elementos de texto)**
+*   **Barra de navegación superior:**
+    *   "Sentinel" (con un ícono de gráfico a su izquierda).
+    *   Pestañas: "Inicio", "Portafolio", "Operaciones", "Cotizaciones", "Reportes".
+    *   Inicial del usuario: "UT" (esquina superior derecha).
+*   **Encabezado de la vista del activo:**
+    *   Botón de retroceso: "← Cotizaciones /"
+    *   Ticker del activo: **GGAL** (estilo destacado).
+    *   Ícono de estrella (para agregar a favoritos).
+    *   Nombre completo del activo: "Grupo Financiero Galicia".
+*   **Tarjetas de información resumen (3 en fila):**
+    *   **Tarjeta 1:** "Último precio", "$ 9.312,50", "▲ +0,74%".
+    *   **Tarjeta 2:** "Moneda", "ARS", "Instrumento del panel".
+    *   **Tarjeta 3:** "Actualizado", "12:12 a.m.", "Última cotización".
+*   **Botones de acción (esquina superior derecha del área de contenido):**
+    *   "Ver análisis" (con fondo de color claro).
+    *   "BCBA" (con fondo de color claro).
+*   **Sección del gráfico:**
+    *   Título: "Gráfico de precios".
+    *   Subtítulo: "GGAL — histórico reciente".
+    *   Pestañas de vista: "Simplificado" (activa/fondo claro), "TradingView" (inactiva).
+*   **Ejes del gráfico:**
+    *   **Eje Y (Precio):** "$ 10.000,00", "$ 7.500,00", "$ 5.000,00", "$ 2.500,00", "$ 0,00".
+    *   **Eje X (Fecha):** "23-may", "29-may", "03-jun", "08-jun", "13-jun", "18-jun", "23-jun", "28-jun", "03-jul", "08-jul", "13-jul", "18-jul", "23-jul", "28-jul", "02-ago", "07-ago", "12-ago", "18-ago".
+*   **Ícono flotante (esquina inferior derecha):**
+    *   Un ícono de burbuja de chat (posible widget de soporte).
+
+---
+
+### **2. Elementos de UI (Componentes de interfaz)**
+*   **Barra de Navegación:** Menú horizontal en la parte superior con 5 pestañas y un botón de usuario.
+*   **Breadcrumbs / Ruta de navegación:** "← Cotizaciones / GGAL" para contextualizar la ubicación.
+*   **Cards (Tarjetas):** Tres tarjetas de información tipo KPI (Key Performance Indicator) que muestran datos clave del activo.
+*   **Botones (Buttons):** "Ver análisis", "BCBA" y la pestaña "Simplificado" (toggle button).
+*   **Gráfico de Línea (Line Chart):** Gráfico de área con línea y relleno semitransparente, que muestra la evolución del precio en el tiempo.
+*   **E

@@ -1,0 +1,57 @@
+Análisis detallado de la captura de pantalla de la aplicación **Sentinel** (IOL, Argentina):
+
+---
+
+### **1. Textos Visibles (ordenados de arriba a abajo)**
+
+- **Barra superior:**
+    - "Sentinel" (con logo de gráfico ascendente a la izquierda)
+    - "UD" (iniciales del usuario, dentro de un círculo)
+- **Encabezado principal:**
+    - "Operaciones"
+    - Subtítulo: "Historial completo de tus operaciones en IOL"
+- **Sección "Historial":**
+    - "Historial"
+    - Subtítulo: "5 operaciones registradas"
+- **Primera tarjeta de operación (NVDA):**
+    - Fecha: "02/07/2026"
+    - Estado: "Aceptada" (etiqueta verde)
+    - Tipo: "Compra" (etiqueta oscura)
+    - Ticker: "NVDA"
+    - TOTAL: "$ 17.800"
+    - Detalles:
+        - "Cantidad: 2"
+        - "Precio: $ 8.900"
+        - "Comisión: $ 27"
+- **Segunda tarjeta de operación (GD35):**
+    - Fecha: "10/06/2026"
+    - Estado: "Aceptada" (etiqueta verde)
+    - Tipo: "Compra" (etiqueta oscura)
+    - Ticker: "GD35"
+    - TOTAL: "$ 33.150.000"
+    - Detalles:
+        - "Cantidad: 300"
+        - "Precio: $ 110.500" (parcialmente oculto)
+        - "Comisión: $ 49.72" (parcialmente oculto)
+- **Barra de navegación inferior:**
+    - "Inicio" (ícono de casa)
+    - "Portafolio" (ícono de gráfico de barras)
+    - "Cotizaciones" (ícono de gráfico de línea)
+    - "Reportes" (ícono de gráfico circular)
+
+---
+
+### **2. Elementos de UI**
+
+- **Barra superior:** Logo + nombre de app, avatar de usuario.
+- **Navegación hacia atrás:** Flecha izquierda "<" en la parte superior.
+- **Tarjetas de operación:** Cada operación es una tarjeta blanca con bordes suaves, conteniendo fecha, estado, tipo, ticker, total y detalles en lista.
+- **Botones flotantes (FAB):** Botón circular oscuro con icono de chat/mensaje en la esquina inferior derecha.
+- **Barra de navegación inferior (bottom navigation):** 4 elementos (Inicio, Portafolio, Cotizaciones, Reportes) con iconos y texto.
+- **Etiquetas de estado/tipo:** Pequeñas "badges" con color de fondo y texto blanco (verde para "Aceptada", oscuro para "Compra").
+
+---
+
+### **3. Colores Dominantes (aproximados)**
+
+- **Fondo

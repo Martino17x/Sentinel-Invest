@@ -1,0 +1,55 @@
+Una vista detallada de la interfaz de la aplicación **Sentinel** (plataforma de IOL Inversiones en Línea) en su sección de conexión con agentes de IA:
+
+### 1. Textos Visibles (Cabeceras y Descripciones)
+
+*   **Logo/Navegación Principal:** `Sentinel` (con ícono de líneas ascendentes).
+*   **Menú de Navegación Superior:** `Inicio`, `Portafolio`, `Operaciones`, `Cotizaciones`, `Reportes`.
+*   **Título de la Sección:** `Conectá Sentinel con tu Agente`.
+*   **Subtítulo Descriptivo:** `Tu agente de IA puede leer tu cartera y cotizaciones en tiempo real via MCP — configuralo en minutos.`
+*   **Subsección 1:** `Elige tu agente`.
+    *   Texto explicativo: `Sentinel expone un server MCP local con las herramientas de tu cartera.`
+*   **Subsección 2 (Agente de IA):** `Qué puede hacer tu agente`.
+    *   Texto explicativo: `Tools que expone el server MCP de Sentinel. Las de scope read consultan tu cartera y el mercado; place_order quedará disponible para operar con confirmación humana.`
+
+### 2. Elementos de UI (Interfaz de Usuario)
+
+*   **Barra de Navegación Superior:** Botones de texto con íconos a la izquierda (excepto logo). Incluye un avatar/identificador de usuario (`UT`) en el extremo derecho.
+*   **Enlace de Retorno:** `← Volver` en la parte superior izquierda del contenido principal.
+*   **Cards de Agentes (Grid):** Cuatro tarjetas horizontales, cada una con:
+    *   Ícono circular o cuadrado con fondo claro en la esquina superior izquierda.
+    *   Nombre del agente (`Claude Code`, `Cursor`, `opencode`, `Codex`).
+    *   Descripción breve del agente.
+    *   Botón de acción primaria: `Ver configuración`.
+*   **Sección Expandible (Acordeón/Lista):**
+    *   Ícono de llave al lado del título "Qué puede hacer tu agente".
+    *   **Fila 1:** `get_portfolio` (con descripción debajo) y un ícono de despliegue (chevron down) a la derecha.
+    *   **Fila 2:** `get_quote` (con descripción debajo) y chevron down.
+    *   **Fila 3:** `search_instruments` (con descripción debajo) y chevron down.
+    *   **Fila 4:** `get_dollar_rates` (con descripción debajo) y chevron down.
+*   **Botón Flotante:** Un botón circular negro con un ícono de chat/burbuja en la esquina inferior derecha.
+
+### 3. Colores Dominantes (Aproximados)
+
+*   **Fondo Principal:** Blanco puro (`#FFFFFF`).
+*   **Fondo de Tarjetas y Secciones:** Gris muy claro o blanco ligeramente diferenciado (ej: `#F9FAFB` o similar).
+*   **Texto Principal (Títulos):** Negro o gris muy oscuro (`#111827`).
+*   **Texto Secundario (Descripciones):** Gris medio (`#6B7280`).
+*   **Acento/Interacción:** El logo de Sentinel usa un azul oscuro/negro. Los botones "Ver configuración" tienen un borde gris claro y fondo blanco (estilo *ghost* o *outline*).
+*   **Iconografía:** Gris oscuro.
+
+### 4. Layout (Disposición)
+
+*   **Estructura:** Layout de tipo "Dashboard" o "Panel de Configuración".
+*   **Centrado:** El contenido principal está contenido dentro de un contenedor de ancho fijo (container) centrado en la pantalla, con márgenes generosos a los lados.
+*   **Flujo Vertical:**
+    1.  Barra de navegación fija o estática arriba.
+    2.  Vínculo de retorno.
+    3.  Encabezado principal (Título y subtítulo).
+    4.  Sección de selección de agente (Cards dispuestas en una fila de 4 columnas).
+    5.  Sección de documentación de herramientas (Lista vertical de items expandibles).
+*   **Alineación:** Todo el contenido está alineado a la izquierda dentro de su contenedor.
+
+### 5. Estado de la Interfaz
+
+*   **Estado:** **Cargado / Funcional.**
+*   **Justificación:** No hay indicadores

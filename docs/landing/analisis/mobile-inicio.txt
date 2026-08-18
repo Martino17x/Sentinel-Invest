@@ -1,0 +1,52 @@
+Esta es un análisis detallado de la captura de pantalla de la app **Sentinel** (parte de IOL Inversiones Online) en Argentina.
+
+### 1. Textos Visibles (Transcripción)
+
+*   **Header:**
+    *   Sentinel (con un icono de gráfico de línea a la izquierda).
+    *   UD (iniciales del usuario en el avatar).
+*   **Sección "Tu total valorizado":**
+    *   Tu total valorizado.
+    *   ARS (selector de moneda con una flecha hacia abajo).
+    *   **$ 907.346** (Monto principal).
+    *   Icono de ojo (para ocultar/mostrar valores).
+    *   Incluye $14.12 convertidos al dólar bolsa 1,509.60 ($21.316).
+    *   ↗ +$ 2.360,32 (+0.27% hoy) (Variación del día en verde).
+*   **Sección "Disponible para invertir":**
+    *   Disponible para invertir.
+    *   $ (icono circular gris) | Pesos | **$ 14.352,26**.
+    *   us$ (icono circular gris) | Dólares | **$14.12**.
+*   **Botones Centrales:**
+    *   Actividad (con icono de reloj).
+    *   Sincronizar (con icono de flechas circulares).
+*   **Sección "Dólar hoy":**
+    *   Dólar hoy.
+    *   Actualizado 03:55 p.m.
+    *   Oficial | 1.460,00 | **1.510,00**.
+    *   Blue | 1.525,00 | **1.545,00**.
+    *   Bolsa | 1.509,60 | **1.521,60**.
+*   **Barra de Navegación Inferior:**
+    *   Inicio (con icono de casa).
+    *   Portafolio (con icono de edificio/columnas).
+    *   Cotizaciones (con icono de gráfico de línea).
+    *   Reportes (con icono de gráfico de barras).
+
+---
+
+### 2. Elementos de UI (Interfaz de Usuario)
+
+*   **Header:** Barra superior con logo, nombre de la app y avatar de usuario.
+*   **Cards (Tarjetas):** Se utilizan tarjetas con bordes redondeados suaves para separar las secciones principales (Total, Disponible y Dólar).
+*   **Tabs/Navigation Bar:** Barra inferior con 4 opciones de navegación (activa la pestaña "Inicio").
+*   **Botones:** Dos botones grandes e iguales en forma para "Actividad" y "Sincronizar".
+*   **Table Data (Tablas):** La sección "Disponible para invertir" y "Dólar hoy" actúan como tablas simplificadas.
+*   **Badge/Tag:** Selector de moneda "ARS".
+*   **FAB (Floating Action Button):** Botón circular negro con icono de chat en la esquina inferior derecha.
+
+---
+
+### 3. Colores Dominantes (Aproximados)
+
+*   **Fondo:** Gris muy claro o blanco roto (`#F5F5F5` aprox.).
+*   **Fondo de Cards:** Blanco puro (`#FFFFFF`).
+*   **Texto Principal:** Negro o gris oscuro

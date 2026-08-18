@@ -1,0 +1,59 @@
+Análisis detallado de la captura de pantalla de la aplicación Sentinel (login/ingreso):
+
+---
+
+### **1. Textos Visibles (ordenados de arriba a abajo)**
+
+- **Título principal:** "Ingresá a Sentinel"
+- **Subtítulo/Descripción:** "Tu cartera de inversiones, controlada"
+- **Etiqueta de campo 1:** "Email"
+- **Valor/example en campo 1:** "vos@ejemplo.com" (texto de placeholder)
+- **Etiqueta de campo 2:** "Contraseña"
+- **Valor en campo 2:** "••••••••" (máscara de caracteres)
+- **Texto del botón principal:** "Ingresar"
+- **Texto separador:** "o continuá con"
+- **Texto del botón secundario:** "Continuar con Google" (con logo de Google a la izquierda)
+- **Enlace de registro:** "¿No tenés cuenta? **Registrate**" (donde "Registrate" es un enlace)
+- **Aviso legal:** "Al continuar aceptás nuestros **Términos** y nuestra **Política de Privacidad**" (donde "Términos" y "Política de Privacidad" son enlaces)
+
+---
+
+### **2. Elementos de UI (interfaz de usuario)**
+
+- **Logo de la app:** Icono negro con forma de gráfico o flecha ascendente dentro de una esquina redondeada (arriba del título).
+- **Tarjeta (Card):** Contenedor blanco central con bordes redondeados y sombra suave.
+- **Campos de entrada (Inputs):**
+  - Campo de email: rectangular, borde gris claro, fondo blanco.
+  - Campo de contraseña: rectangular, borde gris claro, fondo blanco, con contenido enmascarado.
+- **Botones:**
+  - **Botón primario:** "Ingresar" - rectangular, fondo negro, texto blanco, bordes redondeados, ancho completo dentro de la tarjeta.
+  - **Botón secundario (autenticación social):** "Continuar con Google" - rectangular, fondo blanco, borde gris claro, texto negro, incluye el logo multicolor de Google.
+- **Separadores:** Línea horizontal delgada y gris antes del botón de Google.
+- **Enlaces de texto:** "Registrate", "Términos", "Política de Privacidad" - coloreados en negro, estilo de texto en negrita o subrayado.
+- **Navegación visible:** No hay menú de navegación, barra inferior o pestañas (esta es una pantalla de acceso/ingreso).
+
+---
+
+### **3. Colores Dominantes (Aproximados)**
+
+- **Fondo general:** Blanco puro (#FFFFFF).
+- **Fondo de la tarjeta:** Blanco ligeramente diferenciado, sombra suave (efecto elevación).
+- **Texto principal:** Negro o gris muy oscuro (#000000 o #1A1A1A).
+- **Texto secundario/placeholder:** Gris medio (#999999 o #AAAAAA).
+- **Botón primario:** Negro sólido (#000000) con texto blanco (#FFFFFF).
+- **Bordes de campos y botón secundario:** Gris claro (#E0E0E0 o #CCCCCC).
+- **Enlaces:** Negro (mismo que texto principal), posiblemente con hover o subrayado.
+
+---
+
+### **4. Layout y Estructura**
+
+- **Diseño centrado:** Tarjeta verticalmente y horizontalmente centrada en la pantalla.
+- **Distribución en columna:** Todos los elementos apilados verticalmente dentro de la tarjeta (logo, títulos, campos, botones, enlaces).
+- **Espaciado consistente:** Margen interno uniforme (padding) en la tarjeta, espacio generoso entre campos y botones.
+- **Jerarquía visual:** Título grande y negrita, subtítulo más pequeño, campos etiquetados, botón de acción destacado, opciones secundarias en menor tamaño.
+- **Responsividad:** El ancho de la tarjeta parece fijo o con máximo definido (aproximadamente 350-400px de ancho).
+
+---
+
+### **5. Estado

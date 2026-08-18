@@ -1,0 +1,23 @@
+Esta captura corresponde a la pantalla de configuración o integración de la app **Sentinel** (para inversión en IOL, Argentina), específicamente la sección para conectar asistentes de IA basados en el protocolo MCP (Model Context Protocol).
+
+Aquí tienes el análisis detallado:
+
+### 1. Textos Visibles (De arriba a abajo)
+
+*   **Barra superior:** "Sentinel" (junto al logo de onda), "UD" (iniciales de perfil de usuario).
+*   **Encabezado principal:** "Conectá Sentinel con tu Agente".
+*   **Subtítulo descriptivo:** "Tu agente de IA puede leer tu cartera y cotizaciones en tiempo real via MCP — configuralo en minutos."
+*   **Encabezado de sección:** "Elige tu agente".
+*   **Descripción de sección:** "Sentinel expone un server MCP local con las herramientas de tu cartera."
+*   **Tarjeta 1 (Claude Code):**
+    *   Título: "Claude Code".
+    *   Subtítulo: "Agente de Anthropic para tu terminal".
+    *   Botón: "Ver configuración".
+*   **Tarjeta 2 (Cursor):**
+    *   Título: "Cursor".
+    *   Subtítulo: "Editor de código con IA integrada".
+    *   Botón: "Ver configuración".
+*   **Tarjeta 3 (Parcialmente visible):**
+    *   Icono de consola.
+    *   Texto visible: "gemini-cli" (cortado por el final de la pantalla).
+*   **Navegación

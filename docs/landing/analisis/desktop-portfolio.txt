@@ -1,0 +1,25 @@
+La pantalla que muestras es un **panel de control o "dashboard"** de una aplicación financiera o de inversión llamada **Sentinel**. Aquí tienes una descripción detallada:
+
+### 1. Barra de Navegación Superior (Header)
+*   **Texto:** A la izquierda, el logo y nombre "Sentinel". En el centro, los menús: "Inicio", "Portafolio", "Operaciones", "Cotizaciones", "Reportes". A la derecha, las siglas "UD" dentro de un círculo (probablemente el avatar del usuario).
+*   **Iconos:** Cada menú tiene un pequeño icono a su izquierda (casa, carpeta, etc.).
+*   **Fondo:** Blanco con una línea divisoria sutil inferior.
+*   **Estado:** El menú "Inicio" parece tener el foco actual o es la página activa.
+
+### 2. Título y Cuenta
+*   **Texto:** Un encabezado grande y en negrita "Panel", seguido de un subtexto "Cuenta 123456 — resumen de tu cartera".
+*   **Layout:** Alineado a la izquierda, sirviendo como introducción al contenido.
+
+### 3. Tarjetas de Métricas Principales (KPIs)
+Estas son cuatro tarjetas horizontales situadas debajo del título:
+*   **Ganancia / Pérdida:** Muestra "$ 111.114,78" con un porcentaje "15.53%" en color **verde** (indicando ganancia) y un cambio diario "+0.27% hoy" también en verde.
+*   **Activos valorizados:** Muestra "$ 871.678,20" y el subtítulo "Solo posiciones en ARS". Icono de edificio bancario.
+*   **Disponible ARS:** "$ 14.352,26" con texto "Disponible para operar". Icono de billetera.
+*   **Disponible USD:** "$14.12" con texto "Disponible para operar". Icono de moneda.
+*   **Colores:** Fondo blanco, bordes grises sutiles, texto principal en negro, valores monetarios en negrita.
+
+### 4. Sección de Gráficos (Layout en dos columnas)
+Debajo de las tarjetas hay un área dividida en dos paneles principales:
+
+*   **Evolución del valor (Izquierda):**
+    *   **Gráfico de área/linea:** Muestra una tendencia creciente con una línea verde y relleno verde claro transl

@@ -1,0 +1,34 @@
+**Análisis de la captura de pantalla de la app Sentinel (IOL, Argentina)**
+
+---
+
+### **1. Textos visibles**
+
+| Ubicación | Texto |
+|-----------|-------|
+| **Barra superior izquierda** | "Sentinel" (con ícono de línea de tendencia). |
+| **Barra superior derecha** | "UD" (iniciales del usuario, avatar circular). |
+| **Ícono retroceso** | Flecha hacia la izquierda (<). |
+| **Título principal** | "Cotizaciones". |
+| **Subtítulo** | "Mercado argentino y americano — en tiempo real". |
+| **Indicador en vivo** | "⚡ En tiempo real". |
+| **Pestañas de mercado** | "AR Argentina", "US EEUU". |
+| **Pestañas de tipo de instrumento** | "CEDEARs", "Acciones", "Bonos", "Obligaciones Neg." (cortado). |
+| **Indicador de panel** | "Panel" (con ícono de filtros), "▲ 0.65%", "Actualizado 12:14:48". |
+| **Filtros y búsqueda** | "★ Favoritas", "Buscar símbolo — ej: NVD". |
+| **Título de tabla** | "CEDEARs Argentina", "10 instrumentos en total" (con ícono de recarga circular). |
+| **Fila de instrumento (ejemplo AAPL)** | "★ AAPL", "Cedear Apple Inc", "$ 21.450,00", "▼ 0.78%" (en rojo). |
+| **Detalles de precio** | "COMPRA", "$ 21.440,00", "VENTA", "$ 21.460,00". |
+| **Estadísticas del día** | "Mínimo del día", "$ 21.380,00", "Máximo del día", "$ 21.650,00", "Volumen", "45.1...". |
+| **Ícono flotante** | Ícono de chat/burbuja (abajo a la derecha). |
+| **Navegación inferior** | "Inicio" (ícono casa), "Portafolio" (ícono gráfico de barras), "Cotizaciones" (ícono gráfico de líneas, **activa**), "Reportes" (ícono gráfico de velas). |
+
+---
+
+### **2. Elementos de UI (Interfaz de Usuario)**
+
+| Elemento | Tipo | Descripción |
+|----------|------|-------------|
+| **Barra de navegación superior** | Barra de herramientas | Contiene nombre de app, avatar de usuario y botón de retroceso. |
+| **Pestañas de mercado (AR/US)** | Botón de segmentación | Selecciona entre mercado argentino (seleccionado) o estadounidense. |
+| **Pestañas de instrumentos (CEDE
