@@ -65,6 +65,7 @@ export function initLightbox(): void {
 
     if (!dialogEl.open) {
       dialogEl.showModal();
+      document.body.style.overflow = "hidden"; // scroll lock del fondo
       requestAnimationFrame(() => dialogEl.classList.add("is-open"));
     }
     stageEl.focus({ preventScroll: true });
@@ -95,6 +96,7 @@ export function initLightbox(): void {
       if (done) return;
       done = true;
       dialogEl.close();
+      document.body.style.overflow = "";
       dialogEl.classList.remove("is-closing");
       closing = false;
       lastTrigger?.focus({ preventScroll: true });
@@ -141,6 +143,7 @@ export function initLightbox(): void {
   document.addEventListener("astro:before-swap", () => {
     if (dialogEl.open) {
       dialogEl.close();
+      document.body.style.overflow = "";
       dialogEl.classList.remove("is-open", "is-closing");
       closing = false;
     }
