@@ -4,7 +4,7 @@ import { SITE } from "../data/site";
 import { homeFeatures } from "../data/features";
 import Hero from "../components/Hero.astro";
 import SocialProof from "../components/SocialProof.astro";
-import Features from "../components/Features.astro";
+import FeatureGallery from "../components/FeatureGallery.astro";
 import Testimonials from "../components/Testimonials.astro";
 import HowItWorks from "../components/HowItWorks.astro";
 import CTA from "../components/CTA.astro";
@@ -22,7 +22,7 @@ const jsonLd = {
 <Base>
   <Hero />
   <SocialProof />
-  <Features
+  <FeatureGallery
     items={homeFeatures}
     title="Lo esencial de tu cartera"
     subtitle="Portafolio, análisis, reportes y tu agente de IA."
