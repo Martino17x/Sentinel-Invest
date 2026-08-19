@@ -2,6 +2,7 @@ import { and, asc, eq, gte, lt } from "drizzle-orm";
 import { db, schema } from "../../db/index.js";
 import type { IolProvider } from "../iol/IolProvider.js";
 import { fetchChart } from "../market/yahoo.js";
+import { addArtDays, artDateKeyFromUtc, artStartOfDay } from "./art-time.js";
 import type {
   IolCredentials,
   MonthClose,
@@ -31,34 +32,34 @@ import type {
 // ============================================================
 
 // ============================================================
-// HELPERS DE FECHA — TODO en fecha LOCAL del server (UTC-3 Argentina)
+// HELPERS DE FECHA — SIEMPRE en hora ART (UTC-3 fijo) vía art-time.
+// El server puede correr en UTC: el día contable es el de Argentina
+// (PREREQ-1). Los snapshots se persisten en la medianoche ART como
+// instante UTC (artStartOfDay), nunca en hora local del server.
 // ============================================================
 
-function toLocalDateKey(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
 function toLocalMonthKey(d: Date): string {
-  return toLocalDateKey(d).slice(0, 7);
+  return artDateKeyFromUtc(d).slice(0, 7);
 }
 
-/** Inicio del día local (00:00) */
-function startOfLocalDay(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+/** Primer instante del mes ART ("YYYY-MM-01T03:00:00Z") */
+function startOfMonthArt(month: string): Date {
+  return new Date(`${month}-01T03:00:00Z`);
 }
 
-function addMonths(d: Date, months: number): Date {
-  return new Date(d.getFullYear(), d.getMonth() + months, 1);
+/** Mes ART desplazado en `delta` meses ("YYYY-MM") */
+function shiftMonthKey(month: string, delta: number): string {
+  const [year, mon] = month.split("-").map(Number);
+  const d = new Date(Date.UTC(year, mon - 1, 1));
+  d.setUTCMonth(d.getUTCMonth() + delta);
+  return d.toISOString().slice(0, 7);
 }
 
 // ============================================================
 // TIPO INTERNO DE SNAPSHOT (numeric → string en drizzle)
 // ============================================================
 
-type SnapshotRow = typeof schema.portfolioSnapshots.$inferSelect;
+export type SnapshotRow = typeof schema.portfolioSnapshots.$inferSelect;
 
 function snapNumber(s: SnapshotRow, field: "totalValue" | "totalValueUsd" | "cash" | "cashArs" | "cashUsd" | "positionsValue" | "unrealizedGain" | "dayChangePct"): number {
   return Number(s[field] ?? 0);
@@ -134,18 +135,29 @@ function pctBetween(a: number | null, b: number | null): number {
 }
 
 // ============================================================
-// SNAPSHOT SYNC — un snapshot por día local por cuenta
+// SNAPSHOT SYNC — un snapshot por día ART por cuenta
 // ============================================================
 
+export type SnapshotSource = "real" | "reconstructed";
+
 /**
- * Inserta el snapshot del día si todavía no existe para la cuenta.
- * Idempotente por construcción: capturedAt = medianoche LOCAL del día,
- * con ON CONFLICT DO NOTHING contra el unique(account_id, captured_at).
- * El primero del día vale — no se actualiza.
+ * Inserta el snapshot del día si todavía no existe para la cuenta,
+ * junto con la composición (snapshot_positions) del portafolio.
+ * Idempotente por construcción: capturedAt = medianoche ART del día
+ * (artStartOfDay), con ON CONFLICT DO NOTHING contra el
+ * unique(account_id, captured_at). El primero del día vale.
+ *
+ * source: 'real' (captura IOL/cron) por defecto; 'reconstructed'
+ * (backfill) lo pasa el backfillService.
  */
-export async function saveDailySnapshot(accountId: string, portfolio: PortfolioSummary): Promise<boolean> {
-  const todayStart = startOfLocalDay(new Date());
-  const tomorrow = new Date(todayStart.getFullYear(), todayStart.getMonth(), todayStart.getDate() + 1);
+export async function saveDailySnapshot(
+  accountId: string,
+  portfolio: PortfolioSummary,
+  opts: { source?: SnapshotSource } = {}
+): Promise<boolean> {
+  const source = opts.source ?? "real";
+  const todayStart = artStartOfDay(new Date());
+  const tomorrow = addArtDays(todayStart, 1);
 
   const [existing] = await db
     .select({ id: schema.portfolioSnapshots.id })
@@ -161,7 +173,7 @@ export async function saveDailySnapshot(accountId: string, portfolio: PortfolioS
 
   if (existing) return false;
 
-  await db
+  const [inserted] = await db
     .insert(schema.portfolioSnapshots)
     .values({
       accountId,
@@ -174,9 +186,33 @@ export async function saveDailySnapshot(accountId: string, portfolio: PortfolioS
       unrealizedGain: String(portfolio.gainLossArs),
       dayChangePct: String(portfolio.dayChangePct),
       currency: "ARS",
+      source,
       capturedAt: todayStart,
     })
-    .onConflictDoNothing();
+    .onConflictDoNothing()
+    .returning({ id: schema.portfolioSnapshots.id });
+
+  if (!inserted) return false;
+
+  // Composición del día — la materia prima de la contribución por activo
+  if (portfolio.positions.length > 0) {
+    await db
+      .insert(schema.snapshotPositions)
+      .values(
+        portfolio.positions.map((p) => ({
+          snapshotId: inserted.id,
+          symbol: p.symbol,
+          market: p.market,
+          assetType: p.assetType,
+          quantity: String(p.quantity),
+          avgPrice: p.avgPrice != null ? String(p.avgPrice) : null,
+          lastPrice: p.lastPrice != null ? String(p.lastPrice) : null,
+          totalValue: String(p.totalValue),
+          currency: p.currency,
+        }))
+      )
+      .onConflictDoNothing();
+  }
 
   return true;
 }
@@ -272,8 +308,7 @@ export async function buildMonthlyCloses(
 
   const closes: MonthClose[] = [];
   for (const [monthKey, list] of byMonth) {
-    const [year, mon] = monthKey.split("-").map(Number);
-    const monthStart = new Date(year, mon - 1, 1);
+    const monthStart = startOfMonthArt(monthKey);
 
     const emvSnap = list[list.length - 1];
     const emv = snapNumber(emvSnap, "totalValue");
@@ -318,9 +353,9 @@ export async function buildMonthlyReport(
     throw new Error(`Mes inválido: ${month}`);
   }
 
-  const monthStart = new Date(year, mon - 1, 1);
-  const monthEnd = new Date(year, mon, 1);
-  const prevMonthStart = addMonths(monthStart, -1);
+  const monthStart = startOfMonthArt(month);
+  const monthEnd = startOfMonthArt(shiftMonthKey(month, 1));
+  const prevMonthStart = startOfMonthArt(shiftMonthKey(month, -1));
 
   const monthSnaps = await getSnapshotsInRange(accountId, monthStart, monthEnd);
   if (monthSnaps.length === 0) {
@@ -389,7 +424,7 @@ export async function buildMonthlyReport(
     const curr = snapNumber(monthSnaps[i], "totalValue");
     if (prev === 0) continue;
     const pct = ((curr - prev) / prev) * 100;
-    const point = { date: toLocalDateKey(monthSnaps[i].capturedAt), pct };
+    const point = { date: artDateKeyFromUtc(monthSnaps[i].capturedAt), pct };
     if (!bestDay || pct > bestDay.pct) bestDay = point;
     if (!worstDay || pct < worstDay.pct) worstDay = point;
   }
@@ -398,13 +433,13 @@ export async function buildMonthlyReport(
   const [merval, fx] = await Promise.all([fetchYahooDaily(MERVAL_SYMBOL), fetchYahooDaily(FX_SYMBOL)]);
 
   // Series: valor diario + benchmark normalizado a base 1000
-  const firstDate = toLocalDateKey(firstSnap.capturedAt);
-  const lastDate = toLocalDateKey(lastSnap.capturedAt);
+  const firstDate = artDateKeyFromUtc(firstSnap.capturedAt);
+  const lastDate = artDateKeyFromUtc(lastSnap.capturedAt);
   const mervalBase = closeNearest(merval, firstDate);
 
   let mervalCarry: number | null = null;
   const series = monthSnaps.map((s) => {
-    const date = toLocalDateKey(s.capturedAt);
+    const date = artDateKeyFromUtc(s.capturedAt);
     const close = merval.find((p) => p.date === date)?.close;
     if (close != null) mervalCarry = close;
     const benchmark = mervalBase && (mervalCarry ?? mervalBase) > 0
@@ -418,13 +453,13 @@ export async function buildMonthlyReport(
   });
 
   // Variación % del Merval entre el día previo al mes y el último día con snapshot
-  const prevDay = new Date(monthStart.getFullYear(), monthStart.getMonth(), 0);
-  const mervalStart = closeOnOrBefore(merval, toLocalDateKey(prevDay));
+  const prevDayKey = artDateKeyFromUtc(addArtDays(monthStart, -1));
+  const mervalStart = closeOnOrBefore(merval, prevDayKey);
   const mervalEnd = closeOnOrBefore(merval, lastDate);
   const benchmarkPct = pctBetween(mervalStart, mervalEnd);
 
   // Variación % del dólar oficial en el mismo rango
-  const fxStart = closeOnOrBefore(fx, toLocalDateKey(prevDay));
+  const fxStart = closeOnOrBefore(fx, prevDayKey);
   const fxEnd = closeOnOrBefore(fx, lastDate);
   const fxChangePct = pctBetween(fxStart, fxEnd);
 
@@ -456,4 +491,91 @@ export async function buildMonthlyReport(
     fxChangePct,
     series,
   };
+}
+
+// ============================================================
+// MONTH CALENDAR — grid mensual con datos honestos por día
+// (F2, contrato GET /api/portfolio/calendar/:month)
+//
+// Puro: recibe los snapshots del mes y el conteo de movimientos
+// por día (Map dateKey → count); no toca la BD.
+// TODOS los días del mes salen en `days`; los que no tienen
+// snapshot quedan con campos null — NUNCA inventar datos
+// (F1-R4/F2-R3). dayChangePct viene del snapshot almacenado
+// (misma lectura que /series); bestDay/worstDay usan la misma
+// variación día a día que buildMonthlyReport.
+// ============================================================
+
+export interface CalendarDayData {
+  date: string; // YYYY-MM-DD
+  totalValue: number | null;
+  dayChangePct: number | null;
+  source: SnapshotSource | null;
+  cashArs: number | null;
+  cashUsd: number | null;
+  movementCount: number;
+}
+
+export interface MonthCalendar {
+  month: string;
+  days: CalendarDayData[];
+  bestDay: { date: string; pct: number } | null;
+  worstDay: { date: string; pct: number } | null;
+  monthReturn: number | null;
+}
+
+/** Cantidad de días del mes "YYYY-MM" (1-31). */
+function daysInMonth(month: string): number {
+  const [year, mon] = month.split("-").map(Number);
+  // día 0 del mes siguiente = último día del mes pedido
+  return new Date(Date.UTC(year, mon, 0)).getUTCDate();
+}
+
+export function buildMonthCalendar(
+  month: string,
+  snapshots: SnapshotRow[],
+  movementCountByDate: Map<string, number> = new Map()
+): MonthCalendar {
+  const byDate = new Map(snapshots.map((s) => [artDateKeyFromUtc(s.capturedAt), s]));
+
+  const days: CalendarDayData[] = [];
+  for (let day = 1; day <= daysInMonth(month); day++) {
+    const date = `${month}-${String(day).padStart(2, "0")}`;
+    const snap = byDate.get(date);
+    days.push({
+      date,
+      totalValue: snap != null ? snapNumber(snap, "totalValue") : null,
+      dayChangePct: snap != null ? snapNumber(snap, "dayChangePct") : null,
+      source: snap?.source === "real" || snap?.source === "reconstructed" ? snap.source : null,
+      cashArs: snap != null ? snapNumber(snap, "cashArs") : null,
+      cashUsd: snap != null ? snapNumber(snap, "cashUsd") : null,
+      movementCount: movementCountByDate.get(date) ?? 0,
+    });
+  }
+
+  // Mejor/peor día: variación día a día entre snapshots del mes
+  // (mismo algoritmo que buildMonthlyReport, reportBuilder.ts:420)
+  let bestDay: MonthCalendar["bestDay"] = null;
+  let worstDay: MonthCalendar["worstDay"] = null;
+  for (let i = 1; i < snapshots.length; i++) {
+    const prev = snapNumber(snapshots[i - 1], "totalValue");
+    const curr = snapNumber(snapshots[i], "totalValue");
+    if (prev === 0) continue;
+    const pct = ((curr - prev) / prev) * 100;
+    const point = { date: artDateKeyFromUtc(snapshots[i].capturedAt), pct };
+    if (!bestDay || pct > bestDay.pct) bestDay = point;
+    if (!worstDay || pct < worstDay.pct) worstDay = point;
+  }
+
+  // Retorno del mes: primer → último snapshot (misma convención que
+  // grossChangePct del reporte mensual). null si no hay 2 snapshots.
+  const monthReturn =
+    snapshots.length >= 2
+      ? (snapNumber(snapshots[snapshots.length - 1], "totalValue") /
+          snapNumber(snapshots[0], "totalValue") -
+          1) *
+        100
+      : null;
+
+  return { month, days, bestDay, worstDay, monthReturn };
 }
