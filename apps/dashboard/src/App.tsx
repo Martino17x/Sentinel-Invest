@@ -13,6 +13,9 @@ import { DashboardPage } from "@/pages/DashboardPage";
 import { OperationsPage } from "@/pages/OperationsPage";
 import { QuotesPage } from "@/pages/QuotesPage";
 import { QuoteDetailPage } from "@/pages/QuoteDetailPage";
+import { ScreenerPage } from "@/pages/ScreenerPage";
+import { NewsPage } from "@/pages/NewsPage";
+import { NewsDetailPage } from "@/pages/NewsDetailPage";
 import { StockAnalysisPage } from "@/pages/StockAnalysisPage";
 import { ReportsPage } from "@/pages/ReportsPage";
 import { PrivacyPage } from "@/pages/PrivacyPage";
@@ -48,7 +51,9 @@ function ProtectedLayout() {
   // - Desktop (md+): solo en páginas secundarias (perfil, conectar IOL)
   // - Mobile (<md): en todas las demás páginas
   const hasOwnNav =
-    pathname.startsWith("/quotes/") || pathname.startsWith("/analysis/");
+    pathname.startsWith("/quotes/") ||
+    pathname.startsWith("/analysis/") ||
+    pathname.startsWith("/news/");
   const isSecondary = pathname === "/profile" || pathname === "/connect" || pathname === "/agent-connect";
   const showBack = pathname !== "/inicio" && pathname !== "/portfolio" && !hasOwnNav;
   const backClasses = cn(!isSecondary && "md:hidden"); // en desktop se oculta si no es página secundaria
@@ -119,6 +124,9 @@ function App() {
             <Route path="/operar/fci" element={<OperarFciPage />} />
             <Route path="/quotes" element={<QuotesPage />} />
             <Route path="/quotes/:symbol" element={<QuoteDetailPage />} />
+            <Route path="/screener" element={<ScreenerPage />} />
+            <Route path="/news" element={<NewsPage />} />
+            <Route path="/news/:newsId" element={<NewsDetailPage />} />
             <Route path="/analysis/:symbol" element={<StockAnalysisPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/connect" element={<ConnectIolPage />} />

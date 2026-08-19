@@ -8,6 +8,7 @@ import { AvailableCard } from "@/components/home/AvailableCard";
 import { QuickActions } from "@/components/home/QuickActions";
 import { InvestmentsDonut } from "@/components/home/InvestmentsDonut";
 import { DolarCard } from "@/components/home/DolarCard";
+import { NewsWidget } from "@/components/home/NewsWidget";
 
 /**
  * Página INICIO — experiencia estilo home de la app IOL (mobile-first):
@@ -122,6 +123,9 @@ export function HomePage() {
           loading={false}
         />
       </div>
+
+      {/* Noticias — widget compacto (D.5), no domina el home */}
+      <NewsWidget />
 
       {/* Footer legal sutil */}
       <p className="pt-2 text-center text-xs text-muted-foreground">

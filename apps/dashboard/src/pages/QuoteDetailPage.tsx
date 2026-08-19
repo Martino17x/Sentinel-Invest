@@ -7,11 +7,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TradingViewWidget, tradingViewSymbol } from "@/components/ui/tradingview-widget";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { quotesApi } from "@/lib/api";
+import { analysisApi, quotesApi, type AnalysisMarket } from "@/lib/api";
 import { useApiData } from "@/hooks/useApiData";
+import { ConsensusTab } from "@/components/analysis/ConsensusTab";
+import { FundamentalsTab } from "@/components/analysis/FundamentalsTab";
+import { NewsTab } from "@/components/analysis/NewsTab";
 
 const formatterARS = new Intl.NumberFormat("es-AR", {
   style: "currency",
@@ -56,6 +59,28 @@ export function QuoteDetailPage() {
 
   const quote = data?.quote ?? null;
   const history = data?.history ?? [];
+
+  const mappedInsightsMarket: AnalysisMarket | null = (() => {
+    if (!quote) return null;
+    const m = quote.market?.toLowerCase();
+    if (m === "bcba" || m === "bonds") return "bcba";
+    if (m === "nyse") return "nyse";
+    if (m === "nasdaq") return "nasdaq";
+    return null;
+  })();
+
+  const insightsCacheKey =
+    quote && mappedInsightsMarket ? `insights:${quote.symbol}:${mappedInsightsMarket}` : null;
+
+  const {
+    data: insightsData,
+    isLoading: insightsLoading,
+    error: insightsError,
+  } = useApiData(
+    insightsCacheKey,
+    () => analysisApi.getInsights(quote!.symbol, mappedInsightsMarket!),
+    { enabled: Boolean(quote && mappedInsightsMarket) }
+  );
 
   const chartData = useMemo(
     () =>
@@ -293,8 +318,61 @@ export function QuoteDetailPage() {
             />
           )}
         </CardContent>
-      </Card>
+        </Card>
 
+      {/* Análisis — Fundamentales / Consenso / Noticias (portfolio-analysis Fase C) */}
+      {mappedInsightsMarket ? (
+        <Tabs defaultValue="fundamentales" className="w-full">
+          <TabsList>
+            <TabsTrigger value="fundamentales">Fundamentales</TabsTrigger>
+            <TabsTrigger value="consenso">Consenso</TabsTrigger>
+            <TabsTrigger value="noticias">Noticias</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="fundamentales" className="mt-4">
+            {insightsError && !insightsData ? (
+              <Alert>
+                <AlertDescription>{insightsError}</AlertDescription>
+              </Alert>
+            ) : (
+              <FundamentalsTab
+                block={insightsData?.insights.fundamentals}
+                isLoading={insightsLoading && !insightsData}
+              />
+            )}
+          </TabsContent>
+
+          <TabsContent value="consenso" className="mt-4">
+            {insightsError && !insightsData ? (
+              <Alert>
+                <AlertDescription>{insightsError}</AlertDescription>
+              </Alert>
+            ) : (
+              <ConsensusTab
+                block={insightsData?.insights.consensus}
+                isLoading={insightsLoading && !insightsData}
+              />
+            )}
+          </TabsContent>
+
+          <TabsContent value="noticias" className="mt-4">
+            {insightsError && !insightsData ? (
+              <Alert>
+                <AlertDescription>{insightsError}</AlertDescription>
+              </Alert>
+            ) : (
+              <NewsTab
+                block={insightsData?.insights.news}
+                isLoading={insightsLoading && !insightsData}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <Alert>
+          <AlertDescription>Análisis no disponible para este mercado.</AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 }

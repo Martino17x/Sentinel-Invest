@@ -5,6 +5,8 @@ import {
   Briefcase,
   LineChart,
   BarChart3,
+  Search,
+  Newspaper,
   Link2,
   Plug,
   User,
@@ -37,6 +39,8 @@ const NAV_LINKS = [
   { to: "/portfolio", label: "Portafolio", icon: Briefcase },
   { to: "/operations", label: "Operaciones", icon: Link2 },
   { to: "/quotes", label: "Cotizaciones", icon: LineChart },
+  { to: "/screener", label: "Screener", icon: Search },
+  { to: "/news", label: "Noticias", icon: Newspaper },
   { to: "/reports", label: "Reportes", icon: BarChart3 },
 ];
 
