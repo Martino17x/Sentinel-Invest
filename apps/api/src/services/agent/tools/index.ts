@@ -9,6 +9,11 @@ import { getPortfolioTool } from "./portfolio.js";
 import { getQuoteTool, searchInstrumentsTool } from "./quotes.js";
 import { getMonthlyReportsTool } from "./reports.js";
 import { analyzeStockTool } from "./analyzeStock.js";
+import { fundamentalsTool } from "./fundamentals.js";
+import { analystConsensusTool } from "./analyst_consensus.js";
+import { earningsTool } from "./earnings.js";
+import { newsTool } from "./news.js";
+import { backtestStrategyTool } from "./backtest_strategy.js";
 
 // ============================================================
 // Registry de tools del agente — fuente ÚNICA de definiciones
@@ -33,6 +38,11 @@ const DOMAIN_TOOLS: ToolDefinition[] = [
   getDollarRatesTool,
   getMonthlyReportsTool,
   analyzeStockTool,
+  fundamentalsTool,
+  analystConsensusTool,
+  earningsTool,
+  newsTool,
+  backtestStrategyTool,
   searchKnowledgeTool,
   placeOrderTool,
   cancelOrderTool,
