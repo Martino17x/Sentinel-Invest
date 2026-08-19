@@ -25,11 +25,14 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   CartesianGrid, Legend, Line, LineChart,
   ResponsiveContainer, Tooltip as ChartTooltip, XAxis, YAxis,
 } from "recharts";
 import { reportsApi, type MonthClose, type MonthlyReport } from "@/lib/api";
+import { CalendarView } from "@/components/reports/CalendarView";
+import { MetricsSection } from "@/components/metrics/MetricsSection";
 
 const formatterARS = new Intl.NumberFormat("es-AR", {
   style: "currency",
@@ -213,7 +216,13 @@ export function ReportsPage() {
   const beatBenchmark = (report?.twrPct ?? 0) >= (report?.benchmarkPct ?? 0);
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+    <Tabs defaultValue="monthly" className="space-y-6 p-4 sm:p-6 lg:p-8">
+      <TabsList>
+        <TabsTrigger value="monthly">Reporte mensual</TabsTrigger>
+        <TabsTrigger value="calendario">Calendario</TabsTrigger>
+        <TabsTrigger value="metricas">Métricas</TabsTrigger>
+      </TabsList>
+      <TabsContent value="monthly">
       {/* Header con selector de mes */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -729,6 +738,13 @@ export function ReportsPage() {
           </Card>
         </>
       ) : null}
-    </div>
+      </TabsContent>
+      <TabsContent value="calendario">
+        <CalendarView />
+      </TabsContent>
+      <TabsContent value="metricas">
+        <MetricsSection />
+      </TabsContent>
+    </Tabs>
   );
 }

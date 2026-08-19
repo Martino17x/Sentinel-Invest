@@ -8,6 +8,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { operationsApi, ordersApi, type Operation } from "@/lib/api";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { MovementsPanel } from "@/components/movements/MovementsPanel";
 
 const formatterARS = new Intl.NumberFormat("es-AR", {
   style: "currency",
@@ -105,9 +107,9 @@ export function OperationsPage() {
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Operaciones</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Actividad</h1>
           <p className="text-sm text-muted-foreground">
-            Historial completo de tus operaciones en IOL
+            Tus operaciones y movimientos de efectivo en IOL
           </p>
         </div>
         <Button className="cursor-pointer" onClick={() => navigate("/operar")}>
@@ -115,6 +117,12 @@ export function OperationsPage() {
         </Button>
       </div>
 
+      <Tabs defaultValue="operaciones" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="operaciones">Operaciones</TabsTrigger>
+          <TabsTrigger value="movimientos">Movimientos</TabsTrigger>
+        </TabsList>
+        <TabsContent value="operaciones">
       <Card>
         <CardHeader>
           <CardTitle>Historial</CardTitle>
@@ -313,8 +321,13 @@ export function OperationsPage() {
               rowKey={(op) => op.iolOperationId}
             />
           </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+        </TabsContent>
+        <TabsContent value="movimientos">
+          <MovementsPanel />
+        </TabsContent>
+      </Tabs>
 
     </div>
   );
