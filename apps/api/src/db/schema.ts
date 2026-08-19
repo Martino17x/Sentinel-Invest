@@ -28,6 +28,7 @@ export const currencyEnum = pgEnum("currency", ["ARS", "USD"]);
 export const chatRoleEnum = pgEnum("chat_role", ["user", "assistant", "tool"]);
 
 export const apiKeyScopeEnum = pgEnum("api_key_scope", ["read", "trade"]);
+export const pendingOrderStatusEnum = pgEnum("pending_order_status", ["pending", "approved", "rejected", "cancelled"]);
 
 // ============================================================
 // USERS — el corazón del multitenant
@@ -347,4 +348,30 @@ export const agentActions = pgTable(
 
 export const agentActionsRelations = relations(agentActions, ({ one }) => ({
   user: one(users, { fields: [agentActions.userId], references: [users.id] }),
+}));
+
+// ============================================================
+// PENDING ORDERS — órdenes preparadas por el agente (chat) que
+// requieren confirmación explícita antes de ejecutarse en IOL.
+// ============================================================
+
+export const pendingOrders = pgTable(
+  "pending_orders",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tool: text("tool").notNull(),
+    args: jsonb("args").$type<Record<string, unknown>>().notNull(),
+    summary: text("summary").notNull(),
+    status: pendingOrderStatusEnum("status").default("pending").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+  },
+  (table) => [index("pending_orders_user_idx").on(table.userId, table.status, table.createdAt)]
+);
+
+export const pendingOrdersRelations = relations(pendingOrders, ({ one }) => ({
+  user: one(users, { fields: [pendingOrders.userId], references: [users.id] }),
 }));

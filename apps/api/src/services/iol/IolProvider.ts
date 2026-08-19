@@ -2,7 +2,11 @@ import type {
   IolCredentials,
   MonthClose,
   MonthlyReport,
+  FciRedemptionRequest,
+  FciSubscriptionRequest,
   Operation,
+  OrderRequest,
+  OrderResult,
   PanelQuote,
   PanelSummary,
   PortfolioSummary,
@@ -69,4 +73,33 @@ export interface IolProvider {
     accountNumber: string,
     month: string
   ): Promise<MonthlyReport>;
+
+  /**
+   * Ejecuta una orden de compra/venta en la cuenta del usuario.
+   * Solo el provider real (IolApiProvider) opera contra IOL; el mock
+   * simula la ejecución para desarrollo.
+   */
+  placeOrder(
+    credentials: IolCredentials,
+    accountNumber: string,
+    order: OrderRequest
+  ): Promise<OrderResult>;
+
+  /** Cancela una operación pendiente */
+  cancelOperation(
+    credentials: IolCredentials,
+    operationNumber: string
+  ): Promise<OrderResult>;
+
+  /** Suscribe a un FCI (monto en pesos) */
+  subscribeFci(
+    credentials: IolCredentials,
+    request: FciSubscriptionRequest
+  ): Promise<OrderResult>;
+
+  /** Rescata cuotapartes de un FCI */
+  rescueFci(
+    credentials: IolCredentials,
+    request: FciRedemptionRequest
+  ): Promise<OrderResult>;
 }

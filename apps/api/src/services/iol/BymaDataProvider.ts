@@ -3,7 +3,11 @@ import type {
   IolCredentials,
   MonthClose,
   MonthlyReport,
+  FciRedemptionRequest,
+  FciSubscriptionRequest,
   Operation,
+  OrderRequest,
+  OrderResult,
   PanelQuote,
   PanelSummary,
   PortfolioSummary,
@@ -235,6 +239,13 @@ export class BymaDataProvider implements IolProvider {
         variationPct: 0,
         currency: "ARS",
         updatedAt: new Date().toISOString(),
+        bid: null,
+        ask: null,
+        open: null,
+        high: null,
+        low: null,
+        prevClose: null,
+        volume: null,
       };
     }
 
@@ -249,6 +260,13 @@ export class BymaDataProvider implements IolProvider {
       currency: found.denominationCcy === "USD" ? "USD" : "ARS",
       name: (found.description || found.name || INSTRUMENT_NAMES[target] || undefined)?.trim() || undefined,
       updatedAt: new Date().toISOString(),
+      bid: found.bidPrice != null ? Number(found.bidPrice) : null,
+      ask: found.offerPrice != null ? Number(found.offerPrice) : null,
+      open: found.openingPrice != null ? Number(found.openingPrice) : null,
+      high: found.highPrice != null ? Number(found.highPrice) : null,
+      low: found.lowPrice != null ? Number(found.lowPrice) : null,
+      prevClose: found.previousClosingPrice != null ? Number(found.previousClosingPrice) : null,
+      volume: found.tradeVolume != null ? Number(found.tradeVolume) : null,
     };
   }
 
@@ -296,6 +314,33 @@ export class BymaDataProvider implements IolProvider {
   }
   async getPortfolioHistory(_c: IolCredentials, _a: string, _d: number): Promise<PortfolioSnapshotPoint[]> {
     throw new Error("BymaDataProvider no maneja historial de portafolio");
+  }
+  async placeOrder(
+    _creds: IolCredentials,
+    _accountNumber: string,
+    _order: OrderRequest
+  ): Promise<OrderResult> {
+    throw new Error("BYMADATA es solo datos de mercado: no ejecuta órdenes. Las órdenes van por IolApiProvider.");
+  }
+  async cancelOperation(
+    _creds: IolCredentials,
+    _operationNumber: string
+  ): Promise<OrderResult> {
+    throw new Error("BYMADATA es solo datos de mercado: no cancela órdenes. La cancelación va por IolApiProvider.");
+  }
+
+  async subscribeFci(
+    _creds: IolCredentials,
+    _request: FciSubscriptionRequest
+  ): Promise<OrderResult> {
+    throw new Error("BYMADATA es solo datos de mercado: no opera FCI. Las suscripciones van por IolApiProvider.");
+  }
+
+  async rescueFci(
+    _creds: IolCredentials,
+    _request: FciRedemptionRequest
+  ): Promise<OrderResult> {
+    throw new Error("BYMADATA es solo datos de mercado: no opera FCI. Los rescates van por IolApiProvider.");
   }
   async getMonthlyCloses(_c: IolCredentials, _a: string): Promise<MonthClose[]> {
     throw new Error("BymaDataProvider no maneja cierres");

@@ -3,7 +3,11 @@ import type {
   IolCredentials,
   MonthClose,
   MonthlyReport,
+  FciRedemptionRequest,
+  FciSubscriptionRequest,
   Operation,
+  OrderRequest,
+  OrderResult,
   PanelQuote,
   PanelSummary,
   PortfolioSummary,
@@ -77,6 +81,49 @@ export class IolApiProvider implements IolProvider {
     return res.json() as Promise<IolTokenResponse>;
   }
 
+  /**
+   * Convierte un error HTTP de IOL en un mensaje accionable, leyendo el body
+   * (error/message/ModelState) y mapeando códigos comunes (saldo, permisos,
+   * mercado cerrado, etc.).
+   */
+  private async throwIolError(path: string, res: Response): Promise<never> {
+    let detail = "";
+    try {
+      const body = (await res.json()) as Record<string, unknown>;
+      if (body && typeof body === "object") {
+        const ms = body.ModelState as Record<string, string[]> | undefined;
+        if (ms) {
+          const first = Object.values(ms)[0];
+          if (Array.isArray(first) && first.length) detail = String(first[0]);
+        }
+        detail =
+          detail ||
+          (typeof body.error === "string" ? body.error : "") ||
+          (typeof body.message === "string" ? body.message : "") ||
+          (typeof body.Message === "string" ? String(body.Message) : "");
+      }
+    } catch {
+      /* sin body JSON */
+    }
+    const suffix = detail.trim() ? ` — ${detail.trim()}` : "";
+
+    switch (res.status) {
+      case 401:
+        throw new Error(`Tus credenciales de IOL no son válidas o expiraron.${suffix}`);
+      case 403:
+        throw new Error(`IOL rechazó la operación (sin permisos o cuenta no habilitada).${suffix}`);
+      case 400:
+        throw new Error(`Datos de la orden inválidos (revisá saldo, cantidad y precio).${suffix}`);
+      case 404:
+        throw new Error(`No se encontró el recurso en IOL (404).${suffix}`);
+      default:
+        if (res.status >= 500) {
+          throw new Error(`IOL no respondió correctamente (${res.status}). Intentá de nuevo más tarde.${suffix}`);
+        }
+        throw new Error(`Error de IOL (HTTP ${res.status}).${suffix}`);
+    }
+  }
+
   /** Request autenticada a la API v2 */
   private async api<T>(accessToken: string, path: string): Promise<T> {
     const res = await fetch(`${API_BASE}${path}`, {
@@ -84,11 +131,189 @@ export class IolApiProvider implements IolProvider {
     });
 
     if (!res.ok) {
-      throw new Error(`API IOL ${path}: HTTP ${res.status}`);
+      await this.throwIolError(path, res);
     }
     return res.json() as Promise<T>;
   }
 
+  /** Request autenticada con body JSON (POST) a la API v2 */
+  private async postJson<T>(accessToken: string, path: string, body: unknown): Promise<T | null> {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      await this.throwIolError(path, res);
+    }
+    const contentType = res.headers.get("content-type") ?? "";
+    if (!contentType.includes("application/json")) {
+      return null;
+    }
+    return res.json() as Promise<T>;
+  }
+
+  /**
+   * Ejecuta una orden de compra/venta contra la API real de IOL.
+   *
+   * Contrato verificado (referencia: iol-mcp de ramide1):
+   *   POST /api/v2/operar/Comprar  |  POST /api/v2/operar/Vender
+   *   body: { mercado, simbolo, cantidad, precio, plazo, validez }
+   *   → { numeroOperacion?, ... }
+   * La API SIEMPRE espera un precio por unidad: el tool resuelve el
+   * precio de referencia (market) ANTES de llamar acá.
+   */
+  async placeOrder(
+    creds: IolCredentials,
+    _accountNumber: string,
+    order: OrderRequest
+  ): Promise<OrderResult> {
+    const { access_token: token } = await this.login(creds);
+    if (!token) throw new Error("IOL no devolvió access token");
+
+    if (order.price === undefined || order.price <= 0) {
+      throw new Error("La API de IOL requiere un precio por unidad (limit o referencia de mercado)");
+    }
+
+    const isD = order.specie === "D";
+    if (isD && order.market !== "bCBA") {
+      throw new Error("Las órdenes en especie D (MEP) solo operan en el mercado bCBA");
+    }
+    const orderPath = isD
+      ? order.side === "buy" ? "/api/v2/operar/ComprarEspecieD" : "/api/v2/operar/VenderEspecieD"
+      : order.side === "buy" ? "/api/v2/operar/Comprar" : "/api/v2/operar/Vender";
+    const payload: Record<string, unknown> = {
+      mercado: order.market,
+      simbolo: order.symbol,
+      cantidad: order.quantity,
+      precio: order.price,
+      plazo: order.term ?? "t1",
+    };
+    if (order.validity) {
+      payload.validez = order.validity;
+    }
+
+    const data = await this.postJson<{
+      numeroOperacion?: number;
+      estado?: string;
+      [key: string]: unknown;
+    }>(token, orderPath, payload);
+
+    const iolOperationId =
+      data?.numeroOperacion !== undefined && data.numeroOperacion !== null
+        ? String(data.numeroOperacion)
+        : `pendiente-${Date.now()}`;
+
+    return {
+      iolOperationId,
+      status: "pending",
+      message: data
+        ? `Orden enviada a IOL (operación ${iolOperationId})`
+        : "Orden enviada a IOL (sin número de operación en la respuesta)",
+    };
+  }
+
+  /** Request autenticada DELETE a la API v2 */
+  private async deleteJson<T>(accessToken: string, path: string): Promise<T | null> {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method: "DELETE",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!res.ok) {
+      await this.throwIolError(path, res);
+    }
+    const contentType = res.headers.get("content-type") ?? "";
+    if (!contentType.includes("application/json")) {
+      return null;
+    }
+    return res.json() as Promise<T>;
+  }
+
+  /** Cancela una operación pendiente */
+  async cancelOperation(creds: IolCredentials, operationNumber: string): Promise<OrderResult> {
+    const { access_token: token } = await this.login(creds);
+    if (!token) throw new Error("IOL no devolvió access token");
+
+    await this.deleteJson<{
+      numeroOperacion?: number;
+      [key: string]: unknown;
+    }>(token, `/api/v2/operaciones/${operationNumber}`);
+
+    return {
+      iolOperationId: String(operationNumber),
+      status: "cancelled",
+      message: `Operación ${operationNumber} cancelada`,
+    };
+  }
+
+  /** Suscribe a un FCI (monto en pesos) */
+  async subscribeFci(
+    creds: IolCredentials,
+    request: FciSubscriptionRequest
+  ): Promise<OrderResult> {
+    const { access_token: token } = await this.login(creds);
+    if (!token) throw new Error("IOL no devolvió access token");
+
+    const data = await this.postJson<{
+      numeroOperacion?: number;
+      [key: string]: unknown;
+    }>(token, "/api/v2/operar/suscripcion/fci", {
+      simbolo: request.symbol,
+      monto: request.amount,
+    });
+
+    const iolOperationId =
+      data?.numeroOperacion !== undefined && data.numeroOperacion !== null
+        ? String(data.numeroOperacion)
+        : `pendiente-${Date.now()}`;
+
+    return {
+      iolOperationId,
+      status: "pending",
+      message: data
+        ? `Suscripción a FCI enviada (operación ${iolOperationId})`
+        : "Suscripción a FCI enviada (sin número de operación en la respuesta)",
+    };
+  }
+
+  /** Rescata cuotapartes de un FCI */
+  async rescueFci(
+    creds: IolCredentials,
+    request: FciRedemptionRequest
+  ): Promise<OrderResult> {
+    const { access_token: token } = await this.login(creds);
+    if (!token) throw new Error("IOL no devolvió access token");
+
+    const data = await this.postJson<{
+      numeroOperacion?: number;
+      [key: string]: unknown;
+    }>(token, "/api/v2/operar/rescate/fci", {
+      simbolo: request.symbol,
+      cantidad: request.quantity,
+    });
+
+    const iolOperationId =
+      data?.numeroOperacion !== undefined && data.numeroOperacion !== null
+        ? String(data.numeroOperacion)
+        : `pendiente-${Date.now()}`;
+
+    return {
+      iolOperationId,
+      status: "pending",
+      message: data
+        ? `Rescate de FCI enviado (operación ${iolOperationId})`
+        : "Rescate de FCI enviado (sin número de operación en la respuesta)",
+    };
+  }
   async getPortfolio(creds: IolCredentials, accountNumber: string): Promise<PortfolioSummary> {
     const { access_token: token } = await this.login(creds);
     if (!token) throw new Error("IOL no devolvió access token");
@@ -230,40 +455,80 @@ export class IolApiProvider implements IolProvider {
     const { access_token: token } = await this.login(creds);
     if (!token) throw new Error("IOL no devolvió access token");
 
+    const marketCode = mapMarketToIol(market);
+    const url = `${API_BASE}/api/v2/${marketCode}/Titulos/${encodeURIComponent(symbol)}/Cotizacion`;
+
     try {
-      const data = await this.api<any>(token, `/api/v2/cotizaciones/${market}/${symbol}/t1`);
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        // Si IOL falla (endpoints de mercado inestables), devolver cotización
+        // vacía honesta → el wrapper con fallback a BYMADATA la reemplaza.
+        return zeroQuote(symbol, market);
+      }
+      const data = (await res.json()) as Record<string, unknown>;
+      const lastPrice = Number(data.ultimoPrecio ?? 0);
+      const prevClose = data.cierreAnterior != null ? Number(data.cierreAnterior) : null;
+      const variation =
+        prevClose && prevClose > 0 && lastPrice > 0
+          ? ((lastPrice - prevClose) / prevClose) * 100
+          : Number(data.variacionPorcentual ?? data.variacion ?? 0);
       return {
-        symbol: data.simbolo ?? symbol,
+        symbol: String(data.simbolo ?? symbol),
         market: mapMarket(market),
-        lastPrice: Number(data.ultimoPrecio ?? 0),
-        variationPct: Number(data.variacionPorcentual ?? 0),
-        currency: data.moneda?.includes("dolar") ? "USD" : "ARS",
-        name: data.descripcion ?? undefined,
+        lastPrice,
+        variationPct: variation,
+        currency:
+          String(data.moneda ?? "").includes("dolar")
+            ? "USD"
+            : market === "bcba" || market === "bonds"
+              ? "ARS"
+              : "USD",
+        name: data.descripcion ? String(data.descripcion) : undefined,
         updatedAt: new Date().toISOString(),
+        bid: data.puntaCompra != null ? Number(data.puntaCompra) : data.bid != null ? Number(data.bid) : null,
+        ask: data.puntaVenta != null ? Number(data.puntaVenta) : data.ask != null ? Number(data.ask) : null,
+        open: data.apertura != null ? Number(data.apertura) : null,
+        high: data.maximo != null ? Number(data.maximo) : null,
+        low: data.minimo != null ? Number(data.minimo) : null,
+        prevClose,
+        volume: data.volumenNominal != null ? Number(data.volumenNominal) : null,
       };
     } catch {
-      // Endpoints de mercado de IOL v2 están caídos (HTTP 500/400 — bug del lado de IOL).
-      // Degradación elegante: cotización estimada con variación 0.
-      return {
-        symbol,
-        market: mapMarket(market),
-        lastPrice: 0,
-        variationPct: 0,
-        currency: market === "bcba" || market === "bonds" ? "ARS" : "USD",
-        updatedAt: new Date().toISOString(),
-      };
+      return zeroQuote(symbol, market);
     }
   }
 
   async getQuoteHistory(
-    _creds: IolCredentials,
-    _symbol: string,
-    _market: string,
-    _days: number
+    creds: IolCredentials,
+    symbol: string,
+    market: string,
+    days: number
   ): Promise<{ date: string; close: number }[]> {
-    // Endpoints de mercado de IOL v2 están caídos (500/400).
-    // El histórico real viene de BYMADATA via fallback.
-    return [];
+    const { access_token: token } = await this.login(creds);
+    if (!token) throw new Error("IOL no devolvió access token");
+
+    const to = new Date();
+    const from = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const fmt = (d: Date) => d.toISOString().slice(0, 10);
+    const marketCode = mapMarketToIol(market);
+    const url = `${API_BASE}/api/v2/${marketCode}/Titulos/${encodeURIComponent(symbol)}/Cotizacion/seriehistorica/${fmt(from)}/${fmt(to)}/ajustada`;
+
+    try {
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) return [];
+      const data = (await res.json()) as { fechaHora?: string; ultimoPrecio?: number }[];
+      if (!Array.isArray(data)) return [];
+      return data
+        .filter((d) => d.fechaHora && d.ultimoPrecio != null)
+        .map((d) => ({
+          date: new Date(d.fechaHora as string).toISOString(),
+          close: Number(d.ultimoPrecio),
+        }));
+    } catch {
+      return [];
+    }
   }
 
   async getPanel(
@@ -328,6 +593,30 @@ export class IolApiProvider implements IolProvider {
 // ============================================================
 // Mapeadores
 // ============================================================
+
+function mapMarketToIol(market: string): string {
+  const m = market.toLowerCase();
+  if (m.includes("nyse")) return "nYSE";
+  if (m.includes("nasdaq")) return "nASDAQ";
+  if (m.includes("rofx")) return "rOFX";
+  return "bCBA";
+}
+
+function zeroQuote(symbol: string, market: string): Quote {
+  return {
+    symbol,
+    market: mapMarket(market),
+    lastPrice: 0,
+    variationPct: 0,
+    currency: market === "bcba" || market === "bonds" ? "ARS" : "USD",
+    updatedAt: new Date().toISOString(),
+    open: null,
+    high: null,
+    low: null,
+    prevClose: null,
+    volume: null,
+  };
+}
 
 function mapMarket(market: string): Position["market"] {
   const m = market.toLowerCase();

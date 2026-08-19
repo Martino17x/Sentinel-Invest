@@ -29,6 +29,10 @@ const AGENT_ENUM_MIGRATIONS = [
         CREATE TYPE api_key_scope AS ENUM ('read', 'trade');
       EXCEPTION WHEN duplicate_object THEN NULL;
       END $$`,
+  sql`DO $$ BEGIN
+        CREATE TYPE pending_order_status AS ENUM ('pending', 'approved', 'rejected', 'cancelled');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$`,
 ];
 
 /**
@@ -79,6 +83,17 @@ const AGENT_TABLE_MIGRATIONS = [
         created_at timestamptz NOT NULL DEFAULT now()
       )`,
   sql`CREATE INDEX IF NOT EXISTS agent_actions_user_idx ON agent_actions (user_id, created_at)`,
+  sql`CREATE TABLE IF NOT EXISTS pending_orders (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        tool text NOT NULL,
+        args jsonb NOT NULL,
+        summary text NOT NULL,
+        status pending_order_status NOT NULL DEFAULT 'pending',
+        created_at timestamptz NOT NULL DEFAULT now(),
+        decided_at timestamptz
+      )`,
+  sql`CREATE INDEX IF NOT EXISTS pending_orders_user_idx ON pending_orders (user_id, status, created_at)`,
 ];
 
 /**

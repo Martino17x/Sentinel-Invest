@@ -4,7 +4,11 @@ import type {
   IolCredentials,
   MonthClose,
   MonthlyReport,
+  FciRedemptionRequest,
+  FciSubscriptionRequest,
   Operation,
+  OrderRequest,
+  OrderResult,
   PanelQuote,
   PanelSummary,
   PortfolioSummary,
@@ -87,6 +91,54 @@ export class MockIolProvider implements IolProvider {
     ];
   }
 
+  async placeOrder(
+    _creds: IolCredentials,
+    _accountNumber: string,
+    order: OrderRequest
+  ): Promise<OrderResult> {
+    await delay(400); // simular latencia
+    const sideLabel = order.side === "buy" ? "compra" : "venta";
+    return {
+      iolOperationId: `MOCK-${Date.now()}`,
+      status: "accepted",
+      message: `Orden simulada de ${sideLabel}: ${order.quantity} u. de ${order.symbol} @ ${order.price ?? "mercado"} (modo mock — no se ejecutó contra IOL)`,
+    };
+  }
+  async cancelOperation(
+    _creds: IolCredentials,
+    operationNumber: string
+  ): Promise<OrderResult> {
+    await delay(300);
+    return {
+      iolOperationId: String(operationNumber),
+      status: "cancelled",
+      message: `Operación ${operationNumber} cancelada (simulada — modo mock)`,
+    };
+  }
+
+  async subscribeFci(
+    _creds: IolCredentials,
+    request: FciSubscriptionRequest
+  ): Promise<OrderResult> {
+    await delay(300);
+    return {
+      iolOperationId: `MOCK-FCI-${Date.now()}`,
+      status: "accepted",
+      message: `Suscripción simulada a ${request.symbol} por ${request.amount} (modo mock — no se ejecutó contra IOL)`,
+    };
+  }
+
+  async rescueFci(
+    _creds: IolCredentials,
+    request: FciRedemptionRequest
+  ): Promise<OrderResult> {
+    await delay(300);
+    return {
+      iolOperationId: `MOCK-FCI-${Date.now()}`,
+      status: "accepted",
+      message: `Rescate simulado de ${request.quantity} cuotapartes de ${request.symbol} (modo mock — no se ejecutó contra IOL)`,
+    };
+  }
   async getPortfolioHistory(
     _creds: IolCredentials,
     _accountNumber: string,
@@ -124,15 +176,24 @@ export class MockIolProvider implements IolProvider {
       SPY: 587.34,
       AL30: 12875,
     };
+    const lastPrice = basePrices[symbol] ?? 100;
+    const variationPct = (Math.random() - 0.45) * 3; // entre -1.35% y +1.65%
 
     return {
       symbol,
       market: market as Quote["market"],
       name: INSTRUMENT_NAMES[symbol] ?? undefined,
-      lastPrice: basePrices[symbol] ?? 100,
-      variationPct: (Math.random() - 0.45) * 3, // entre -1.35% y +1.65%
+      lastPrice,
+      variationPct,
       currency: market === "bcba" || market === "bonds" ? "ARS" : "USD",
       updatedAt: new Date().toISOString(),
+      bid: Math.round(lastPrice * 0.997 * 100) / 100,
+      ask: Math.round(lastPrice * 1.003 * 100) / 100,
+      open: Math.round(lastPrice * 0.995 * 100) / 100,
+      high: Math.round(lastPrice * 1.01 * 100) / 100,
+      low: Math.round(lastPrice * 0.98 * 100) / 100,
+      prevClose: variationPct !== 0 ? Math.round((lastPrice / (1 + variationPct / 100)) * 100) / 100 : lastPrice,
+      volume: 12345,
     };
   }
 

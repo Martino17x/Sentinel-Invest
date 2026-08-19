@@ -3,7 +3,10 @@ import { MockIolProvider } from "./MockIolProvider.js";
 import { IolApiProvider } from "./IolApiProvider.js";
 import { BymaDataProvider } from "./BymaDataProvider.js";
 import type {
+  FciRedemptionRequest,
+  FciSubscriptionRequest,
   IolCredentials,
+  OrderRequest,
   PanelQuote,
   PanelSummary,
   Quote,
@@ -139,6 +142,18 @@ class QuoteFallbackProvider implements IolProvider {
   }
   getOperations(creds: IolCredentials, accountNumber: string) {
     return this.accountProvider.getOperations(creds, accountNumber);
+  }
+  placeOrder(creds: IolCredentials, accountNumber: string, order: OrderRequest) {
+    return this.accountProvider.placeOrder(creds, accountNumber, order);
+  }
+  cancelOperation(creds: IolCredentials, operationNumber: string) {
+    return this.accountProvider.cancelOperation(creds, operationNumber);
+  }
+  subscribeFci(creds: IolCredentials, request: FciSubscriptionRequest) {
+    return this.accountProvider.subscribeFci(creds, request);
+  }
+  rescueFci(creds: IolCredentials, request: FciRedemptionRequest) {
+    return this.accountProvider.rescueFci(creds, request);
   }
   getPortfolioHistory(creds: IolCredentials, accountNumber: string, days: number) {
     return this.accountProvider.getPortfolioHistory(creds, accountNumber, days);

@@ -97,10 +97,18 @@ export interface Quote {
   symbol: string;
   market: Market;
   lastPrice: number;
-  variationPct: number; // variaci�n respecto al cierre anterior
+  variationPct: number; // variación respecto al cierre anterior
   currency: Currency;
   updatedAt: string; // ISO
-  name?: string; // nombre/descripci�n del instrumento (si el proveedor lo conoce)
+  name?: string; // nombre/descripción del instrumento (si el proveedor lo conoce)
+  // Datos de detalle (si el proveedor los conoce)
+  bid?: number | null; // mejor precio compra (punta)
+  ask?: number | null; // mejor precio venta (punta)
+  open?: number | null;
+  high?: number | null;
+  low?: number | null;
+  prevClose?: number | null;
+  volume?: number | null;
 }
 
 /** Fila de un panel de cotizaciones (tabla de mercado) */
@@ -181,4 +189,53 @@ export interface MonthlyReport {
 export interface IolCredentials {
   username: string;
   password: string;
+}
+
+/** Lado de una orden de compra/venta */
+export type OrderSide = "buy" | "sell";
+
+/** Tipo de precio: limit (precio tope) o market (precio de referencia) */
+export type PriceType = "market" | "limit";
+
+/**
+ * Orden de compra/venta a ejecutar contra la cuenta IOL.
+ * La API de IOL SIEMPRE espera un precio por unidad: en limit es el
+ * precio tope exacto; en market se usa el último precio conocido como
+ * referencia (el tool lo resuelve antes de despachar si no viene).
+ */
+export interface OrderRequest {
+  side: OrderSide;
+  symbol: string;
+  /** Especie MEP (dólar): "D" usa los endpoints ComprarEspecieD/VenderEspecieD (solo bCBA) */
+  specie?: "D";
+  /** Código de mercado IOL: "bCBA" | "nYSE" | "nASDAQ" | "rOFX" | "bCBA" (bonos) */
+  market: string;
+  quantity: number;
+  priceType: PriceType;
+  /** Precio por unidad. Obligatorio en limit; en market se resuelve como referencia. */
+  price?: number;
+  /** Plazo de liquidación: "t0" | "t1" | "t2" (default "t1") */
+  term?: string;
+  /** Validez de la orden (ej: "1d" o fecha YYYY-MM-DD) */
+  validity?: string;
+}
+
+
+/** Suscripción a un FCI: monto en pesos a invertir */
+export interface FciSubscriptionRequest {
+  symbol: string;
+  amount: number;
+}
+
+/** Rescate de un FCI: cantidad de cuotapartes a rescatar */
+export interface FciRedemptionRequest {
+  symbol: string;
+  quantity: number;
+}
+
+/** Resultado de ejecutar una orden contra IOL */
+export interface OrderResult {
+  iolOperationId: string;
+  status: OperationStatus;
+  message?: string;
 }
