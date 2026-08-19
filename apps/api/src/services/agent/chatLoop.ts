@@ -36,7 +36,7 @@ const SYSTEM_PROMPT = [
   "- get_dollar_rates: cotizaciones actuales del dólar (oficial, blue, MEP, CCL, tarjeta). SIEMPRE antes de hablar del dólar o valorizar la cartera en USD.",
   "- get_monthly_reports: rendimiento histórico mensual de la cuenta del usuario.",
   "- search_knowledge: base de conocimiento del mercado argentino (CEDEARs, bonos, VN100, análisis técnico/fundamental, impuestos, estrategia, horarios, etc.). CONSULTÁ EL CORPUS ANTES DE EXPLICAR cualquier concepto o instrumento; después respondé con esa información, no de memoria.",
-  "- place_order: NO está implementado. NUNCA sugieras operar directamente ni des a entender que se puede ejecutar una orden: si el usuario quiere comprar/vender, avisale que la ejecución de órdenes está en desarrollo.",
+  "- place_order / cancel_order / subscribe_fci / rescue_fci: podés PREPARAR órdenes (compra/venta, MEP, FCI, cancelación) y el sistema le pedirá confirmación explícita al usuario antes de ejecutarlas contra IOL. NUNCA des a entender que ya se ejecutó: si el usuario aprueba, la orden se envía; si rechaza, se cancela. También podés guiarlo a la app: Cotizaciones → botón Comprar, u Operaciones → Nueva operación (/operar).",
   "",
   "FLUJO DE RESPUESTA:",
   "- Si el usuario pregunta por instrumentos o conceptos (ej. 'qué es un CEDEAR', 'AL30 vs GD30', 'cómo está NVDA'): buscá la cotización (get_quote/search_instruments) y consultá el corpus (search_knowledge) cuando aplique, y recién después respondé.",
@@ -219,7 +219,25 @@ export async function chatLoop(options: ChatLoopOptions): Promise<ChatLoopResult
             registry,
             clientName,
           });
-          const status = result.ok ? "success" : "error";
+
+          // Órdenes preparadas (scope chat) → evento order_pending para que
+          // la UI muestre Aprobar/Rechazar; status needs_approval en tool_end.
+          const needsApproval = Boolean(result.pendingApproval);
+          const status = needsApproval
+            ? "needs_approval"
+            : result.ok
+              ? "success"
+              : "error";
+
+          if (result.pendingApproval) {
+            onEvent({
+              type: "order_pending",
+              id: result.pendingApproval.id,
+              tool: tc.name,
+              summary: result.pendingApproval.summary,
+            });
+          }
+
           onEvent({
             type: "tool_end",
             id: tc.id,
@@ -227,7 +245,14 @@ export async function chatLoop(options: ChatLoopOptions): Promise<ChatLoopResult
             status,
             summary: result.message.slice(0, 200),
           });
-          await appendMessage(sessionId, "tool", result.message);
+
+          // Persistimos un marcador parseable para reconstruir la tarjeta
+          // de confirmación desde el historial (PENDIENTE_ORDEN=<id>).
+          const persisted = result.pendingApproval
+            ? `${result.message}
+PENDIENTE_ORDEN=${result.pendingApproval.id}`
+            : result.message;
+          await appendMessage(sessionId, "tool", persisted);
           return { tc, result };
         })
       );

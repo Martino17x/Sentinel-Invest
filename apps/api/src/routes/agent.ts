@@ -5,6 +5,11 @@ import { AgentLoopError, chatLoop } from "../services/agent/chatLoop.js";
 import { getSessionOwned, deleteSession, getSessionMessages, listSessions } from "../services/agent/sessions.js";
 import { SseWriter } from "../services/agent/sse.js";
 import { agentRegistry } from "../services/agent/tools/index.js";
+import { getAccountForUser } from "../services/agent/account.js";
+import { getIolCredentials } from "../lib/iol-credentials.js";
+import { auditAgentAction } from "../services/agent/audit.js";
+import { getPendingOrder, setPendingOrderStatus } from "../services/agent/pendingOrders.js";
+import type { ToolContext } from "../services/agent/types.js";
 
 // ============================================================
 // Rutas del agente — chat SSE + gestión de sesiones
@@ -166,6 +171,101 @@ router.delete("/sessions/:id", async (req, res) => {
     return;
   }
   res.status(204).end();
+});
+
+
+
+/** Distingue errores del cliente IOL (validación/saldo/permisos) de fallos del server */
+function isIolClientError(message: string): boolean {
+  return /Datos de la orden inválidos|rechazó la operación|credenciales de IOL/.test(message);
+}
+
+// ============================================================
+// POST /api/agent/orders/:id/approve | /reject — confirmación de
+// órdenes preparadas por el chat (pending_orders). El approve
+// ejecuta el mismo tool con scope "trade" (gates incluidos).
+// ============================================================
+
+const pendingIdSchema = z.string().uuid("ID de orden inválido");
+
+function parsePendingId(req: { params: Record<string, unknown> }): { ok: true; id: string } | { ok: false; message: string } {
+  const raw = req.params.id;
+  const id = Array.isArray(raw) ? raw[0] : raw;
+  const parsed = pendingIdSchema.safeParse(id);
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? "ID inválido" };
+  return { ok: true, id: parsed.data };
+}
+
+router.post("/orders/:id/approve", async (req, res) => {
+  const pid = parsePendingId(req);
+  if (!pid.ok) { res.status(400).json({ error: pid.message }); return; }
+  const userId = req.user!.id;
+
+  const pending = await getPendingOrder(pid.id, userId);
+  if (!pending) { res.status(404).json({ error: "Orden pendiente no encontrada" }); return; }
+  if (pending.status !== "pending") { res.status(409).json({ error: `La orden ya fue ${pending.status}` }); return; }
+
+  const tool = agentRegistry.lookup(pending.tool);
+  if (!tool) { res.status(400).json({ error: `Tool desconocido: ${pending.tool}` }); return; }
+
+  const accountResult = await getAccountForUser(userId);
+  if (!accountResult.ok) { res.status(403).json({ error: accountResult.message }); return; }
+  const creds = await getIolCredentials(userId);
+
+  // Marcar aprobada ANTES de ejecutar: evita doble aprobación concurrente.
+  await setPendingOrderStatus(pending.id, "approved");
+
+  const ctx: ToolContext = {
+    userId,
+    scope: "trade",
+    account: accountResult.account,
+    creds,
+    signal: new AbortController().signal,
+  };
+
+  try {
+    const result = await tool.execute(ctx, pending.args);
+    await auditAgentAction({
+      userId,
+      tool: `${pending.tool}:approve`,
+      args: pending.args,
+      resultStatus: result.ok ? "success" : "error",
+      clientName: "api:agent-orders",
+      errorMessage: result.ok ? undefined : result.message.slice(0, 800),
+    });
+    res.json({ ok: result.ok, message: result.message });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Error al ejecutar la orden";
+    await auditAgentAction({
+      userId,
+      tool: `${pending.tool}:approve`,
+      args: pending.args,
+      resultStatus: "error",
+      clientName: "api:agent-orders",
+      errorMessage: message.slice(0, 800),
+    });
+    res.status(isIolClientError(message) ? 400 : 502).json({ error: message });
+  }
+});
+
+router.post("/orders/:id/reject", async (req, res) => {
+  const pid = parsePendingId(req);
+  if (!pid.ok) { res.status(400).json({ error: pid.message }); return; }
+  const userId = req.user!.id;
+
+  const pending = await getPendingOrder(pid.id, userId);
+  if (!pending) { res.status(404).json({ error: "Orden pendiente no encontrada" }); return; }
+  if (pending.status !== "pending") { res.status(409).json({ error: `La orden ya fue ${pending.status}` }); return; }
+
+  await setPendingOrderStatus(pending.id, "rejected");
+  await auditAgentAction({
+    userId,
+    tool: `${pending.tool}:reject`,
+    args: pending.args,
+    resultStatus: "success",
+    clientName: "api:agent-orders",
+  });
+  res.json({ ok: true, message: "Orden rechazada" });
 });
 
 export default router;

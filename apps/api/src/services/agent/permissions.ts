@@ -13,7 +13,7 @@ export type PermissionVerdict =
 
 /**
  * Verdict de permiso para una tool call.
- * - exclude → jamás ejecuta (contratos como place_order, tools deshabilitados).
+ * - exclude → jamás ejecuta (tools deshabilitados; place_order ya no es exclude: ahora es allow con gates en su execute).
  * - ask → requiere aprobación humana: flujo diseñado pero NO implementado
  *   (spec out of scope), así que en esta fase tampoco ejecuta.
  * - allow → pasa al dispatch (siempre y cuando el scope del MCP lo permita;

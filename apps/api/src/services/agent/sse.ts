@@ -33,6 +33,7 @@ export type AgentSseEvent =
   | { type: "tool_call"; id: string; name: string; args: object }
   | { type: "tool_start"; id: string; name: string }
   | { type: "tool_end"; id: string; name: string; status: AgentToolEndStatus; summary: string }
+  | { type: "order_pending"; id: string; tool: string; summary: string }
   | { type: "done"; sessionId: string; messageId: string; usage?: { input: number; output: number } }
   | { type: "error"; code: string; message: string; fatal?: boolean };
 

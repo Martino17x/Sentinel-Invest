@@ -15,6 +15,8 @@ export type ToolScope = "chat" | "read" | "trade";
 export interface ToolResult {
   ok: boolean;
   message: string;
+  /** Si viene, la orden quedó preparada y espera confirmación explícita (chat). */
+  pendingApproval?: { id: string; summary: string };
 }
 
 /**

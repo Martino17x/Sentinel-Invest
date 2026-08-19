@@ -3,6 +3,8 @@ import type { ToolDefinition } from "../types.js";
 import { searchKnowledgeTool } from "../knowledge/knowledgeTool.js";
 import { getDollarRatesTool } from "./dollarRates.js";
 import { placeOrderTool } from "./placeOrder.js";
+import { cancelOrderTool } from "./cancelOrder.js";
+import { subscribeFciTool, rescueFciTool } from "./fci.js";
 import { getPortfolioTool } from "./portfolio.js";
 import { getQuoteTool, searchInstrumentsTool } from "./quotes.js";
 import { getMonthlyReportsTool } from "./reports.js";
@@ -16,7 +18,9 @@ import { analyzeStockTool } from "./analyzeStock.js";
 //   get_portfolio / get_quote / search_instruments /
 //   get_dollar_rates / get_monthly_reports / analyze_stock /
 //   search_knowledge → allow
-//   place_order → exclude (stub de contrato, NUNCA ejecuta)
+//   place_order / cancel_order / subscribe_fci / rescue_fci → allow con gates
+//   (IOL_TRADING_ENABLED + scope trade + credenciales; proposeOnly los oculta
+//   del scope read — ver tradingGates.ts)
 //
 // La validación fail-fast del registry corre en el módulo:
 // si un tool está mal definido, el server no arranca.
@@ -31,6 +35,9 @@ const DOMAIN_TOOLS: ToolDefinition[] = [
   analyzeStockTool,
   searchKnowledgeTool,
   placeOrderTool,
+  cancelOrderTool,
+  subscribeFciTool,
+  rescueFciTool,
 ];
 
 export function createAgentRegistry(): ToolRegistry {
