@@ -6,6 +6,7 @@ import type {
   FciRedemptionRequest,
   FciSubscriptionRequest,
   Operation,
+  OperationFilters,
   OrderRequest,
   OrderResult,
   PanelQuote,
@@ -411,11 +412,26 @@ export class IolApiProvider implements IolProvider {
     };
   }
 
-  async getOperations(creds: IolCredentials, _accountNumber: string): Promise<Operation[]> {
+  async getOperations(
+    creds: IolCredentials,
+    _accountNumber: string,
+    filters?: OperationFilters
+  ): Promise<Operation[]> {
     const { access_token: token } = await this.login(creds);
     if (!token) throw new Error("IOL no devolvió access token");
 
-    const data = await this.api<unknown[]>(token, "/api/v2/operaciones");
+    // Filtros opcionales (spec F3-B2 / design D7): IOL v2 acepta
+    // fechaDesde/fechaHasta/estado como query params. El label de
+    // estado asumido es el español de IOL ("Aceptada"...); verificar
+    // en vivo cuando haya credenciales (open question del design).
+    const params = new URLSearchParams();
+    if (filters?.from) params.set("fechaDesde", filters.from);
+    if (filters?.to) params.set("fechaHasta", filters.to);
+    if (filters?.status) params.set("estado", mapOperationStatusToIol(filters.status));
+    const query = params.toString();
+    const path = query ? `/api/v2/operaciones?${query}` : "/api/v2/operaciones";
+
+    const data = await this.api<unknown[]>(token, path);
     return data.map((op: any) => ({
       iolOperationId: String(op.numero ?? op.id ?? "op-unknown"),
       symbol: op.simbolo ?? "",
@@ -432,23 +448,15 @@ export class IolApiProvider implements IolProvider {
   }
 
   async getPortfolioHistory(
-    creds: IolCredentials,
-    accountNumber: string,
-    days: number
+    _creds: IolCredentials,
+    _accountNumber: string,
+    _days: number
   ): Promise<PortfolioSnapshotPoint[]> {
-    // TODO: cuando IOL tenga histórico de portafolio, se sincronizan los snapshots.
-    // Por ahora devolvemos un punto actual para no romper el frontend.
-    const portfolio = await this.getPortfolio(creds, accountNumber);
-    const points: PortfolioSnapshotPoint[] = [];
-    for (let i = days; i >= 0; i -= 7) {
-      points.push({
-        capturedAt: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString(),
-        totalValue: portfolio.totalArs,
-        cash: portfolio.cashArs,
-        currency: "ARS",
-      });
-    }
-    return points;
+    // INERTE a propósito (spec F1-R4 / design D7): IOL no expone un
+    // histórico de portafolio, y repetir el valor actual era inventar
+    // datos. GET /api/portfolio/history lee portfolio_snapshots de BD.
+    // MockIolProvider conserva el random walk solo para desarrollo.
+    return [];
   }
 
   async getQuote(creds: IolCredentials, symbol: string, market: string): Promise<Quote> {
@@ -654,6 +662,21 @@ function mapOperationStatus(estado: string): Operation["status"] {
   if (s.includes("rech")) return "rejected";
   if (s.includes("cancel")) return "cancelled";
   return "accepted";
+}
+
+/** Estado interno → label del query param `estado` de la API IOL v2.
+ *  Asumido (español IOL); pendiente de verificación en vivo. */
+function mapOperationStatusToIol(status: Operation["status"]): string {
+  switch (status) {
+    case "pending":
+      return "Pendiente";
+    case "accepted":
+      return "Aceptada";
+    case "rejected":
+      return "Rechazada";
+    case "cancelled":
+      return "Cancelada";
+  }
 }
 
 function buildDistribution(

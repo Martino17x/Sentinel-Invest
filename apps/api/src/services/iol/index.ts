@@ -6,6 +6,7 @@ import type {
   FciRedemptionRequest,
   FciSubscriptionRequest,
   IolCredentials,
+  OperationFilters,
   OrderRequest,
   PanelQuote,
   PanelSummary,
@@ -140,8 +141,8 @@ class QuoteFallbackProvider implements IolProvider {
   getPortfolio(creds: IolCredentials, accountNumber: string) {
     return this.accountProvider.getPortfolio(creds, accountNumber);
   }
-  getOperations(creds: IolCredentials, accountNumber: string) {
-    return this.accountProvider.getOperations(creds, accountNumber);
+  getOperations(creds: IolCredentials, accountNumber: string, filters?: OperationFilters) {
+    return this.accountProvider.getOperations(creds, accountNumber, filters);
   }
   placeOrder(creds: IolCredentials, accountNumber: string, order: OrderRequest) {
     return this.accountProvider.placeOrder(creds, accountNumber, order);

@@ -10,6 +10,20 @@ export type Currency = "ARS" | "USD";
 export type OperationType = "buy" | "sell" | "subscription" | "redemption";
 export type OperationStatus = "pending" | "accepted" | "rejected" | "cancelled";
 
+/**
+ * Filtros OPCIONALES para getOperations (spec F3-B2, design D7).
+ * Retrocompatible: todos los campos son opcionales; sin filtros la
+ * llamada se comporta exactamente como antes.
+ */
+export interface OperationFilters {
+  /** Fecha inicial inclusiva "YYYY-MM-DD" (filtra por la fecha de la operación) */
+  from?: string;
+  /** Fecha final inclusiva "YYYY-MM-DD" */
+  to?: string;
+  /** Estado: solo operaciones con ese estado (ej. "accepted") */
+  status?: OperationStatus;
+}
+
 /** Una posición de la cartera (un activo que el usuario posee) */
 export interface Position {
   symbol: string;

@@ -7,6 +7,7 @@ import type {
   FciRedemptionRequest,
   FciSubscriptionRequest,
   Operation,
+  OperationFilters,
   OrderRequest,
   OrderResult,
   PanelQuote,
@@ -48,6 +49,15 @@ const MOCK_DISTRIBUTION = [
   { label: "MRCUO", pct: 2.3 },
 ];
 
+// Historial de operaciones del mock — filtrable en memoria (F3-2/D7)
+const MOCK_OPERATIONS: Operation[] = [
+  { iolOperationId: "OP-2026-0001", symbol: "GD35", market: "bonds", type: "buy", status: "accepted", quantity: 651, price: 104209.74, total: 67840535.94, commission: 101760.8, currency: "ARS", date: "2026-03-15T14:32:00.000Z" },
+  { iolOperationId: "OP-2026-0002", symbol: "MRCUO", market: "bcba", type: "buy", status: "accepted", quantity: 54, price: 99663, total: 5381802, commission: 8072.7, currency: "ARS", date: "2026-04-22T11:05:00.000Z" },
+  { iolOperationId: "OP-2026-0003", symbol: "NVDA", market: "bcba", type: "buy", status: "accepted", quantity: 3, price: 6780, total: 20340, commission: 30.51, currency: "ARS", date: "2026-05-18T15:20:00.000Z" },
+  { iolOperationId: "OP-2026-0004", symbol: "GD35", market: "bonds", type: "buy", status: "accepted", quantity: 300, price: 110500, total: 33150000, commission: 49725, currency: "ARS", date: "2026-06-10T16:45:00.000Z" },
+  { iolOperationId: "OP-2026-0005", symbol: "NVDA", market: "bcba", type: "buy", status: "accepted", quantity: 2, price: 8900, total: 17800, commission: 26.7, currency: "ARS", date: "2026-07-02T13:10:00.000Z" },
+];
+
 export class MockIolProvider implements IolProvider {
   async getPortfolio(_creds: IolCredentials, accountNumber: string): Promise<PortfolioSummary> {
     // Simular latencia de red para que el frontend muestre sus estados de carga
@@ -79,16 +89,14 @@ export class MockIolProvider implements IolProvider {
     };
   }
 
-  async getOperations(_creds: IolCredentials, _accountNumber: string): Promise<Operation[]> {
+  async getOperations(
+    _creds: IolCredentials,
+    _accountNumber: string,
+    filters?: OperationFilters
+  ): Promise<Operation[]> {
     await delay(250);
 
-    return [
-      { iolOperationId: "OP-2026-0001", symbol: "GD35", market: "bonds", type: "buy", status: "accepted", quantity: 651, price: 104209.74, total: 67840535.94, commission: 101760.8, currency: "ARS", date: "2026-03-15T14:32:00.000Z" },
-      { iolOperationId: "OP-2026-0002", symbol: "MRCUO", market: "bcba", type: "buy", status: "accepted", quantity: 54, price: 99663, total: 5381802, commission: 8072.7, currency: "ARS", date: "2026-04-22T11:05:00.000Z" },
-      { iolOperationId: "OP-2026-0003", symbol: "NVDA", market: "bcba", type: "buy", status: "accepted", quantity: 3, price: 6780, total: 20340, commission: 30.51, currency: "ARS", date: "2026-05-18T15:20:00.000Z" },
-      { iolOperationId: "OP-2026-0004", symbol: "GD35", market: "bonds", type: "buy", status: "accepted", quantity: 300, price: 110500, total: 33150000, commission: 49725, currency: "ARS", date: "2026-06-10T16:45:00.000Z" },
-      { iolOperationId: "OP-2026-0005", symbol: "NVDA", market: "bcba", type: "buy", status: "accepted", quantity: 2, price: 8900, total: 17800, commission: 26.7, currency: "ARS", date: "2026-07-02T13:10:00.000Z" },
-    ];
+    return MOCK_OPERATIONS.filter((op) => matchesOperationFilters(op, filters));
   }
 
   async placeOrder(
@@ -373,6 +381,33 @@ export class MockIolProvider implements IolProvider {
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Filtra operaciones EN MEMORIA (modo mock) aplicando OperationFilters
+ * (spec F3-B2 / design D7). Semántica espejo de IolApiProvider, que mapea
+ * a los query params fechaDesde/fechaHasta/estado de la API v2 de IOL:
+ *  - from / to: rango de fechas INCLUSIVO "YYYY-MM-DD" comparado contra
+ *    la fecha de la operación (op.date).
+ *  - status: estado exacto.
+ * Sin filtros (undefined) → pasa todo (retrocompatible).
+ */
+function matchesOperationFilters(op: Operation, filters?: OperationFilters): boolean {
+  if (!filters) return true;
+
+  if (filters.from) {
+    const opDate = op.date.slice(0, 10);
+    if (opDate < filters.from) return false;
+  }
+
+  if (filters.to) {
+    const opDate = op.date.slice(0, 10);
+    if (opDate > filters.to) return false;
+  }
+
+  if (filters.status && op.status !== filters.status) return false;
+
+  return true;
 }
 
 // ============================================================

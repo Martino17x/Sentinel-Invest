@@ -5,6 +5,7 @@ import type {
   FciRedemptionRequest,
   FciSubscriptionRequest,
   Operation,
+  OperationFilters,
   OrderRequest,
   OrderResult,
   PanelQuote,
@@ -29,8 +30,12 @@ export interface IolProvider {
   /** Portafolio completo (posiciones + cash) de una cuenta */
   getPortfolio(credentials: IolCredentials, accountNumber: string): Promise<PortfolioSummary>;
 
-  /** Historial de operaciones de una cuenta */
-  getOperations(credentials: IolCredentials, accountNumber: string): Promise<Operation[]>;
+  /** Historial de operaciones de una cuenta (filtros opcionales, retrocompatibles) */
+  getOperations(
+    credentials: IolCredentials,
+    accountNumber: string,
+    filters?: OperationFilters
+  ): Promise<Operation[]>;
 
   /** Serie de valores del portafolio en el tiempo (análisis de patrones) */
   getPortfolioHistory(
