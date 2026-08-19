@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { Loader2, FileCheck2, AlertTriangle } from "lucide-react";
+import { useState } from "react";
+import { Loader2, FileCheck2, AlertTriangle, ChevronDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -9,10 +9,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { movementsApi, type ImportRowPreview } from "@/lib/api";
+import { FileDropzone, type SelectedFileInfo } from "./FileDropzone";
+import { cn } from "@/lib/utils";
 
 interface Props {
   open: boolean;
@@ -21,8 +21,9 @@ interface Props {
 }
 
 export function MovementsImportDialog({ open, onOpenChange, onImported }: Props) {
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<SelectedFileInfo | null>(null);
   const [text, setText] = useState("");
+  const [isManualOpen, setIsManualOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<ImportRowPreview[] | null>(null);
   const [summary, setSummary] = useState<{ total: number; valid: number; invalid: number } | null>(null);
@@ -32,28 +33,50 @@ export function MovementsImportDialog({ open, onOpenChange, onImported }: Props)
   const [error, setError] = useState<string | null>(null);
 
   function reset() {
+    setSelectedFile(null);
+    setText("");
+    setIsManualOpen(false);
+    setPreview(null);
+    setSummary(null);
+    setErrors([]);
+    setResult(null);
+    setError(null);
+  }
+
+  async function handleFileSelect(file: File) {
+    try {
+      const content = await file.text();
+      setText(content);
+      setSelectedFile({ name: file.name, size: file.size });
+      setError(null);
+      setPreview(null);
+      setResult(null);
+    } catch {
+      setError("No se pudo leer el archivo seleccionado");
+    }
+  }
+
+  function handleFileClear() {
+    setSelectedFile(null);
     setText("");
     setPreview(null);
     setSummary(null);
     setErrors([]);
     setResult(null);
     setError(null);
-    if (fileRef.current) fileRef.current.value = "";
   }
 
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      setText(await file.text());
-    } catch {
-      setError("No se pudo leer el archivo");
+  function handleTextChange(val: string) {
+    setText(val);
+    setError(null);
+    if (!val.trim()) {
+      setSelectedFile(null);
     }
   }
 
   async function analyze() {
     if (!text.trim()) {
-      setError("Pegá el contenido del archivo o subilo primero");
+      setError("Arrastrá o seleccioná un archivo de IOL, o pegá su contenido");
       return;
     }
     setLoading(true);
@@ -109,25 +132,45 @@ export function MovementsImportDialog({ open, onOpenChange, onImported }: Props)
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="mv-file">Archivo de IOL</Label>
-            <Input
-              id="mv-file"
-              ref={fileRef}
-              type="file"
-              accept=".xls,.html,.htm,text/html"
-              onChange={handleFile}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="mv-paste">…o pegá el contenido</Label>
-            <textarea
-              id="mv-paste"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="Pegá aquí el HTML del export de IOL"
-              className="h-28 w-full rounded-lg border border-input bg-transparent p-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-            />
+          <FileDropzone
+            selectedFile={selectedFile}
+            onFileSelect={handleFileSelect}
+            onFileClear={handleFileClear}
+            disabled={loading || confirming}
+          />
+
+          <div className="space-y-2 pt-1">
+            <button
+              type="button"
+              onClick={() => setIsManualOpen((prev) => !prev)}
+              className="flex w-full items-center justify-between py-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors group cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded"
+              aria-expanded={isManualOpen}
+            >
+              <span>…o pegá el contenido HTML manualmente</span>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 transition-transform duration-200 text-muted-foreground group-hover:text-foreground motion-reduce:transition-none",
+                  isManualOpen && "rotate-180"
+                )}
+              />
+            </button>
+
+            <div
+              className={cn(
+                "grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none",
+                isManualOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+              )}
+            >
+              <div className="overflow-hidden">
+                <textarea
+                  id="mv-paste"
+                  value={text}
+                  onChange={(e) => handleTextChange(e.target.value)}
+                  placeholder="Pegá aquí el HTML del export de IOL"
+                  className="h-28 w-full rounded-lg border border-input bg-transparent p-2.5 text-xs font-mono outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 transition-colors"
+                />
+              </div>
+            </div>
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}
@@ -182,7 +225,7 @@ export function MovementsImportDialog({ open, onOpenChange, onImported }: Props)
           )}
 
           {result && (
-            <p className="text-sm text-emerald-600">
+            <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
               Importadas {result.imported} · omitidas (ya existían) {result.skipped}
             </p>
           )}
@@ -193,7 +236,7 @@ export function MovementsImportDialog({ open, onOpenChange, onImported }: Props)
             Cerrar
           </Button>
           <div className="flex gap-2">
-            <Button type="button" variant="secondary" onClick={analyze} disabled={loading}>
+            <Button type="button" variant="secondary" onClick={analyze} disabled={loading || !text.trim()}>
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
               Analizar
             </Button>
