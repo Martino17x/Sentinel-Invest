@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Star } from "lucide-react";
 import { useSmartBack } from "@/lib/use-smart-back";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TradingViewWidget } from "@/components/ui/tradingview-widget";
+import { TradingViewWidget, tradingViewSymbol } from "@/components/ui/tradingview-widget";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { quotesApi, type Quote } from "@/lib/api";
 
@@ -39,6 +39,7 @@ export function QuoteDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
   const [chartMode, setChartMode] = useState<"simple" | "tradingview">("simple");
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!symbol) return;
@@ -95,6 +96,10 @@ export function QuoteDetailPage() {
   }
 
   const isUp = quote.variationPct >= 0;
+  const tradeMarket =
+    quote.market === "nyse" || quote.market === "nasdaq" || quote.market === "bonds"
+      ? (quote.market as "nyse" | "nasdaq" | "bonds")
+      : "bcba";
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
@@ -129,6 +134,12 @@ export function QuoteDetailPage() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="cursor-pointer text-red-600" onClick={() => navigate(`/operar/${quote.symbol}?side=sell&market=${tradeMarket}`)}>
+            Vender
+          </Button>
+          <Button variant="default" size="sm" className="cursor-pointer" onClick={() => navigate(`/operar/${quote.symbol}?side=buy&market=${tradeMarket}`)}>
+            Comprar
+          </Button>
           <Link to={`/analysis/${quote.symbol}`}>
             <Button variant="outline" size="sm" className="cursor-pointer">
               Ver análisis
@@ -185,6 +196,26 @@ export function QuoteDetailPage() {
         </Card>
       </div>
 
+      {/* Datos de detalle: rango del día, cierre anterior, volumen */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+        {[
+          { label: "Apertura", value: quote.open != null ? formatPrice(quote.open, quote.currency) : "—" },
+          { label: "Máximo", value: quote.high != null ? formatPrice(quote.high, quote.currency) : "—" },
+          { label: "Mínimo", value: quote.low != null ? formatPrice(quote.low, quote.currency) : "—" },
+          { label: "Cierre anterior", value: quote.prevClose != null ? formatPrice(quote.prevClose, quote.currency) : "—" },
+          { label: "Volumen", value: quote.volume != null ? quote.volume.toLocaleString("es-AR") : "—" },
+        ].map((d) => (
+          <Card key={d.label}>
+            <CardHeader className="pb-1">
+              <CardTitle className="text-xs font-medium text-muted-foreground">{d.label}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-base font-semibold tabular-nums">{d.value}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
       {/* Gráfico histórico — tabs: Simplificado (propio) / TradingView (avanzado) */}
       <Card>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -207,9 +238,9 @@ export function QuoteDetailPage() {
                 histórico).
               </p>
             ) : (
-              <div className="h-72 w-full">
+              <div className="h-[420px] w-full sm:h-[480px] lg:h-[540px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
+                  <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
                     <defs>
                       <linearGradient id="quoteGradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.35} />
@@ -229,6 +260,7 @@ export function QuoteDetailPage() {
                       axisLine={false}
                       tick={{ fontSize: 11 }}
                       width={90}
+                      domain={["auto", "auto"]}
                       tickFormatter={(v: number) => formatPrice(v, quote.currency)}
                     />
                     <Tooltip
@@ -247,10 +279,14 @@ export function QuoteDetailPage() {
               </div>
             )
           ) : (
-            <TradingViewWidget symbol={`BCBA:${quote.symbol}`} />
+            <TradingViewWidget
+              symbol={tradingViewSymbol(quote.market, quote.symbol)}
+              className="h-[420px] sm:h-[480px] lg:h-[540px]"
+            />
           )}
         </CardContent>
       </Card>
+
     </div>
   );
 }

@@ -449,6 +449,8 @@ export function DashboardPage() {
                 {
                   key: "activo",
                   header: "Activo",
+                  sortable: true,
+                  sortValue: (pos) => pos.symbol,
                   render: (pos) => (
                     <div className="min-w-0">
                       <Link
@@ -466,11 +468,15 @@ export function DashboardPage() {
                 {
                   key: "tipo",
                   header: "Tipo",
+                  sortable: true,
+                  sortValue: (pos) => pos.assetType,
                   render: (pos) => <AssetTypeBadge type={pos.assetType} />,
                 },
                 {
                   key: "cantidad",
                   header: "Cantidad",
+                  sortable: true,
+                  sortValue: (pos) => pos.quantity,
                   align: "right",
                   render: (pos) => (
                     <span className="tabular-nums">{pos.quantity.toLocaleString("es-AR")}</span>
@@ -479,6 +485,8 @@ export function DashboardPage() {
                 {
                   key: "variacion-diaria",
                   header: "Variación diaria",
+                  sortable: true,
+                  sortValue: (pos) => pos.dayChangePct,
                   align: "right",
                   render: (pos) => {
                     // Monto del día: totalValue × pct/(100+pct) — el % es relativo
@@ -518,18 +526,24 @@ export function DashboardPage() {
                 {
                   key: "ultimo",
                   header: "Último",
+                  sortable: true,
+                  sortValue: (pos) => pos.lastPrice,
                   align: "right",
                   render: (pos) => <span className="tabular-nums">{formatARS(pos.lastPrice)}</span>,
                 },
                 {
                   key: "promedio",
                   header: "Prom. compra",
+                  sortable: true,
+                  sortValue: (pos) => pos.avgPrice,
                   align: "right",
                   render: (pos) => <span className="tabular-nums">{formatARS(pos.avgPrice)}</span>,
                 },
                 {
                   key: "rendimiento",
                   header: "Rendimiento",
+                  sortable: true,
+                  sortValue: (pos) => pos.gainLossPct,
                   align: "right",
                   render: (pos) => {
                     const gainPositive = pos.gainLossPct >= 0;
@@ -558,6 +572,8 @@ export function DashboardPage() {
                 {
                   key: "valorizado",
                   header: "Valorizado",
+                  sortable: true,
+                  sortValue: (pos) => pos.totalValue,
                   align: "right",
                   render: (pos) => (
                     <span className="font-medium tabular-nums">{formatARS(pos.totalValue)}</span>

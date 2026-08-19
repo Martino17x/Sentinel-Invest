@@ -20,6 +20,9 @@ import { TermsPage } from "@/pages/TermsPage";
 import { ConnectIolPage } from "@/pages/ConnectIolPage";
 import { ProfilePage } from "@/pages/ProfilePage";
 import { AgentConnectPage } from "@/pages/AgentConnectPage";
+import { OperarPage } from "@/pages/OperarPage";
+import { OperarSymbolPage } from "@/pages/OperarSymbolPage";
+import { OperarFciPage } from "@/pages/OperarFciPage";
 import { cn } from "@/lib/utils";
 
 // Rutas que requieren sesión — redirigen a /login si no hay usuario
@@ -111,6 +114,9 @@ function App() {
             {/* Redirect legacy: /dashboard ya no existe como ruta principal */}
             <Route path="/dashboard" element={<Navigate to="/portfolio" replace />} />
             <Route path="/operations" element={<OperationsPage />} />
+            <Route path="/operar" element={<OperarPage />} />
+            <Route path="/operar/:symbol" element={<OperarSymbolPage />} />
+            <Route path="/operar/fci" element={<OperarFciPage />} />
             <Route path="/quotes" element={<QuotesPage />} />
             <Route path="/quotes/:symbol" element={<QuoteDetailPage />} />
             <Route path="/analysis/:symbol" element={<StockAnalysisPage />} />

@@ -146,27 +146,41 @@ const FUNDAMENTAL_CARDS: { key: keyof NonNullable<Analysis["fundamentals"]>; lab
 ];
 
 function FundamentalsGrid({ fundamentals }: { fundamentals: Analysis["fundamentals"] }) {
+  // Solo mostramos las métricas con datos: evita el muro de "n/d" cuando
+  // Yahoo no tiene el dato del activo (común en CEDEARs locales).
+  const available = fundamentals
+    ? FUNDAMENTAL_CARDS.filter((card) => fundamentals[card.key] != null)
+    : [];
+
   return (
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium">Fundamentales</CardTitle>
         <CardDescription>
-          {fundamentals ? "Datos de Yahoo Finance (trimestrales)" : "No disponibles — análisis solo técnico"}
+          {available.length > 0
+            ? "Datos de Yahoo Finance (trimestrales)"
+            : "No disponibles — análisis solo técnico"}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {FUNDAMENTAL_CARDS.map((card) => (
-            <div key={card.key} className="rounded-lg border bg-card p-3">
-              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                {card.label}
-              </p>
-              <p className="mt-1 truncate text-base font-semibold tabular-nums">
-                {fundamentals ? card.format(fundamentals[card.key]) : "n/d"}
-              </p>
-            </div>
-          ))}
-        </div>
+        {available.length === 0 ? (
+          <p className="py-2 text-sm text-muted-foreground">
+            No hay datos de fundamentales disponibles para este activo.
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {available.map((card) => (
+              <div key={card.key} className="rounded-lg border bg-card p-3">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  {card.label}
+                </p>
+                <p className="mt-1 truncate text-base font-semibold tabular-nums">
+                  {card.format(fundamentals![card.key])}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

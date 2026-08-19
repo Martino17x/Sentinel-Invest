@@ -421,6 +421,8 @@ export function QuotesPage() {
                     {
                       key: "activo",
                       header: "Activo",
+                      sortable: true,
+                      sortValue: (q) => q.symbol,
                       render: (quote) => (
                         <div className="min-w-0">
                           <Link
@@ -438,6 +440,8 @@ export function QuotesPage() {
                     {
                       key: "ultimo",
                       header: "Último",
+                      sortable: true,
+                      sortValue: (q) => q.lastPrice,
                       align: "right",
                       render: (quote) => (
                         <span className="font-medium tabular-nums">{formatPrice(quote.lastPrice)}</span>
@@ -446,12 +450,16 @@ export function QuotesPage() {
                     {
                       key: "variacion",
                       header: "Variación",
+                      sortable: true,
+                      sortValue: (q) => q.variationPct,
                       align: "right",
                       render: (quote) => <VariationBadge pct={quote.variationPct} />,
                     },
                     {
                       key: "compra",
                       header: "Compra",
+                      sortable: true,
+                      sortValue: (q) => q.bid ?? null,
                       align: "right",
                       render: (quote) => (
                         <span className="tabular-nums text-muted-foreground">{formatPrice(quote.bid)}</span>
@@ -460,6 +468,8 @@ export function QuotesPage() {
                     {
                       key: "venta",
                       header: "Venta",
+                      sortable: true,
+                      sortValue: (q) => q.ask ?? null,
                       align: "right",
                       render: (quote) => (
                         <span className="tabular-nums text-muted-foreground">{formatPrice(quote.ask)}</span>
@@ -468,6 +478,8 @@ export function QuotesPage() {
                     {
                       key: "minimo",
                       header: "Mínimo",
+                      sortable: true,
+                      sortValue: (q) => q.low ?? null,
                       align: "right",
                       render: (quote) => (
                         <span className="tabular-nums text-muted-foreground">{formatPrice(quote.low)}</span>
@@ -476,6 +488,8 @@ export function QuotesPage() {
                     {
                       key: "maximo",
                       header: "Máximo",
+                      sortable: true,
+                      sortValue: (q) => q.high ?? null,
                       align: "right",
                       render: (quote) => (
                         <span className="tabular-nums text-muted-foreground">{formatPrice(quote.high)}</span>
@@ -484,11 +498,25 @@ export function QuotesPage() {
                     {
                       key: "volumen",
                       header: "Volumen",
+                      sortable: true,
+                      sortValue: (q) => q.volume,
                       align: "right",
                       render: (quote) => (
                         <span className="tabular-nums text-muted-foreground">
                           {formatVolume(quote.volume)}
                         </span>
+                      ),
+                    },
+                    {
+                      key: "accion",
+                      header: "",
+                      align: "right",
+                      render: (quote) => (
+                        <Link to={`/operar/${quote.symbol}?side=buy&market=${market}`}>
+                          <Button size="xs" className="cursor-pointer">
+                            Comprar
+                          </Button>
+                        </Link>
                       ),
                     },
                   ]}

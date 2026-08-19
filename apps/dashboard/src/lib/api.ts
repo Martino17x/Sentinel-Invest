@@ -328,6 +328,61 @@ export const operationsApi = {
     return apiFetch("/operations");
   },
 };
+// ============================================================
+// Órdenes — operar contra IOL desde la app (POST /api/orders)
+// ============================================================
+
+export type OrderSide = "buy" | "sell";
+export type PriceType = "market" | "limit";
+export type OrderMarket = "bcba" | "nyse" | "nasdaq" | "bonds";
+export type OrderTerm = "t0" | "t1" | "t2";
+
+export interface CreateOrderInput {
+  symbol: string;
+  side: OrderSide;
+  qty: number;
+  priceType?: PriceType;
+  price?: number;
+  market?: OrderMarket;
+  term?: OrderTerm;
+  validity?: "1d" | "7d" | string;
+  specie?: "D";
+}
+
+export interface FciSubscriptionInput {
+  symbol: string;
+  amount: number;
+}
+
+export interface FciRedemptionInput {
+  symbol: string;
+  quantity: number;
+}
+
+export interface OrderResult {
+  ok: boolean;
+  orderId: string;
+  status: string;
+  message?: string;
+}
+
+export const ordersApi = {
+  async createOrder(input: CreateOrderInput): Promise<OrderResult> {
+    return apiFetch("/orders", { method: "POST", body: JSON.stringify(input) });
+  },
+  async cancelOrder(operationNumber: string | number): Promise<OrderResult> {
+    return apiFetch(`/orders/${encodeURIComponent(String(operationNumber))}/cancel`, {
+      method: "POST",
+    });
+  },
+  async subscribeFci(input: FciSubscriptionInput): Promise<OrderResult> {
+    return apiFetch("/orders/fci/subscribe", { method: "POST", body: JSON.stringify(input) });
+  },
+  async rescueFci(input: FciRedemptionInput): Promise<OrderResult> {
+    return apiFetch("/orders/fci/rescue", { method: "POST", body: JSON.stringify(input) });
+  },
+};
+
 
 export const quotesApi = {
   async getPanel(
@@ -362,6 +417,13 @@ export interface Quote {
   currency: string;
   updatedAt: string;
   name?: string;
+  bid?: number | null;
+  ask?: number | null;
+  open?: number | null;
+  high?: number | null;
+  low?: number | null;
+  prevClose?: number | null;
+  volume?: number | null;
 }
 
 export interface DolarQuote {
@@ -542,6 +604,14 @@ export const agentApi = {
 
   async deleteSession(id: string): Promise<void> {
     return apiFetch(`/agent/sessions/${id}`, { method: "DELETE" });
+  },
+
+  async approveOrder(id: string): Promise<{ ok: boolean; message: string }> {
+    return apiFetch(`/agent/orders/${id}/approve`, { method: "POST" });
+  },
+
+  async rejectOrder(id: string): Promise<{ ok: boolean; message: string }> {
+    return apiFetch(`/agent/orders/${id}/reject`, { method: "POST" });
   },
 };
 

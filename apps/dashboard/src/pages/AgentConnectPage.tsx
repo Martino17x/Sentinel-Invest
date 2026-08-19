@@ -188,9 +188,30 @@ const MCP_TOOLS: ToolInfo[] = [
   },
   {
     name: "place_order",
-    summary: "⚠️ En desarrollo — compra/venta de instrumentos (requerirá confirmación humana)",
-    returns: "structuredContent { status, orderId }",
-    when: "Cuando esté disponible, para operar. Requerirá confirmación humana explícita.",
+    summary: "Compra/venta de instrumentos en tu cuenta IOL (incluye MEP con especie D)",
+    returns: "structuredContent { ok, message }",
+    when: "Operar acciones, CEDEARs, bonos o MEP. Requiere API key con scope trade y el server con IOL_TRADING_ENABLED=true.",
+    scope: "trade",
+  },
+  {
+    name: "cancel_order",
+    summary: "Cancela una operación pendiente en IOL",
+    returns: "structuredContent { ok, message }",
+    when: "Cancelar una orden pendiente. Mismos requisitos que place_order.",
+    scope: "trade",
+  },
+  {
+    name: "subscribe_fci",
+    summary: "Suscribe a un fondo común de inversión (FCI) por monto",
+    returns: "structuredContent { ok, message }",
+    when: "Invertir en un FCI de tu cuenta IOL. Mismos requisitos que place_order.",
+    scope: "trade",
+  },
+  {
+    name: "rescue_fci",
+    summary: "Rescata cuotapartes de un FCI",
+    returns: "structuredContent { ok, message }",
+    when: "Retirar plata de un FCI. Mismos requisitos que place_order.",
     scope: "trade",
   },
 ];
@@ -334,7 +355,8 @@ export function AgentConnectPage() {
           </CardTitle>
           <CardDescription>
             Tools que expone el server MCP de Sentinel. Las de scope read consultan tu cartera y el
-            mercado; place_order quedará disponible para operar con confirmación humana.
+            mercado; las de scope trade operan (compra/venta, FCI, cancelación) cuando el server
+            corre con IOL_TRADING_ENABLED=true.
           </CardDescription>
         </CardHeader>
         <CardContent>

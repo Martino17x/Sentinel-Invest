@@ -13,6 +13,7 @@ import { formatSessionDate } from "@/components/agent/chat-shared";
 import type { ChatView } from "@/lib/chat-view";
 import type { AgentSession } from "@/lib/api";
 import type { ChatItem } from "@/components/agent/AgentChatDrawer";
+import { PendingOrderCard, type PendingOutcome } from "@/components/agent/PendingOrderCard";
 
 // ============================================================
 // AgentChatFullScreen — modal de pantalla completa del chat,
@@ -51,6 +52,7 @@ export interface AgentChatFullScreenProps {
   onNewSession: () => void;
   onOpenSession: (id: string) => void;
   onDeleteSession: (id: string) => void;
+  onResolvePending: (itemId: string, outcome: PendingOutcome) => void;
 }
 
 const ENTER_MS = 30;
@@ -82,6 +84,7 @@ export function AgentChatFullScreen({
   onNewSession,
   onOpenSession,
   onDeleteSession,
+  onResolvePending,
 }: AgentChatFullScreenProps) {
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
@@ -378,6 +381,18 @@ export function AgentChatFullScreen({
                         )}
                         {item.tools.length > 0 && (
                           <ToolTimeline tools={item.tools} live={!!item.streaming} tone="modal" />
+                        )}
+                        {item.pendingApproval && (
+                          <PendingOrderCard
+                            approval={item.pendingApproval}
+                            tone="modal"
+                            onDone={(o) => onResolvePending(item.id, o)}
+                          />
+                        )}
+                        {item.pendingOutcome && (
+                          <p className={cn("text-xs", item.pendingOutcome.ok ? "text-emerald-300" : "text-red-300")}>
+                            {item.pendingOutcome.message}
+                          </p>
                         )}
                       </div>
                     </div>

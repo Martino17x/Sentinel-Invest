@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { MessageBubble } from "@/components/agent/MessageBubble";
 import { ThinkingIndicator } from "@/components/agent/ThinkingIndicator";
 import { ToolTimeline, type TimelineTool } from "@/components/agent/ToolTimeline";
+import { PendingOrderCard, type PendingApproval, type PendingOutcome } from "@/components/agent/PendingOrderCard";
 import { WelcomePrompts } from "@/components/agent/WelcomePrompts";
 import { ChatComposer } from "@/components/agent/ChatComposer";
 import { AgentChatFullScreen } from "@/components/agent/AgentChatFullScreen";
@@ -58,6 +59,10 @@ export interface ChatItem {
   tools: TimelineTool[];
   streaming?: boolean;
   createdAt?: string;
+  /** Orden preparada por el agente que espera confirmación (Aprobar/Rechazar). */
+  pendingApproval?: PendingApproval;
+  /** Resultado de la aprobación/rechazo ya resuelto (para mostrar tras decidir). */
+  pendingOutcome?: PendingOutcome | null;
 }
 
 function toolsFromHistory(toolCalls: unknown): TimelineTool[] {
@@ -74,10 +79,28 @@ function toolsFromHistory(toolCalls: unknown): TimelineTool[] {
   return tools;
 }
 
+/** Extrae { id, summary } de un mensaje tool que contiene el marcador PENDIENTE_ORDEN= */
+function parsePendingFromTool(content: string | null): PendingApproval | null {
+  if (!content) return null;
+  const m = content.match(/PENDIENTE_ORDEN=([0-9a-f-]+)/);
+  if (!m) return null;
+  const summary = content
+    .replace(/\nPENDIENTE_ORDEN=[0-9a-f-]+/s, "")
+    .replace(/^Orden preparada: /, "")
+    .replace(/\. Esperando tu confirmación\.$/, "")
+    .trim();
+  return { id: m[1], summary: summary || "Orden preparada" };
+}
+
 function messagesToItems(messages: AgentChatMessage[]): ChatItem[] {
   const items: ChatItem[] = [];
+  const pendingQueue: PendingApproval[] = [];
   for (const msg of messages) {
-    if (msg.role === "tool") continue;
+    if (msg.role === "tool") {
+      const pending = parsePendingFromTool(msg.content);
+      if (pending) pendingQueue.push(pending);
+      continue;
+    }
     if (msg.role === "user") {
       items.push({
         id: msg.id,
@@ -88,13 +111,17 @@ function messagesToItems(messages: AgentChatMessage[]): ChatItem[] {
       });
     } else {
       // Turnos de tool-call sin texto: el timeline lleva la info
-      items.push({
+      const item: ChatItem = {
         id: msg.id,
         role: "assistant",
         content: msg.content ?? "",
         tools: toolsFromHistory(msg.toolCalls),
         createdAt: msg.createdAt ?? undefined,
-      });
+      };
+      if (pendingQueue.length > 0) {
+        item.pendingApproval = pendingQueue.shift();
+      }
+      items.push(item);
     }
   }
   return items;
@@ -260,6 +287,14 @@ function AgentChatInner({
     });
   }
 
+  function resolvePending(itemId: string, outcome: PendingOutcome) {
+    setItems((prev) =>
+      prev.map((it) =>
+        it.id === itemId ? { ...it, pendingApproval: undefined, pendingOutcome: outcome } : it
+      )
+    );
+  }
+
   function pushError(message: string) {
     setItems((prev) => {
       const next = prev.filter(
@@ -317,6 +352,18 @@ function AgentChatInner({
                 name: event.name,
                 status: event.status as AgentToolStatus,
                 summary: event.summary,
+              });
+              break;
+            case "order_pending":
+              setItems((prev) => {
+                const next = [...prev];
+                const last = next[next.length - 1];
+                if (!last?.streaming) return prev;
+                next[next.length - 1] = {
+                  ...last,
+                  pendingApproval: { id: event.id, summary: event.summary },
+                };
+                return next;
               });
               break;
             case "done":
@@ -485,6 +532,22 @@ function AgentChatInner({
                       {item.tools.length > 0 && (
                         <ToolTimeline tools={item.tools} live={!!item.streaming} />
                       )}
+                      {item.pendingApproval && (
+                        <PendingOrderCard
+                          approval={item.pendingApproval}
+                          onDone={(o) => resolvePending(item.id, o)}
+                        />
+                      )}
+                      {item.pendingOutcome && (
+                        <p
+                          className={cn(
+                            "text-xs",
+                            item.pendingOutcome.ok ? "text-emerald-600" : "text-destructive"
+                          )}
+                        >
+                          {item.pendingOutcome.message}
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -541,6 +604,7 @@ function AgentChatInner({
       onNewSession={newSession}
       onOpenSession={(id) => void openSession(id)}
       onDeleteSession={(id) => void handleDeleteSession(id)}
+      onResolvePending={resolvePending}
     />
   );
 }

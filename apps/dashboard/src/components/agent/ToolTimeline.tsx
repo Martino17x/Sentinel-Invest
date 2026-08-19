@@ -95,6 +95,9 @@ const TOOL_LABELS: Record<string, string> = {
   get_dollar_rates: "Dólar",
   get_monthly_reports: "Reportes mensuales",
   place_order: "Orden de compra/venta",
+  cancel_order: "Cancelar operación",
+  subscribe_fci: "Suscripción a FCI",
+  rescue_fci: "Rescate de FCI",
 };
 
 function toolLabel(name: string): string {

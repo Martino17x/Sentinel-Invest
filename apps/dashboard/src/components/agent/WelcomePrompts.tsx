@@ -21,6 +21,8 @@ const SUGGESTED_PROMPTS: SuggestedPrompt[] = [
   { label: "Mi cartera", prompt: "¿Cómo está mi cartera hoy?" },
   { label: "Dólar", prompt: "¿A cuánto está el dólar hoy?" },
   { label: "Cotizaciones", prompt: "¿Cómo vienen las acciones de tecnología?" },
+  { label: "Operar", prompt: "Quiero comprar acciones. ¿Cómo hago?" },
+  { label: "FCI", prompt: "¿Cómo invierto en un fondo común de inversión?" },
   { label: "Reportes", prompt: "Resumí mis últimos movimientos" },
 ];
 

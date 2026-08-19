@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { operationsApi, type Operation } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
+import { operationsApi, ordersApi, type Operation } from "@/lib/api";
 
 const formatterARS = new Intl.NumberFormat("es-AR", {
   style: "currency",
@@ -40,6 +43,24 @@ export function OperationsPage() {
   const [operations, setOperations] = useState<Operation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const [cancelTarget, setCancelTarget] = useState<Operation | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+
+  async function handleCancel(op: Operation) {
+    setCancelling(true);
+    setCancelError(null);
+    try {
+      await ordersApi.cancelOrder(op.iolOperationId);
+      setCancelTarget(null);
+      await load();
+    } catch (err) {
+      setCancelError(err instanceof Error ? err.message : "No se pudo cancelar la operación");
+    } finally {
+      setCancelling(false);
+    }
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -82,11 +103,16 @@ export function OperationsPage() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Operaciones</h1>
-        <p className="text-sm text-muted-foreground">
-          Historial completo de tus operaciones en IOL
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Operaciones</h1>
+          <p className="text-sm text-muted-foreground">
+            Historial completo de tus operaciones en IOL
+          </p>
+        </div>
+        <Button className="cursor-pointer" onClick={() => navigate("/operar")}>
+          Nueva operación
+        </Button>
       </div>
 
       <Card>
@@ -160,6 +186,24 @@ export function OperationsPage() {
                     </dd>
                   </div>
                 </dl>
+                {op.status === "pending" &&
+                  (cancelTarget?.iolOperationId === op.iolOperationId ? (
+                    <div className="mt-3 space-y-2">
+                      {cancelError && <p className="text-xs text-destructive">{cancelError}</p>}
+                      <p className="text-xs text-muted-foreground">¿Cancelar la operación {op.iolOperationId}?</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button variant="outline" size="sm" className="cursor-pointer" onClick={() => setCancelTarget(null)}>No</Button>
+                        <Button variant="destructive" size="sm" className="cursor-pointer" disabled={cancelling} onClick={() => handleCancel(op)}>
+                          {cancelling && <Loader2 className="h-4 w-4 animate-spin" />}
+                          {cancelling ? "Cancelando…" : "Sí"}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button variant="outline" size="sm" className="mt-3 w-full cursor-pointer text-destructive" onClick={() => setCancelTarget(op)}>
+                      Cancelar
+                    </Button>
+                  ))}
               </div>
             ))}
           </div>
@@ -244,6 +288,26 @@ export function OperationsPage() {
                     </Badge>
                   ),
                 },
+                {
+                  key: "acciones",
+                  header: "",
+                  align: "right" as const,
+                  render: (op) =>
+                    op.status === "pending" ? (
+                      cancelTarget?.iolOperationId === op.iolOperationId ? (
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button variant="outline" size="xs" className="cursor-pointer" onClick={() => setCancelTarget(null)}>No</Button>
+                          <Button variant="destructive" size="xs" className="cursor-pointer" disabled={cancelling} onClick={() => handleCancel(op)}>
+                            {cancelling ? "…" : "Sí"}
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button variant="outline" size="xs" className="cursor-pointer text-destructive" onClick={() => setCancelTarget(op)}>
+                          Cancelar
+                        </Button>
+                      )
+                    ) : null,
+                },
               ]}
               data={sorted}
               rowKey={(op) => op.iolOperationId}
@@ -251,6 +315,7 @@ export function OperationsPage() {
           </div>
         </CardContent>
       </Card>
+
     </div>
   );
 }
