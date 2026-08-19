@@ -28,7 +28,7 @@
 - Micro-copy explicativa con ícono de info.
 
 ## 6. Agente IA (MCP)
-- **Server MCP local** que expone la cartera: tools `get_portfolio`, `get_quote`, `search_instruments`, `get_dollar_rates` (scope read); `place_order` queda para una próxima versión con confirmación humana.
+- **Server MCP local** con tools de lectura (scope `read`: `get_portfolio`, `get_quote`, `search_instruments`, `get_dollar_rates`) y de trading (scope `trade`: `place_order`, `cancel_order`, `subscribe_fci`, `rescue_fci`). En la app, toda orden pide confirmación explícita antes de enviarse a IOL.
 - **Agentes soportados:** Claude Code, Cursor, opencode, Codex, gemini-cli; guías de configuración por agente.
 - **API Keys** en el perfil (el secreto se muestra una sola vez).
 - **Chat Synara:** FAB con gradiente verde de marca (`#0b6749 → #064028`).

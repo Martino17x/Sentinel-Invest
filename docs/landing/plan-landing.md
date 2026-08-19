@@ -10,7 +10,7 @@
 - **Identidad real**: tipografía **Geist**; theme shadcn neutro light/dark (primary casi negro `oklch(0.205 0 0)`); charts esmeralda/violeta/azul/ámbar/cyan; verde de marca **Synara** `#0b6749 → #064028`; tono voseo rioplatense ("Tu cartera de inversiones, controlada").
 
 ## 2. Objetivo
-Landing pública que venda **Sentinel**: control de inversiones en IOL **solo lectura** (nunca ejecuta órdenes), cotizaciones AR/US en tiempo real, análisis técnico con señal compuesta 0–100, reportes mensuales (TWR + comparativa Merval), dólar del día y **agente IA vía MCP**. **Multipágina** con **View Transitions** (por eso el ClientRouter), responsive, accesible (WCAG AA), SEO, con las capturas reales (mock demo).
+Landing pública que venda **Sentinel**: control de inversiones en IOL con **consulta y operación** (toda orden con confirmación explícita), cotizaciones AR/US en tiempo real, análisis técnico con señal compuesta 0–100, reportes mensuales (TWR + comparativa Merval), dólar del día y **agente IA vía MCP**. **Multipágina** con **View Transitions** (por eso el ClientRouter), responsive, accesible (WCAG AA), SEO, con las capturas reales (mock demo).
 
 ## 3. Paso 0 — Skills de animación (✅ YA INSTALADAS en `.agents/skills/`)
 `gsap-core`, `gsap-scrolltrigger`, `gsap-timeline` (greensock/gsap-skills); `review-animations`, `animation-vocabulary` (emilkowalski/skills); `motion-design` (lottiefiles/motion-design-skill); `animation-on-scroll` (mengto/skills). Ya estaban: `gpt-taste` (GSAP), `ui-ux-pro-max` (presets GSAP), `impeccable` (animate), `astro-framework` (VT), `high-end-visual-design`. No existe `@astrojs/animation` → **VT nativas de Astro + GSAP**.
