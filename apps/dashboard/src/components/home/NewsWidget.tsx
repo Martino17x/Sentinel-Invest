@@ -1,10 +1,5 @@
 import { useNavigate, Link } from "react-router-dom";
-import { ArrowRight, Clock, Newspaper } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { newsApi, type NewsItem } from "@/lib/api";
 import { useApiData } from "@/hooks/useApiData";
 
@@ -23,15 +18,18 @@ function timeAgo(iso: string | null): string {
   return `hace ${days} días`;
 }
 
+function initialsFromSource(source: string): string {
+  const s = source.trim();
+  if (!s) return "N";
+  const parts = s.split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase().slice(0, 2);
+  return s.slice(0, 2).toUpperCase();
+}
+
 /**
- * NewsWidget — teaser moderno de noticias para HomePage (D.5).
- * - Fetch top 5 via newsApi.getFeed(5)
- * - Compacto: no domina el HomePage (max ~ 380px height)
- * - Degrada silenciosamente si API falla o vacío → retorna null
- * - Cada item → /news/:id con encodeURIComponent
- * - CTA "Ver todas →" → /news
- * - Skeleton mientras carga, hover states, animated enter
- * - Respeta prefers-reduced-motion, rounded cards, accent gradient
+ * NewsWidget — versión compacta TradingView para Home.
+ * Mismo lenguaje visual que NewsPage: avatar + metadata + título,
+ * grilla 3 columnas, mucho whitespace, sin badges ni gradientes.
  */
 export function NewsWidget() {
   const navigate = useNavigate();
@@ -47,111 +45,81 @@ export function NewsWidget() {
       (data as { news?: NewsItem[] } | null)?.news ??
       []) as NewsItem[];
 
-  const list: NewsItem[] = Array.isArray(items) ? items.slice(0, 5) : [];
+  const list: NewsItem[] = Array.isArray(items) ? items.slice(0, 3) : [];
 
-  // Degrade gracefully: si error o vacío (y no está cargando) → ocultar
   if (error) return null;
   if (!isLoading && list.length === 0) return null;
 
   return (
-    <Card className="relative overflow-hidden motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-1 motion-reduce:animate-none">
-      {/* Accent gradient top bar */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-primary via-primary/60 to-violet-500/60"
-      />
-
-      <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
-        <div className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 ring-1 ring-primary/15">
-            <Newspaper className="h-4 w-4 text-primary" />
+    <section
+      aria-labelledby="news-widget-heading"
+      className="space-y-4 motion-safe:animate-in motion-safe:fade-in motion-reduce:animate-none"
+    >
+      <div className="flex items-center justify-between gap-4 border-b border-border pb-3">
+        <h2
+          id="news-widget-heading"
+          className="flex items-center gap-1.5 text-sm font-semibold tracking-tight"
+        >
+          Historias destacadas
+          <span aria-hidden className="text-base font-normal leading-none text-muted-foreground">
+            ›
           </span>
-          <div>
-            <CardTitle className="text-sm font-semibold leading-none">Noticias del mercado</CardTitle>
-            <p className="text-xs text-muted-foreground">Lo último — feed general</p>
-          </div>
-        </div>
+        </h2>
+        <Link
+          to="/news"
+          className="shrink-0 text-xs font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          Ver todas →
+        </Link>
+      </div>
 
-        <Button variant="ghost" size="sm" asChild className="h-7 gap-1 text-xs">
-          <Link to="/news">
-            Ver todas <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-        </Button>
-      </CardHeader>
-
-      <Separator />
-
-      <CardContent className="p-3 sm:p-4">
-        {isLoading && list.length === 0 ? (
-          <div className="grid gap-2 md:grid-cols-2">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="flex gap-3 rounded-xl border border-transparent p-3"
-              >
-                <div className="min-w-0 flex-1 space-y-2">
-                  <Skeleton className="h-4 w-5/6" />
-                  <Skeleton className="h-3 w-3/5" />
-                  <div className="flex items-center gap-2 pt-1">
-                    <Skeleton className="h-4 w-14 rounded-full" />
-                    <Skeleton className="h-3 w-16" />
-                  </div>
-                </div>
-                <Skeleton className="hidden h-14 w-20 shrink-0 rounded-lg sm:block" />
+      {isLoading && list.length === 0 ? (
+        <div className="grid gap-4 md:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex flex-col gap-3 p-3">
+              <Skeleton className="h-8 w-8 rounded-full" />
+              <Skeleton className="h-3 w-24" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-4/5" />
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid gap-2 md:grid-cols-2">
-            {list.map((item) => {
-              const imageUrl =
-                (item as unknown as { image?: string; imageUrl?: string }).image ??
-                (item as unknown as { imageUrl?: string }).imageUrl ??
-                null;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => navigate(`/news/${encodeURIComponent(item.id)}`)}
-                  className="flex w-full cursor-pointer gap-3 rounded-xl border border-transparent p-3 text-left transition-colors hover:border-border/60 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-2 md:grid-cols-3 md:gap-6">
+          {list.map((item) => {
+            const metaTime = item.publishedAt ? timeAgo(item.publishedAt) : "";
+            const meta = [metaTime, item.source].filter(Boolean).join(" · ");
+            return (
+              <article
+                key={item.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => navigate(`/news/${encodeURIComponent(item.id)}`)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    navigate(`/news/${encodeURIComponent(item.id)}`);
+                  }
+                }}
+                className="group flex cursor-pointer flex-col gap-2.5 rounded-xl p-3 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-safe:transition-colors md:p-4"
+              >
+                <span
+                  aria-hidden
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-[10px] font-semibold tracking-wide text-muted-foreground ring-1 ring-border/50"
                 >
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <h4 className="line-clamp-2 text-sm font-medium leading-snug">
-                      {item.title}
-                    </h4>
-                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                      <Badge variant="secondary" className="text-[10px] leading-none">
-                        {item.source}
-                      </Badge>
-                      {item.publishedAt && (
-                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                          <Clock className="h-3 w-3 shrink-0" />
-                          {timeAgo(item.publishedAt)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {imageUrl ? (
-                    <img
-                      src={imageUrl}
-                      alt=""
-                      className="hidden h-14 w-20 shrink-0 rounded-lg object-cover sm:block"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <span
-                      aria-hidden
-                      className="hidden h-14 w-20 shrink-0 items-center justify-center rounded-lg bg-muted sm:flex"
-                    >
-                      <Newspaper className="h-5 w-5 text-muted-foreground/50" />
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+                  {initialsFromSource(item.source)}
+                </span>
+                {meta && <p className="text-xs leading-none text-muted-foreground">{meta}</p>}
+                <h3 className="line-clamp-3 text-sm font-medium leading-snug text-foreground">
+                  {item.title}
+                </h3>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </section>
   );
 }

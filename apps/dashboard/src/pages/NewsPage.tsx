@@ -1,10 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import { Clock, ExternalLink, Newspaper } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { newsApi, type NewsItem } from "@/lib/api";
 import { useApiData } from "@/hooks/useApiData";
 
@@ -23,16 +19,12 @@ function timeAgo(iso: string | null): string {
   return `hace ${days} días`;
 }
 
-function formatDate(iso: string | null): string {
-  if (!iso) return "";
-  try {
-    return new Date(iso).toLocaleString("es-AR", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    });
-  } catch {
-    return iso ?? "";
-  }
+function initialsFromSource(source: string): string {
+  const s = source.trim();
+  if (!s) return "N";
+  const parts = s.split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase().slice(0, 2);
+  return s.slice(0, 2).toUpperCase();
 }
 
 export function NewsPage() {
@@ -51,108 +43,99 @@ export function NewsPage() {
   const list: NewsItem[] = Array.isArray(items) ? items : [];
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-            <Newspaper className="h-6 w-6 text-primary" />
-            Noticias
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Últimas noticias del mercado — feed general
-          </p>
+    <div className="mx-auto max-w-6xl space-y-8 p-4 sm:p-6 lg:p-8">
+      {/* Header centrado — TradingView style */}
+      <header className="py-6 text-center motion-safe:animate-in motion-safe:fade-in motion-reduce:animate-none sm:py-8">
+        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Noticias</h1>
+        <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          No te pierdas ningún movimiento — mantenete al día con lo esencial del mercado.
+        </p>
+      </header>
+
+      {/* Sección Top stories */}
+      <section
+        aria-labelledby="top-stories-heading"
+        className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-1 motion-reduce:animate-none"
+      >
+        <div className="flex items-center justify-between border-b border-border pb-3">
+          <h2
+            id="top-stories-heading"
+            className="flex items-center gap-1.5 text-sm font-semibold tracking-tight"
+          >
+            Historias destacadas
+            <span aria-hidden className="text-base font-normal leading-none text-muted-foreground">
+              ›
+            </span>
+          </h2>
+          <span className="font-mono text-xs text-muted-foreground">
+            {list.length} {list.length === 1 ? "historia" : "historias"}
+          </span>
         </div>
-        <Badge variant="outline" className="w-fit font-mono text-xs">
-          {list.length} noticia{list.length !== 1 ? "s" : ""}
-        </Badge>
-      </div>
 
-      <Separator className="motion-safe:animate-in motion-safe:fade-in motion-reduce:animate-none" />
+        {error && (
+          <Alert variant="destructive" className="mt-6">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {isLoading && list.length === 0 ? (
-        <div className="space-y-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i} className="overflow-hidden">
-              <CardContent className="p-4">
-                <div className="flex gap-4">
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-5 w-3/4" />
-                    <Skeleton className="h-4 w-1/2" />
-                    <Skeleton className="h-3 w-full" />
-                  </div>
-                  <Skeleton className="hidden h-20 w-28 shrink-0 rounded-md sm:block" />
+        {isLoading && list.length === 0 ? (
+          <div className="mt-6 grid gap-6 md:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex flex-col gap-3 p-4">
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <Skeleton className="h-3 w-28" />
+                <div className="space-y-2 pt-1">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-5/6" />
+                  <Skeleton className="h-4 w-3/4" />
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : !error && list.length === 0 ? (
-        <Alert>
-          <AlertDescription>Sin noticias para mostrar.</AlertDescription>
-        </Alert>
-      ) : (
-        <div className="grid gap-3 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-1 motion-reduce:animate-none">
-          {list.map((item) => {
-            const imageUrl =
-              (item as unknown as { image?: string; imageUrl?: string }).image ??
-              (item as unknown as { imageUrl?: string }).imageUrl ??
-              null;
-            return (
-              <Card
-                key={item.id}
-                className="cursor-pointer overflow-hidden transition-colors hover:bg-muted/40"
-                onClick={() => navigate(`/news/${encodeURIComponent(item.id)}`)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex gap-4">
-                    <div className="min-w-0 flex-1 space-y-1.5">
-                      <h3 className="line-clamp-2 text-sm font-semibold leading-snug">
-                        {item.title}
-                      </h3>
-                      {item.summary && (
-                        <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                          {item.summary}
-                        </p>
-                      )}
-                      <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-muted-foreground">
-                        <Badge variant="secondary" className="text-[10px]">
-                          {item.source}
-                        </Badge>
-                        {item.publishedAt && (
-                          <span className="inline-flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            <span title={formatDate(item.publishedAt)}>{timeAgo(item.publishedAt)}</span>
-                          </span>
-                        )}
-                        {item.symbol && (
-                          <span className="font-mono text-[11px]">{item.symbol}</span>
-                        )}
-                        <span className="ml-auto inline-flex items-center gap-1 text-primary">
-                          Ver detalle <ExternalLink className="h-3 w-3" />
-                        </span>
-                      </div>
-                    </div>
-                    {imageUrl && (
-                      <img
-                        src={imageUrl}
-                        alt=""
-                        className="hidden h-20 w-28 shrink-0 rounded-md object-cover sm:block"
-                        loading="lazy"
-                      />
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+              </div>
+            ))}
+          </div>
+        ) : !error && list.length === 0 ? (
+          <Alert className="mt-6">
+            <AlertDescription>Sin noticias para mostrar.</AlertDescription>
+          </Alert>
+        ) : (
+          <div className="mt-6 grid gap-6 md:grid-cols-3">
+            {list.map((item) => {
+              const metaTime = item.publishedAt ? timeAgo(item.publishedAt) : "";
+              const meta = [metaTime, item.source].filter(Boolean).join(" · ");
+              return (
+                <article
+                  key={item.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate(`/news/${encodeURIComponent(item.id)}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      navigate(`/news/${encodeURIComponent(item.id)}`);
+                    }
+                  }}
+                  className="group flex cursor-pointer flex-col gap-3 rounded-xl p-4 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-safe:transition-colors"
+                >
+                  {/* Avatar / logo */}
+                  <span
+                    aria-hidden
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-[11px] font-semibold tracking-wide text-muted-foreground ring-1 ring-border/50"
+                  >
+                    {initialsFromSource(item.source)}
+                  </span>
+
+                  {/* Metadata */}
+                  {meta && <p className="text-xs leading-none text-muted-foreground">{meta}</p>}
+
+                  {/* Title */}
+                  <h3 className="line-clamp-3 text-[15px] font-medium leading-snug text-foreground">
+                    {item.title}
+                  </h3>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
