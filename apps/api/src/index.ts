@@ -10,6 +10,7 @@ import accountsRouter from "./routes/accounts.js";
 import connectionsRouter from "./routes/connections.js";
 import profileRouter from "./routes/profile.js";
 import portfolioRouter from "./routes/portfolio.js";
+import portfolioMovementsRouter from "./routes/portfolioMovements.js";
 import operationsRouter from "./routes/operations.js";
 import ordersRouter from "./routes/orders.js";
 import quotesRouter from "./routes/quotes.js";
@@ -18,6 +19,7 @@ import ratesRouter from "./routes/rates.js";
 import agentRouter from "./routes/agent.js";
 import apiKeysRouter from "./routes/api-keys.js";
 import { mountMcpHttp } from "./mcp/http.js";
+import { startScheduledJobs } from "./jobs/scheduler.js";
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 3001);
@@ -52,6 +54,7 @@ app.use("/api/accounts", accountsRouter);
 app.use("/api/connections", connectionsRouter);
 app.use("/api/profile", profileRouter);
 app.use("/api/portfolio", portfolioRouter);
+app.use("/api/portfolio", portfolioMovementsRouter);
 app.use("/api/operations", operationsRouter);
 app.use("/api/orders", ordersRouter);
 app.use("/api/quotes", quotesRouter);
@@ -73,9 +76,15 @@ app.listen(PORT, () => {
   console.log(`🚀 API escuchando en http://localhost:${PORT}`);
 });
 
-// Migraciones idempotentes al arranque — nunca deben romper el boot
+// Migraciones idempotentes al arranque — nunca deben romper el boot.
+// Los jobs diarios (snapshot 17:30 ART, reconciliación) arrancan SOLO
+// tras ensureSchema OK; el scheduler tiene su propio guard de tabla
+// (D2): si la tabla falta, no agenda y la app sigue viva.
 ensureSchema()
-  .then(() => console.log("✅ ensure-schema: OK"))
+  .then(async () => {
+    console.log("✅ ensure-schema: OK");
+    await startScheduledJobs();
+  })
   .catch((err) => console.warn("⚠️ ensure-schema:", err instanceof Error ? err.message : err));
 
 
