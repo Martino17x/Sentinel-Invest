@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Fixtures de prueba del parser B6 (NO commitear — son binarios de prueba)
+public/temp/

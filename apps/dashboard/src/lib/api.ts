@@ -167,8 +167,13 @@ export interface DistributionByTypeItem {
 export interface PortfolioSnapshotPoint {
   capturedAt: string;
   totalValue: number;
-  cash: number;
-  currency: string;
+  totalValueUsd: number;
+  cashArs: number;
+  cashUsd: number;
+  positionsValue: number;
+  dayChangePct: number;
+  unrealizedGain: number;
+  source: string;
 }
 
 export interface Operation {
@@ -521,12 +526,206 @@ export const analysisApi = {
 };
 
 export const reportsApi = {
+  async history(days = 90): Promise<{ history: PortfolioSnapshotPoint[] }> {
+    return apiFetch(`/portfolio/history?days=${days}`);
+  },
+
   async getMonthlyCloses(): Promise<{ closes: MonthClose[] }> {
     return apiFetch("/portfolio/reports");
   },
 
   async getMonthlyReport(month: string): Promise<{ report: MonthlyReport }> {
     return apiFetch(`/portfolio/reports/${month}`);
+  },
+};
+
+// ============================================================
+// Serie diaria + calendario mensual — desde portfolio_snapshots
+// (F1/F2). El calendario devuelve TODOS los días del mes: los que
+// no tienen snapshot llegan con totalValue/cash en null — el
+// frontend NUNCA inventa datos (spec F2-R3), los muestra vacíos.
+// ============================================================
+
+export interface SeriesDay {
+  date: string;
+  totalValue: number;
+  totalValueUsd: number;
+  cashArs: number;
+  cashUsd: number;
+  positionsValue: number;
+  dayChangePct: number;
+  unrealizedGain: number;
+  source: string;
+}
+
+export interface SeriesPositionPoint {
+  date: string;
+  symbol: string;
+  market: string;
+  quantity: number;
+  lastPrice: number | null;
+  totalValue: number;
+}
+
+export interface SeriesResponse {
+  days: SeriesDay[];
+  positions?: SeriesPositionPoint[];
+}
+
+export const seriesApi = {
+  async get(from: string, to?: string, includePositions = false): Promise<SeriesResponse> {
+    const toParam = to ? `&to=${to}` : "";
+    const positions = includePositions ? "&includePositions=true" : "";
+    return apiFetch(`/portfolio/series?from=${from}${toParam}${positions}`);
+  },
+};
+
+export interface CalendarDay {
+  date: string;
+  totalValue: number | null;
+  dayChangePct: number | null;
+  source: string | null;
+  cashArs: number | null;
+  cashUsd: number | null;
+  movementCount: number;
+}
+
+export interface MonthCalendar {
+  month: string;
+  days: CalendarDay[];
+  bestDay: { date: string; pct: number } | null;
+  worstDay: { date: string; pct: number } | null;
+  monthReturn: number | null;
+}
+
+export const calendarApi = {
+  async getMonth(month: string): Promise<MonthCalendar> {
+    return apiFetch(`/portfolio/calendar/${month}`);
+  },
+};
+
+// ============================================================
+// Movimientos de efectivo (cash ledger) — cash_movements
+// (F3-B6, F3-C1). GET lista (filtros), POST registro manual,
+// PATCH confirm/reject, DELETE, import IOL (preview + confirm).
+// ============================================================
+
+export type MovementSource = "manual" | "imported" | "detected";
+export type MovementStatus = "confirmed" | "pending" | "rejected";
+export type MovementType = "deposit" | "withdrawal" | "dividend" | "caucion" | "adjustment";
+
+export interface Movement {
+  id: string;
+  date: string;
+  amount: number;
+  currency: "ARS" | "USD";
+  type: MovementType;
+  source: MovementSource;
+  status: MovementStatus;
+  description: string | null;
+  iolReference: string | null;
+  createdAt: string;
+  decidedAt: string | null;
+}
+
+export interface ImportRowPreview {
+  row: number;
+  parsed: {
+    nroMov: string;
+    liquidDate: string | null;
+    monto: number;
+    currency: "ARS" | "USD";
+    tipo: MovementType;
+    tipoMov: string;
+  };
+  valid: boolean;
+  errors: string[];
+}
+
+export interface ImportPreview {
+  preview: ImportRowPreview[];
+  summary: { total: number; valid: number; invalid: number; byType: Record<string, number> };
+  errors: string[];
+}
+
+export interface CreateMovementInput {
+  date: string;
+  amount: number;
+  currency: "ARS" | "USD";
+  type: MovementType;
+  description?: string;
+}
+
+export const movementsApi = {
+  async list(params: { status?: MovementStatus; source?: MovementSource } = {}): Promise<{ movements: Movement[] }> {
+    const qs = new URLSearchParams();
+    if (params.status) qs.set("status", params.status);
+    if (params.source) qs.set("source", params.source);
+    const q = qs.toString();
+    return apiFetch(`/portfolio/movements${q ? `?${q}` : ""}`);
+  },
+
+  async create(input: CreateMovementInput): Promise<{ movement: Movement }> {
+    return apiFetch("/portfolio/movements", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+
+  async decide(id: string, status: "confirmed" | "rejected"): Promise<{ movement: Movement }> {
+    return apiFetch(`/portfolio/movements/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  async remove(id: string): Promise<void> {
+    return apiFetch(`/portfolio/movements/${id}`, { method: "DELETE" });
+  },
+
+  // Preview del export HTML de IOL: el backend espera el HTML CRUDO
+  // como cuerpo de texto (express.text). Enviamos text/plain.
+  async importPreview(html: string): Promise<ImportPreview> {
+    return apiFetch("/portfolio/movements/import", {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: html,
+    });
+  },
+
+  async importConfirm(rows: ImportRowPreview["parsed"][]): Promise<{ imported: number; skipped: number }> {
+    return apiFetch("/portfolio/movements/import/confirm", {
+      method: "POST",
+      body: JSON.stringify({ rows }),
+    });
+  },
+};
+
+// ============================================================
+// Métricas de cartera — GET /api/portfolio/metrics (F3-A1, D11)
+// Devuelve volatilidad, sharpe, maxDrawdown, correlación Merval,
+// YTD, retorno del período y la rf usada (default 0).
+// ============================================================
+
+export interface PortfolioMetrics {
+  volatility: number;
+  sharpe: number | null;
+  maxDrawdown: number;
+  mervalCorrelation: number | null;
+  ytd: number | null;
+  periodReturn: number;
+  rf: number;
+}
+
+export const metricsApi = {
+  async get(params: { from?: string; to?: string; days?: number; rf?: number } = {}): Promise<PortfolioMetrics> {
+    const qs = new URLSearchParams();
+    if (params.from) qs.set("from", params.from);
+    if (params.to) qs.set("to", params.to);
+    if (params.days) qs.set("days", String(params.days));
+    if (params.rf !== undefined) qs.set("rf", String(params.rf));
+    const q = qs.toString();
+    return apiFetch(`/portfolio/metrics${q ? `?${q}` : ""}`);
   },
 };
 
