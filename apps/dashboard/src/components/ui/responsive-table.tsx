@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Table,
@@ -20,6 +21,10 @@ export interface Column<T> {
   className?: string;
   /** Alineación (afecta al label en mobile) */
   align?: "left" | "right";
+  /** Habilita ordenamiento al clickear el header (asc → desc → asc) */
+  sortable?: boolean;
+  /** Valor usado para ordenar (string o number); null/undefined van al final */
+  sortValue?: (item: T) => string | number | null | undefined;
 }
 
 interface ResponsiveTableProps<T> {
@@ -36,8 +41,8 @@ interface ResponsiveTableProps<T> {
 
 /**
  * Tabla responsive: desktop → tabla clásica, mobile/tablet (< lg) → cards.
- * Las cards muestran cada columna como par label/valor, evitando el
- * scroll horizontal que es incómodo en pantallas chicas.
+ * Las columnas con `sortable` ordenan al clickear el header (asc/desc).
+ * Sin orden activo se conserva el orden de `data` tal cual viene.
  */
 export function ResponsiveTable<T>({
   columns,
@@ -47,6 +52,31 @@ export function ResponsiveTable<T>({
   tableClassName,
   emptyState,
 }: ResponsiveTableProps<T>) {
+  const [sort, setSort] = useState<{ key: string; dir: "asc" | "desc" } | null>(null);
+
+  const sortedData = useMemo(() => {
+    if (!sort) return data;
+    const col = columns.find((c) => c.key === sort.key);
+    if (!col?.sortValue) return data;
+    const dir = sort.dir === "asc" ? 1 : -1;
+    return [...data].sort((a, b) => {
+      const va = col.sortValue!(a);
+      const vb = col.sortValue!(b);
+      if (va == null && vb == null) return 0;
+      if (va == null) return 1;
+      if (vb == null) return -1;
+      if (typeof va === "number" && typeof vb === "number") return (va - vb) * dir;
+      return String(va).localeCompare(String(vb), "es", { numeric: true }) * dir;
+    });
+  }, [data, sort, columns]);
+
+  function toggleSort(key: string) {
+    setSort((prev) => {
+      if (!prev || prev.key !== key) return { key, dir: "asc" };
+      return prev.dir === "asc" ? { key, dir: "desc" } : { key, dir: "asc" };
+    });
+  }
+
   if (data.length === 0) {
     return (
       <div className="rounded-lg border py-8 text-center text-sm text-muted-foreground">
@@ -55,10 +85,7 @@ export function ResponsiveTable<T>({
     );
   }
 
-  const rowClasses = cn(
-    onRowClick && "cursor-pointer"
-  );
-
+  const rowClasses = cn(onRowClick && "cursor-pointer");
   const cardClasses = cn(
     "rounded-xl border bg-card p-4 shadow-sm",
     onRowClick && "cursor-pointer transition-colors hover:bg-accent/50"
@@ -71,18 +98,47 @@ export function ResponsiveTable<T>({
         <Table className={tableClassName}>
           <TableHeader>
             <TableRow>
-              {columns.map((col) => (
-                <TableHead
-                  key={col.key}
-                  className={cn(col.align === "right" && "text-right", col.className)}
-                >
-                  {col.header}
-                </TableHead>
-              ))}
+              {columns.map((col) => {
+                const active = sort?.key === col.key;
+                return (
+                  <TableHead
+                    key={col.key}
+                    className={cn(
+                      col.align === "right" && "text-right",
+                      col.className
+                    )}
+                    aria-sort={
+                      active ? (sort!.dir === "asc" ? "ascending" : "descending") : undefined
+                    }
+                  >
+                    {col.sortable ? (
+                      <button
+                        type="button"
+                        onClick={() => toggleSort(col.key)}
+                        className={cn(
+                          "inline-flex cursor-pointer items-center gap-1 transition-colors hover:text-foreground",
+                          active ? "text-foreground" : "text-muted-foreground"
+                        )}
+                      >
+                        {col.header}
+                        {active ? (
+                          sort!.dir === "asc" ? (
+                            <ChevronUp className="h-3.5 w-3.5" />
+                          ) : (
+                            <ChevronDown className="h-3.5 w-3.5" />
+                          )
+                        ) : null}
+                      </button>
+                    ) : (
+                      col.header
+                    )}
+                  </TableHead>
+                );
+              })}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((item) => (
+            {sortedData.map((item) => (
               <TableRow
                 key={rowKey(item)}
                 onClick={onRowClick ? () => onRowClick(item) : undefined}
@@ -104,7 +160,7 @@ export function ResponsiveTable<T>({
 
       {/* ===== MOBILE / TABLET (< lg) ===== */}
       <div className="space-y-3 lg:hidden">
-        {data.map((item) => (
+        {sortedData.map((item) => (
           <div
             key={rowKey(item)}
             onClick={onRowClick ? () => onRowClick(item) : undefined}
@@ -114,10 +170,7 @@ export function ResponsiveTable<T>({
               {columns.map((col) => (
                 <div
                   key={col.key}
-                  className={cn(
-                    "min-w-0",
-                    col.align === "right" && "text-right"
-                  )}
+                  className={cn("min-w-0", col.align === "right" && "text-right")}
                 >
                   <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                     {col.header}

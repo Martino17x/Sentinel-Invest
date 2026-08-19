@@ -147,6 +147,27 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Evitar layout shift y desaparición de sticky headers (Header/Navigation)
+     cuando Radix o react-remove-scroll bloquean el scroll al abrir Select, Dropdowns o Dialogs.
+     - Como html ya maneja el scroll con scrollbar-gutter: stable y overflow-y: scroll,
+       cualquier padding-right agregado dinámicamente al body duplica el gutter y corre la UI a la izquierda.
+     - Además, react-remove-scroll inyecta 'overflow: hidden !important; position: relative !important;'
+       en body[data-scroll-locked], lo cual rompe el contexto de posicionamiento sticky del <header>
+       cuando el usuario tiene scroll vertical, haciéndolo desaparecer fuera de pantalla.
+     - Sobrescribir overflow: visible !important y position: static !important mantiene el viewport como
+       contenedor de scroll y el header sticky 100% visible e intacto en todo momento. */
+  :root {
+    --removed-body-scroll-bar-size: 0px !important;
+  }
+
+  body[data-scroll-locked],
+  [data-radix-scroll-lock] {
+    overflow: visible !important;
+    position: static !important;
+    padding-right: 0px !important;
+    margin-right: 0px !important;
+  }
 }
 
 /* ============================================================
