@@ -41,57 +41,59 @@ export function HomeHero({
   const usdConverted = usdRate ? totalUsd * usdRate.compra : 0;
 
   return (
-    <Card>
-      <CardContent className="pt-6">
-        {/* Label + selector de moneda */}
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium text-muted-foreground">Tu total valorizado</p>
-          <Select value={currency} onValueChange={(v) => setCurrency(v as "ARS" | "USD")}>
-            <SelectTrigger className="h-7 w-auto gap-1 px-2 text-xs font-medium">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent position="popper" align="end">
-              <SelectItem value="ARS">ARS</SelectItem>
-              <SelectItem value="USD">USD</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+    <Card className="h-full">
+      <CardContent className="flex h-full flex-col justify-between p-6">
+        <div>
+          {/* Label + selector de moneda */}
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-muted-foreground">Tu total valorizado</p>
+            <Select value={currency} onValueChange={(v) => setCurrency(v as "ARS" | "USD")}>
+              <SelectTrigger className="h-7 w-auto gap-1 px-2 text-xs font-medium">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper" align="end">
+                <SelectItem value="ARS">ARS</SelectItem>
+                <SelectItem value="USD">USD</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-        {/* Monto principal — GRANDE */}
-        <div className="mt-2 flex items-center gap-3">
-          <p className="text-4xl font-bold tracking-tight tabular-nums">
-            {hidden
-              ? maskAmount(total)
-              : currency === "ARS"
-                ? formatArsNoDecimals(total)
-                : formatUsd(total)}
-          </p>
-          <button
-            type="button"
-            onClick={() => setHidden((prev) => !prev)}
-            className="cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
-            aria-label={hidden ? "Mostrar montos" : "Ocultar montos"}
-            title={hidden ? "Mostrar montos" : "Ocultar montos"}
-          >
-            {hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-          </button>
-        </div>
+          {/* Monto principal — GRANDE */}
+          <div className="mt-3 flex items-center gap-3">
+            <p className="text-3xl font-bold tracking-tight tabular-nums sm:text-4xl lg:text-5xl">
+              {hidden
+                ? maskAmount(total)
+                : currency === "ARS"
+                  ? formatArsNoDecimals(total)
+                  : formatUsd(total)}
+            </p>
+            <button
+              type="button"
+              onClick={() => setHidden((prev) => !prev)}
+              className="cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
+              aria-label={hidden ? "Mostrar montos" : "Ocultar montos"}
+              title={hidden ? "Mostrar montos" : "Ocultar montos"}
+            >
+              {hidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
+          </div>
 
-        {/* Nota de conversión (solo en ARS, cuando hay dólar y USD > 0) */}
-        {!hidden && currency === "ARS" && usdRate && totalUsd > 0 && (
-          <p className="mt-1 text-xs text-muted-foreground">
-            Incluye {formatUsd(totalUsd)} convertidos al dólar bolsa{" "}
-            {usdRate.compra.toLocaleString("es-AR", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
-            {usdConverted > 0 && <> ({formatArsNoDecimals(usdConverted)})</>}
-          </p>
-        )}
+          {/* Nota de conversión (solo en ARS, cuando hay dólar y USD > 0) */}
+          {!hidden && currency === "ARS" && usdRate && totalUsd > 0 && (
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              Incluye {formatUsd(totalUsd)} convertidos al dólar bolsa{" "}
+              {usdRate.compra.toLocaleString("es-AR", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+              {usdConverted > 0 && <> ({formatArsNoDecimals(usdConverted)})</>}
+            </p>
+          )}
+        </div>
 
         {/* Variación del día */}
         <div
-          className={`mt-1 flex items-center gap-1.5 text-sm font-medium tabular-nums ${
+          className={`mt-4 flex items-center gap-1.5 text-sm font-medium tabular-nums ${
             isUp ? "text-emerald-600" : "text-red-600"
           }`}
         >

@@ -62,18 +62,32 @@ export function HomePage() {
 
   if (portfolioLoading && !portfolio) {
     return (
-      <div className="space-y-4 p-4 sm:p-6 lg:p-8">
-        <Skeleton className="h-32 rounded-xl" />
-        <Skeleton className="h-32 rounded-xl" />
-        <Skeleton className="h-24 rounded-xl" />
-        <Skeleton className="h-72 rounded-xl" />
+      <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
+        <div className="grid gap-4 lg:grid-cols-12 lg:gap-6">
+          <div className="lg:col-span-7 xl:col-span-8">
+            <Skeleton className="h-48 rounded-xl" />
+          </div>
+          <div className="flex flex-col gap-4 lg:col-span-5 xl:col-span-4">
+            <Skeleton className="h-28 rounded-xl" />
+            <Skeleton className="h-14 rounded-xl" />
+          </div>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-12 lg:gap-6">
+          <div className="lg:col-span-7 xl:col-span-8">
+            <Skeleton className="h-72 rounded-xl" />
+          </div>
+          <div className="lg:col-span-5 xl:col-span-4">
+            <Skeleton className="h-72 rounded-xl" />
+          </div>
+        </div>
+        <Skeleton className="h-44 rounded-xl" />
       </div>
     );
   }
 
   if (portfolioError && !portfolio) {
     return (
-      <div className="p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
         <Alert variant="destructive">
           <AlertDescription>
             {portfolioError ?? "No hay datos de cartera. Conectá tu cuenta IOL para empezar."}
@@ -85,7 +99,7 @@ export function HomePage() {
 
   if (!portfolio) {
     return (
-      <div className="p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
         <Alert variant="destructive">
           <AlertDescription>
             No hay datos de cartera. Conectá tu cuenta IOL para empezar.
@@ -96,10 +110,10 @@ export function HomePage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-4 sm:p-6 md:max-w-2xl lg:max-w-5xl lg:p-8">
-      {/* Mobile/tablet: apilado. Desktop (lg+): dos columnas */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="space-y-4">
+    <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
+      {/* Fila 1: Total valorizado (hero prominente) + Liquidez & Acciones rápidas */}
+      <div className="grid gap-4 lg:grid-cols-12 lg:gap-6">
+        <div className="lg:col-span-7 xl:col-span-8">
           <HomeHero
             totalArs={totalArsConverted}
             totalUsd={portfolio.totalUsd}
@@ -108,23 +122,31 @@ export function HomePage() {
             dayChangePct={portfolio.dayChangePct}
             usdRate={usdRate}
           />
-
-          <AvailableCard cashArs={portfolio.cashArs} cashUsd={portfolio.cashUsd} hidden={false} />
-
-          <QuickActions syncing={syncing} onSync={handleSync} />
-
-          <DolarCard dolares={dolares} loading={ratesLoading} />
         </div>
 
-        <InvestmentsDonut
-          distribution={portfolio.distributionByType}
-          currency="ARS"
-          hidden={false}
-          loading={false}
-        />
+        <div className="flex flex-col gap-4 lg:col-span-5 xl:col-span-4">
+          <AvailableCard cashArs={portfolio.cashArs} cashUsd={portfolio.cashUsd} hidden={false} />
+          <QuickActions syncing={syncing} onSync={handleSync} />
+        </div>
       </div>
 
-      {/* Noticias — widget compacto (D.5), no domina el home */}
+      {/* Fila 2: Mis Inversiones (Donut + desglose) + Dólar hoy */}
+      <div className="grid gap-4 lg:grid-cols-12 lg:gap-6">
+        <div className="lg:col-span-7 xl:col-span-8">
+          <InvestmentsDonut
+            distribution={portfolio.distributionByType}
+            currency="ARS"
+            hidden={false}
+            loading={false}
+          />
+        </div>
+
+        <div className="lg:col-span-5 xl:col-span-4">
+          <DolarCard dolares={dolares} loading={ratesLoading} />
+        </div>
+      </div>
+
+      {/* Fila 3: Noticias del mercado */}
       <NewsWidget />
 
       {/* Footer legal sutil */}

@@ -42,30 +42,30 @@ export function DolarCard({ dolares, loading }: { dolares: DolarQuote[] | null; 
     : null;
 
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Dólar hoy</CardTitle>
+        <CardTitle className="text-base font-semibold">Dólar hoy</CardTitle>
         <CardDescription>
           {updated ? `Actualizado ${updated}` : "Fuente: dolarapi.com"}
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex flex-1 flex-col justify-between">
         <div className="space-y-1">
           {casas.map((casa) => (
             <div
               key={casa.casa}
-              className="flex items-center justify-between rounded-lg px-2 py-2"
+              className="flex items-center justify-between rounded-lg px-2.5 py-2 transition-colors hover:bg-muted/30"
             >
               <span className="text-sm font-medium">{casa.nombre}</span>
               <span className="flex items-center gap-3 tabular-nums">
                 <span className="text-xs text-muted-foreground">
-                  {casa.compra.toLocaleString("es-AR", {
+                  ${casa.compra.toLocaleString("es-AR", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}
                 </span>
                 <span className="text-sm font-semibold">
-                  {casa.venta.toLocaleString("es-AR", {
+                  ${casa.venta.toLocaleString("es-AR", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}
@@ -74,8 +74,8 @@ export function DolarCard({ dolares, loading }: { dolares: DolarQuote[] | null; 
             </div>
           ))}
         </div>
-        <p className="mt-2 px-2 text-[10px] text-muted-foreground">
-          Compra / Venta — dolarapi.com
+        <p className="mt-3 px-2 text-[10px] text-muted-foreground">
+          Valores en ARS para Compra / Venta — dolarapi.com
         </p>
       </CardContent>
     </Card>

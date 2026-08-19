@@ -14,14 +14,14 @@ interface AvailableCardProps {
  */
 export function AvailableCard({ cashArs, cashUsd, hidden }: AvailableCardProps) {
   return (
-    <Card>
-      <CardContent className="pt-6">
+    <Card className="flex-1">
+      <CardContent className="p-6">
         <p className="text-sm font-medium text-muted-foreground">Disponible para invertir</p>
 
-        <div className="mt-3 space-y-1">
-          <div className="flex items-center justify-between rounded-lg px-2 py-2.5">
-            <span className="flex items-center gap-2">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold tracking-tight">
+        <div className="mt-3 space-y-1.5">
+          <div className="flex items-center justify-between rounded-lg px-2.5 py-2 transition-colors hover:bg-muted/30">
+            <span className="flex items-center gap-2.5">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold tracking-tight text-foreground">
                 $
               </span>
               <span className="text-sm font-medium">Pesos</span>
@@ -31,9 +31,9 @@ export function AvailableCard({ cashArs, cashUsd, hidden }: AvailableCardProps) 
             </span>
           </div>
 
-          <div className="flex items-center justify-between rounded-lg px-2 py-2.5">
-            <span className="flex items-center gap-2">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold tracking-tight">
+          <div className="flex items-center justify-between rounded-lg px-2.5 py-2 transition-colors hover:bg-muted/30">
+            <span className="flex items-center gap-2.5">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold tracking-tight text-foreground">
                 US$
               </span>
               <span className="text-sm font-medium">Dólares</span>

@@ -58,19 +58,19 @@ export function InvestmentsDonut({
   };
 
   return (
-    <Card className="lg:h-full">
-      <CardHeader>
-        <CardTitle>Mis inversiones</CardTitle>
+    <Card className="h-full">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base font-semibold">Mis inversiones</CardTitle>
         <CardDescription>Distribución por tipo de activo</CardDescription>
       </CardHeader>
-      <CardContent className="lg:flex lg:h-full lg:flex-col lg:justify-center">
+      <CardContent className="pt-2">
         {loading ? (
-          <div className="flex flex-col items-center gap-4 py-4">
-            <Skeleton className="h-40 w-40 rounded-full" />
-            <div className="w-full space-y-2">
-              <Skeleton className="h-8" />
-              <Skeleton className="h-8" />
-              <Skeleton className="h-8" />
+          <div className="flex flex-col items-center gap-4 py-4 sm:flex-row sm:justify-around">
+            <Skeleton className="h-44 w-44 rounded-full" />
+            <div className="w-full max-w-xs space-y-2">
+              <Skeleton className="h-7 rounded-lg" />
+              <Skeleton className="h-7 rounded-lg" />
+              <Skeleton className="h-7 rounded-lg" />
             </div>
           </div>
         ) : distribution.length === 0 ? (
@@ -78,16 +78,16 @@ export function InvestmentsDonut({
             No tenés inversiones todavía. Conectá tu cuenta IOL para ver tu cartera.
           </p>
         ) : (
-          <>
+          <div className="grid items-center gap-6 sm:grid-cols-2">
             {/* Donut con total en el centro */}
-            <div className="relative mx-auto h-56 w-56 lg:h-64 lg:w-64">
+            <div className="relative mx-auto h-52 w-52 sm:h-56 sm:w-56">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={chartData}
                     dataKey="pct"
                     nameKey="label"
-                    innerRadius="59%"
+                    innerRadius="58%"
                     outerRadius="80%"
                     paddingAngle={2}
                     strokeWidth={0}
@@ -102,7 +102,7 @@ export function InvestmentsDonut({
                 <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                   Total
                 </p>
-                <p className="px-2 text-center text-lg font-bold tabular-nums">
+                <p className="px-2 text-center text-base font-bold tabular-nums sm:text-lg">
                   {hidden
                     ? maskAmount(total)
                     : currency === "ARS"
@@ -113,9 +113,12 @@ export function InvestmentsDonut({
             </div>
 
             {/* Desglose por categoría */}
-            <div className="mt-5 space-y-2">
+            <div className="space-y-1.5">
               {chartData.map((item) => (
-                <div key={item.type} className="flex items-center justify-between gap-3">
+                <div
+                  key={item.type}
+                  className="flex items-center justify-between gap-3 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-muted/30"
+                >
                   <div className="flex min-w-0 items-center gap-2">
                     <span
                       className="h-2.5 w-2.5 shrink-0 rounded-full"
@@ -132,7 +135,7 @@ export function InvestmentsDonut({
                 </div>
               ))}
             </div>
-          </>
+          </div>
         )}
       </CardContent>
     </Card>

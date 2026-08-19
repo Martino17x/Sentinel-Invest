@@ -81,10 +81,10 @@ export function NewsWidget() {
 
       <Separator />
 
-      <CardContent className="p-2 sm:p-3">
+      <CardContent className="p-3 sm:p-4">
         {isLoading && list.length === 0 ? (
-          <div className="space-y-2">
-            {Array.from({ length: 3 }).map((_, i) => (
+          <div className="grid gap-2 md:grid-cols-2">
+            {Array.from({ length: 4 }).map((_, i) => (
               <div
                 key={i}
                 className="flex gap-3 rounded-xl border border-transparent p-3"
@@ -102,7 +102,7 @@ export function NewsWidget() {
             ))}
           </div>
         ) : (
-          <div className="space-y-1">
+          <div className="grid gap-2 md:grid-cols-2">
             {list.map((item) => {
               const imageUrl =
                 (item as unknown as { image?: string; imageUrl?: string }).image ??
@@ -113,7 +113,7 @@ export function NewsWidget() {
                   key={item.id}
                   type="button"
                   onClick={() => navigate(`/news/${encodeURIComponent(item.id)}`)}
-                  className="flex w-full gap-3 rounded-xl border border-transparent p-3 text-left transition-colors hover:border-border/60 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                  className="flex w-full cursor-pointer gap-3 rounded-xl border border-transparent p-3 text-left transition-colors hover:border-border/60 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                 >
                   <div className="min-w-0 flex-1 space-y-1">
                     <h4 className="line-clamp-2 text-sm font-medium leading-snug">

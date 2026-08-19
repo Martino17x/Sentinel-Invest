@@ -70,7 +70,12 @@ function ProtectedLayout() {
             <BackButton />
           </div>
         )}
-        <Outlet />
+        <div
+          key={pathname}
+          className="animate-in fade-in-0 slide-in-from-bottom-1 duration-200 ease-out motion-reduce:animate-none"
+        >
+          <Outlet />
+        </div>
       </main>
       <BottomNav />
       <AgentChatDrawer />
@@ -81,6 +86,7 @@ function ProtectedLayout() {
 // Rutas públicas — si ya hay sesión, redirigen al inicio
 function GuestOnlyLayout() {
   const { user, loading } = useAuth();
+  const { pathname } = useLocation();
 
   if (loading) {
     return (
@@ -94,7 +100,14 @@ function GuestOnlyLayout() {
     return <Navigate to="/inicio" replace />;
   }
 
-  return <Outlet />;
+  return (
+    <div
+      key={pathname}
+      className="animate-in fade-in-0 slide-in-from-bottom-1 duration-200 ease-out motion-reduce:animate-none"
+    >
+      <Outlet />
+    </div>
+  );
 }
 
 function App() {
