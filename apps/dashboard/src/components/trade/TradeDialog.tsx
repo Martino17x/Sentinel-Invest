@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { SegmentedToggle } from "@/components/trade/SegmentedToggle";
 import { tradeFormSchema, parseDecimal } from "@/components/trade/tradeSchema";
 import { ordersApi, type CreateOrderInput, type OrderMarket, type OrderSide, type OrderTerm, type PriceType, type OrderResult } from "@/lib/api";
+import { invalidateApiCache } from "@/hooks/useApiData";
 
 const formatterARS = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 2 });
 const formatterUSD = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
@@ -188,6 +189,9 @@ export function TradeForm({
     };
     try {
       const res = await ordersApi.createOrder(input);
+      invalidateApiCache("operations");
+      invalidateApiCache("portfolio");
+      invalidateApiCache("operar");
       setResult(res);
       onSuccess?.(res);
       setStep("done");

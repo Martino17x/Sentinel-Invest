@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { reportsApi, type MonthClose, type MonthlyReport } from "@/lib/api";
+import { reportsApi } from "@/lib/api";
+import { useApiData } from "@/hooks/useApiData";
 import { CalendarView } from "@/components/reports/CalendarView";
 import { MetricsSection } from "@/components/metrics/MetricsSection";
 import { MonthlyReportHeader } from "@/components/reports/MonthlyReportHeader";
@@ -15,61 +16,33 @@ import { MonthlyReportEmpty } from "@/components/reports/MonthlyReportEmpty";
 import { MonthlyReportSkeleton } from "@/components/reports/MonthlyReportSkeleton";
 
 export function ReportsPage() {
-  const [closes, setCloses] = useState<MonthClose[]>([]);
-  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
-  const [report, setReport] = useState<MonthlyReport | null>(null);
-  const [loadingCloses, setLoadingCloses] = useState(true);
-  const [loadingReport, setLoadingReport] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: closesData,
+    isLoading: loadingCloses,
+    error: closesError,
+  } = useApiData("reports:closes", () => reportsApi.getMonthlyCloses());
 
-  // Cargar cierres mensuales (historial para navegación y comparativa)
-  useEffect(() => {
-    let isMounted = true;
-    (async () => {
-      try {
-        const res = await reportsApi.getMonthlyCloses();
-        if (!isMounted) return;
-        setCloses(res.closes);
-        if (res.closes.length > 0) {
-          setSelectedMonth(res.closes[res.closes.length - 1].month);
-        }
-      } catch (err) {
-        if (!isMounted) return;
-        setError(err instanceof Error ? err.message : "No se pudieron cargar los cierres mensuales");
-      } finally {
-        if (isMounted) setLoadingCloses(false);
-      }
-    })();
+  const closes = closesData?.closes ?? [];
 
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const [userSelectedMonth, setUserSelectedMonth] = useState<string | null>(null);
 
-  // Cargar reporte detallado del mes seleccionado
-  useEffect(() => {
-    if (!selectedMonth) return;
-    let isMounted = true;
-    setLoadingReport(true);
-    setError(null);
+  // Default selectedMonth to the latest month from closes if not manually chosen
+  const selectedMonth =
+    userSelectedMonth ??
+    (closes.length > 0 ? closes[closes.length - 1].month : null);
 
-    (async () => {
-      try {
-        const res = await reportsApi.getMonthlyReport(selectedMonth);
-        if (!isMounted) return;
-        setReport(res.report);
-      } catch (err) {
-        if (!isMounted) return;
-        setError(err instanceof Error ? err.message : "No se pudo cargar el reporte del mes");
-      } finally {
-        if (isMounted) setLoadingReport(false);
-      }
-    })();
+  const {
+    data: reportData,
+    isLoading: loadingReport,
+    error: reportError,
+  } = useApiData(
+    selectedMonth ? `reports:monthly:${selectedMonth}` : null,
+    () => reportsApi.getMonthlyReport(selectedMonth!),
+    { enabled: Boolean(selectedMonth) }
+  );
 
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedMonth]);
+  const report = reportData?.report ?? null;
+  const error = closesError || reportError;
 
   const closesSorted = useMemo(
     () => [...closes].sort((a, b) => a.month.localeCompare(b.month)),
@@ -85,13 +58,13 @@ export function ReportsPage() {
 
   function handlePrev() {
     if (hasPrev) {
-      setSelectedMonth(closesSorted[selectedIndex - 1].month);
+      setUserSelectedMonth(closesSorted[selectedIndex - 1].month);
     }
   }
 
   function handleNext() {
     if (hasNext) {
-      setSelectedMonth(closesSorted[selectedIndex + 1].month);
+      setUserSelectedMonth(closesSorted[selectedIndex + 1].month);
     }
   }
 
@@ -106,7 +79,7 @@ export function ReportsPage() {
 
         {/* Tab 1: Reporte Mensual */}
         <TabsContent value="monthly" className="space-y-6 animate-in fade-in-50 duration-200">
-          {loadingCloses ? (
+          {loadingCloses && closes.length === 0 ? (
             <MonthlyReportSkeleton />
           ) : error && !report ? (
             <Alert variant="destructive">
@@ -131,7 +104,7 @@ export function ReportsPage() {
                 </Alert>
               )}
 
-              {loadingReport ? (
+              {loadingReport && !report ? (
                 <MonthlyReportSkeleton />
               ) : report ? (
                 <>
@@ -154,7 +127,7 @@ export function ReportsPage() {
                   <MonthlyReportClosesHistory
                     closes={closes}
                     selectedMonth={selectedMonth}
-                    onSelectMonth={setSelectedMonth}
+                    onSelectMonth={setUserSelectedMonth}
                   />
                 </>
               ) : null}

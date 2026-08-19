@@ -7,14 +7,22 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { profileApi, type UserProfile } from "@/lib/api";
+import { profileApi } from "@/lib/api";
+import { useApiData } from "@/hooks/useApiData";
 import { AgentApiKeysCard } from "@/components/agent/AgentApiKeysCard";
 import { useAuth } from "@/context/AuthContext";
 
 export function ProfilePage() {
   const { user } = useAuth();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+
+  const {
+    data: profileData,
+    isLoading: loading,
+    error: loadError,
+    mutate,
+  } = useApiData("profile", () => profileApi.get());
+
+  const profile = profileData?.profile ?? null;
 
   const [fullName, setFullName] = useState("");
   const [savingName, setSavingName] = useState(false);
@@ -28,15 +36,10 @@ export function ProfilePage() {
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    profileApi
-      .get()
-      .then((res) => {
-        setProfile(res.profile);
-        setFullName(res.profile.fullName ?? "");
-      })
-      .catch((err) => setError(err instanceof Error ? err.message : "No se pudo cargar el perfil"))
-      .finally(() => setLoading(false));
-  }, []);
+    if (profile?.fullName && !fullName) {
+      setFullName(profile.fullName);
+    }
+  }, [profile?.fullName, fullName]);
 
   async function handleSaveName(e: FormEvent) {
     e.preventDefault();
@@ -45,7 +48,7 @@ export function ProfilePage() {
     setSavingName(true);
     try {
       const res = await profileApi.update(fullName.trim());
-      setProfile(res.profile);
+      mutate({ profile: res.profile });
       setSuccess("Nombre actualizado correctamente");
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo actualizar el nombre");
@@ -82,7 +85,7 @@ export function ProfilePage() {
     }
   }
 
-  if (loading) {
+  if (loading && !profile) {
     return (
       <div className="mx-auto max-w-2xl space-y-4 p-4 sm:p-6 lg:p-8">
         <Skeleton className="h-8 w-48" />
@@ -96,7 +99,7 @@ export function ProfilePage() {
     return (
       <div className="mx-auto max-w-2xl p-4 sm:p-6 lg:p-8">
         <Alert variant="destructive">
-          <AlertDescription>{error ?? "No se pudo cargar el perfil"}</AlertDescription>
+          <AlertDescription>{error || loadError || "No se pudo cargar el perfil"}</AlertDescription>
         </Alert>
       </div>
     );

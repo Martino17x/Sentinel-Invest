@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { operationsApi, ordersApi, type Operation } from "@/lib/api";
+import { useApiData, invalidateApiCache } from "@/hooks/useApiData";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { MovementsPanel } from "@/components/movements/MovementsPanel";
 
@@ -42,13 +43,19 @@ const STATUS_LABELS: Record<Operation["status"], string> = {
 };
 
 export function OperationsPage() {
-  const [operations, setOperations] = useState<Operation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const [cancelTarget, setCancelTarget] = useState<Operation | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+
+  const {
+    data: opsData,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useApiData("operations:all", () => operationsApi.getAll());
+
+  const operations = opsData?.operations ?? [];
 
   async function handleCancel(op: Operation) {
     setCancelling(true);
@@ -56,7 +63,9 @@ export function OperationsPage() {
     try {
       await ordersApi.cancelOrder(op.iolOperationId);
       setCancelTarget(null);
-      await load();
+      invalidateApiCache("operations");
+      invalidateApiCache("portfolio");
+      await refetch();
     } catch (err) {
       setCancelError(err instanceof Error ? err.message : "No se pudo cancelar la operación");
     } finally {
@@ -64,24 +73,7 @@ export function OperationsPage() {
     }
   }
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await operationsApi.getAll();
-      setOperations(res.operations);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudieron cargar las operaciones");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  if (loading) {
+  if (loading && operations.length === 0) {
     return (
       <div className="space-y-4 p-4 sm:p-6 lg:p-8">
         <Skeleton className="h-8 w-48" />
@@ -90,7 +82,7 @@ export function OperationsPage() {
     );
   }
 
-  if (error) {
+  if (error && operations.length === 0) {
     return (
       <div className="p-4 sm:p-6 lg:p-8">
         <Alert variant="destructive">

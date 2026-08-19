@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import {
   Link2,
   Link2Off,
@@ -18,11 +18,16 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { connectionsApi, type IolConnectionState } from "@/lib/api";
+import { connectionsApi } from "@/lib/api";
+import { useApiData, invalidateApiCache } from "@/hooks/useApiData";
 
 export function ConnectIolPage() {
-  const [state, setState] = useState<IolConnectionState | null>(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    data: state,
+    isLoading: loading,
+    error: loadError,
+    refetch: loadState,
+  } = useApiData("connections:state", () => connectionsApi.getState());
 
   const [iolUsername, setIolUsername] = useState("");
   const [iolPassword, setIolPassword] = useState("");
@@ -32,21 +37,6 @@ export function ConnectIolPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-
-  const loadState = useCallback(async () => {
-    try {
-      const res = await connectionsApi.getState();
-      setState(res);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo verificar la conexión");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadState();
-  }, [loadState]);
 
   async function handleConnect(e: FormEvent) {
     e.preventDefault();
@@ -64,6 +54,9 @@ export function ConnectIolPage() {
         `¡Cuenta${res.accounts.length > 1 ? "s" : ""} ${connectedAccounts} conectada${res.accounts.length > 1 ? "s" : ""} y validada${res.accounts.length > 1 ? "s" : ""} contra IOL! Tus credenciales están cifradas.`
       );
       setIolPassword("");
+      invalidateApiCache("connections");
+      invalidateApiCache("portfolio");
+      invalidateApiCache("operations");
       await loadState();
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo conectar la cuenta");
@@ -78,13 +71,16 @@ export function ConnectIolPage() {
     try {
       await connectionsApi.disconnect();
       setSuccess("Cuenta desconectada. Tus credenciales fueron eliminadas.");
+      invalidateApiCache("connections");
+      invalidateApiCache("portfolio");
+      invalidateApiCache("operations");
       await loadState();
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo desconectar");
     }
   }
 
-  if (loading) {
+  if (loading && !state) {
     return (
       <div className="mx-auto max-w-2xl space-y-4 p-4 sm:p-6 lg:p-8">
         <Skeleton className="h-8 w-64" />
@@ -104,11 +100,11 @@ export function ConnectIolPage() {
         </p>
       </div>
 
-      {error && (
+      {(error || loadError) && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{error || loadError}</AlertDescription>
         </Alert>
       )}
 

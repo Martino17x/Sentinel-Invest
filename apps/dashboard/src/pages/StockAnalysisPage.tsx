@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { ArrowLeft, LineChart, TriangleAlert } from "lucide-react";
 import { useSmartBack } from "@/lib/use-smart-back";
@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { analysisApi, type Analysis, type AnalysisSignalFactor } from "@/lib/api";
+import { useApiData } from "@/hooks/useApiData";
 import { formatPct } from "@/lib/format";
 
 const formatterARS = new Intl.NumberFormat("es-AR", {
@@ -337,24 +338,21 @@ function Range52wBar({ analysis }: { analysis: Analysis }) {
 export function StockAnalysisPage() {
   const { symbol } = useParams<{ symbol: string }>();
   const { goBack } = useSmartBack("/quotes");
-  const [analysis, setAnalysis] = useState<Analysis | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!symbol) return;
-    setLoading(true);
-    setError(null);
-    analysisApi
-      .getAnalysis(symbol)
-      .then((res) => setAnalysis(res.analysis))
-      .catch((err) =>
-        setError(err instanceof Error ? err.message : "No se pudo analizar el activo")
-      )
-      .finally(() => setLoading(false));
-  }, [symbol]);
+  const cacheKey = symbol ? `analysis:${symbol}` : null;
+  const {
+    data,
+    isLoading: loading,
+    error,
+  } = useApiData(
+    cacheKey,
+    () => analysisApi.getAnalysis(symbol!),
+    { enabled: Boolean(symbol) }
+  );
 
-  if (loading) {
+  const analysis = data?.analysis ?? null;
+
+  if (loading && !analysis) {
     return (
       <div className="space-y-4 p-4 sm:p-6 lg:p-8">
         <Skeleton className="h-8 w-56" />
@@ -379,7 +377,7 @@ export function StockAnalysisPage() {
               onClick={goBack}
               className="mt-2 block cursor-pointer text-sm font-medium underline underline-offset-4 hover:text-foreground"
             >
-              ← Volver a cotizaciones
+              Volver a Cotizaciones
             </button>
           </AlertDescription>
         </Alert>

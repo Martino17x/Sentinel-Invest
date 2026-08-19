@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Activity, TrendingUp, Gauge, Scale, ArrowDownRight, CalendarRange, Info } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -16,7 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { metricsApi, type PortfolioMetrics } from "@/lib/api";
+import { metricsApi } from "@/lib/api";
+import { useApiData } from "@/hooks/useApiData";
 
 // Tasas libres de riesgo ANUAL preestablecidas. BADLAR/LECAP son
 // ESTIMACIONES ILUSTRATIVAS (D11: no hay fuente confiable hoy en ARS);
@@ -89,29 +90,12 @@ function MetricCard({
 
 export function MetricsSection() {
   const [rf, setRf] = useState<number>(0);
-  const [metrics, setMetrics] = useState<PortfolioMetrics | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    metricsApi
-      .get({ days: 90, rf })
-      .then((data) => {
-        if (!cancelled) setMetrics(data);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : "No se pudieron cargar las métricas");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [rf]);
+  const {
+    data: metrics,
+    isLoading: loading,
+    error,
+  } = useApiData(`metrics:90:${rf}`, () => metricsApi.get({ days: 90, rf }));
 
   return (
     <TooltipProvider>
@@ -149,7 +133,7 @@ export function MetricsSection() {
           </Alert>
         )}
 
-        {loading ? (
+        {loading && !metrics ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} className="h-28" />

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Loader2, Check, X, Plus, FileUp } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import {
   type MovementStatus,
   type MovementType,
 } from "@/lib/api";
+import { useApiData, invalidateApiCache } from "@/hooks/useApiData";
 import { MovementRegisterDialog } from "./MovementRegisterDialog";
 import { MovementsImportDialog } from "./MovementsImportDialog";
 
@@ -59,35 +60,28 @@ function formatDate(date: string) {
 }
 
 export function MovementsPanel() {
-  const [movements, setMovements] = useState<Movement[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [decidingId, setDecidingId] = useState<string | null>(null);
   const [registerOpen, setRegisterOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await movementsApi.list();
-      setMovements(res.movements);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudieron cargar los movimientos");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const {
+    data: movementsData,
+    isLoading: loading,
+    error: loadError,
+    refetch: load,
+  } = useApiData("movements:all", () => movementsApi.list());
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const movements = movementsData?.movements ?? [];
 
   async function decide(id: string, status: "confirmed" | "rejected") {
     setDecidingId(id);
     setError(null);
     try {
       await movementsApi.decide(id, status);
+      invalidateApiCache("movements");
+      invalidateApiCache("reports");
+      invalidateApiCache("portfolio");
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo procesar el movimiento");
@@ -189,13 +183,13 @@ export function MovementsPanel() {
         </Button>
       </div>
 
-      {error && (
+      {(error || loadError) && (
         <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{error || loadError}</AlertDescription>
         </Alert>
       )}
 
-      {loading ? (
+      {loading && movements.length === 0 ? (
         <div className="space-y-3">
           <Skeleton className="h-24" />
           <Skeleton className="h-24" />
@@ -227,9 +221,23 @@ export function MovementsPanel() {
       <MovementRegisterDialog
         open={registerOpen}
         onOpenChange={setRegisterOpen}
-        onCreated={load}
+        onCreated={() => {
+          invalidateApiCache("movements");
+          invalidateApiCache("reports");
+          invalidateApiCache("portfolio");
+          load();
+        }}
       />
-      <MovementsImportDialog open={importOpen} onOpenChange={setImportOpen} onImported={load} />
+      <MovementsImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImported={() => {
+          invalidateApiCache("movements");
+          invalidateApiCache("reports");
+          invalidateApiCache("portfolio");
+          load();
+        }}
+      />
     </div>
   );
 }

@@ -1,4 +1,3 @@
-import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { TrendingUp, TrendingDown, Wallet, PiggyBank, Landmark } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -7,11 +6,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { AssetTypeBadge } from "@/components/ui/asset-type-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  portfolioApi,
-  type PortfolioSnapshotPoint,
-  type PortfolioSummary,
-} from "@/lib/api";
+import { portfolioApi } from "@/lib/api";
+import { useApiData } from "@/hooks/useApiData";
 
 // Formateadores de moneda — ARS con separador de miles
 const formatterARS = new Intl.NumberFormat("es-AR", {
@@ -44,31 +40,22 @@ const PIE_COLORS = [
 ];
 
 export function DashboardPage() {
-  const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
-  const [history, setHistory] = useState<PortfolioSnapshotPoint[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: pfData,
+    isLoading: pfLoading,
+    error: pfError,
+  } = useApiData("portfolio", () => portfolioApi.get());
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [pfRes, histRes] = await Promise.all([
-        portfolioApi.get(),
-        portfolioApi.getHistory(90),
-      ]);
-      setPortfolio(pfRes.portfolio);
-      setHistory(histRes.history);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo cargar la cartera");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const {
+    data: histData,
+    isLoading: histLoading,
+    error: histError,
+  } = useApiData("portfolio:history:90", () => portfolioApi.getHistory(90));
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const portfolio = pfData?.portfolio ?? null;
+  const history = histData?.history ?? [];
+  const error = pfError || histError;
+  const loading = (pfLoading && !portfolio) || (histLoading && history.length === 0);
 
   if (loading) {
     return (
@@ -85,11 +72,21 @@ export function DashboardPage() {
     );
   }
 
-  if (error || !portfolio) {
+  if (error && !portfolio) {
     return (
       <div className="p-4 sm:p-6 lg:p-8">
         <Alert variant="destructive">
           <AlertDescription>{error ?? "No hay datos de cartera"}</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  if (!portfolio) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8">
+        <Alert variant="destructive">
+          <AlertDescription>No hay datos de cartera</AlertDescription>
         </Alert>
       </div>
     );

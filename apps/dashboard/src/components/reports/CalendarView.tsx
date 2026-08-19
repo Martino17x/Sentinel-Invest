@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -10,7 +10,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { calendarApi, type CalendarDay, type MonthCalendar } from "@/lib/api";
+import { calendarApi, type CalendarDay } from "@/lib/api";
+import { useApiData } from "@/hooks/useApiData";
 import { artTodayMonthKey, dayLabel, monthLabel, shiftMonthKey } from "@/lib/art-time";
 import { DayDetailDialog } from "./DayDetailDialog";
 
@@ -171,35 +172,14 @@ function DayCell({ day, index, onSelect }: DayCellProps) {
 
 export function CalendarView() {
   const [month, setMonth] = useState(() => artTodayMonthKey());
-  const [data, setData] = useState<MonthCalendar | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<CalendarDay | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-
-    calendarApi
-      .getMonth(month)
-      .then((cal) => {
-        if (!cancelled) setData(cal);
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "No se pudo cargar el calendario");
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [month]);
+  const {
+    data,
+    isLoading: loading,
+    error,
+  } = useApiData(`calendar:${month}`, () => calendarApi.getMonth(month));
 
   // Celdas en blanco iniciales: semanas L→D (convención es-AR)
   const leadingBlanks = useMemo(() => {
@@ -218,55 +198,61 @@ export function CalendarView() {
     setDialogOpen(true);
   }
 
+  function handlePrevMonth() {
+    setMonth((m) => shiftMonthKey(m, -1));
+  }
+
+  function handleNextMonth() {
+    setMonth((m) => shiftMonthKey(m, 1));
+  }
+
   return (
     <TooltipProvider delayDuration={150}>
       <div className="space-y-4">
-        {/* Header: navegación de mes */}
-        <div className="flex items-center justify-between gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setMonth((m) => shiftMonthKey(m, -1))}
-            aria-label="Mes anterior"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
+        {/* Header con navegación de mes y resumen */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
-            <span className="min-w-40 text-center font-medium capitalize">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 cursor-pointer"
+              onClick={handlePrevMonth}
+              aria-label="Mes anterior"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="min-w-36 text-center text-sm font-semibold capitalize">
               {monthLabel(month)}
             </span>
-            <Button variant="ghost" size="sm" onClick={() => setMonth(artTodayMonthKey())}>
-              Hoy
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 cursor-pointer"
+              onClick={handleNextMonth}
+              aria-label="Mes siguiente"
+            >
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setMonth((m) => shiftMonthKey(m, 1))}
-            aria-label="Mes siguiente"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+
+          <p className="text-xs text-muted-foreground">
+            {capturedCount} {capturedCount === 1 ? "día registrado" : "días registrados"} en el mes
+          </p>
         </div>
 
-        {/* Resumen del mes: retorno, mejor y peor día */}
+        {/* Resumen del mes (3 metric cards compactas) */}
         {data && (
-          <div className="grid animate-in fade-in-0 grid-cols-1 gap-3 sm:grid-cols-3 motion-reduce:animate-none">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <div className="flex items-center justify-between rounded-lg border bg-card px-3 py-2">
-              <span className="text-xs text-muted-foreground">Retorno del mes</span>
+              <span className="text-xs text-muted-foreground">Rendimiento mensual</span>
               <span
                 className={cn(
-                  "flex items-center gap-1 text-sm font-bold tabular-nums",
+                  "text-sm font-bold tabular-nums",
                   pctColor(data.monthReturn)
                 )}
               >
                 {data.monthReturn != null ? (
                   <>
-                    {data.monthReturn > 0.01 ? (
-                      <TrendingUp className="h-3.5 w-3.5" />
-                    ) : data.monthReturn < -0.01 ? (
-                      <TrendingDown className="h-3.5 w-3.5" />
-                    ) : null}
                     {pctSign(data.monthReturn)}
                     {data.monthReturn.toFixed(2)}%
                   </>
@@ -309,7 +295,7 @@ export function CalendarView() {
         )}
 
         {/* Grid mensual */}
-        {error ? (
+        {error && !data ? (
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>
           </Alert>

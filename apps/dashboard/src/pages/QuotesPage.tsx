@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Search, Star, Zap, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { quotesApi, type PanelQuote, type PanelSummary } from "@/lib/api";
+import { quotesApi } from "@/lib/api";
+import { useApiData } from "@/hooks/useApiData";
 
 const formatterARS = new Intl.NumberFormat("es-AR", {
   style: "currency",
@@ -75,9 +76,6 @@ function VariationBadge({ pct }: { pct: number }) {
 export function QuotesPage() {
   const [market, setMarket] = useState("bcba");
   const [assetType, setAssetType] = useState("cedear");
-  const [summary, setSummary] = useState<PanelSummary | null>(null);
-  const [quotes, setQuotes] = useState<PanelQuote[]>([]);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [onlyFavorites, setOnlyFavorites] = useState(false);
@@ -85,48 +83,39 @@ export function QuotesPage() {
   // Inicializar la búsqueda desde ?q= (usado por la página Inicio para
   // navegar a cotizaciones con un símbolo prefijado)
   const [search, setSearch] = useState(searchParams.get("q") ?? "");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [searched, setSearched] = useState(searchParams.get("q")?.trim() ?? "");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   const PAGE_SIZE = 25;
 
-  const loadPanel = useCallback(async (mkt: string, type: string, pg: number, query?: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await quotesApi.getPanel(mkt, type, pg, PAGE_SIZE, query);
-      setSummary(res.summary);
-      setQuotes(res.quotes);
-      setTotal(res.total ?? 0);
-      setPage(pg);
-      setLastUpdated(new Date());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo cargar el panel");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   // Búsqueda SERVER-SIDE con debounce (350ms): el server filtra el catálogo
   // completo ANTES de paginar, así "NVDA" aparece aunque no esté en la página 1.
-  const [searched, setSearched] = useState("");
-
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       setSearched(search.trim());
+      setPage(1);
     }, 350);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [search]);
 
-  // Cargar panel: al cambiar mercado/tipo o la búsqueda efectiva (página 1)
-  useEffect(() => {
-    loadPanel(market, assetType, 1, searched || undefined);
-  }, [searched, market, assetType, loadPanel]);
+  const cacheKey = `quotes:panel:${market}:${assetType}:${page}:${searched}`;
+
+  const {
+    data: panelData,
+    isLoading: loading,
+    isRefreshing,
+    error,
+    refetch,
+  } = useApiData(cacheKey, () =>
+    quotesApi.getPanel(market, assetType, page, PAGE_SIZE, searched || undefined)
+  );
+
+  const summary = panelData?.summary ?? null;
+  const quotes = panelData?.quotes ?? [];
+  const total = panelData?.total ?? 0;
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -166,8 +155,8 @@ export function QuotesPage() {
           variant="outline"
           size="sm"
           className="h-8 cursor-pointer px-2"
-          onClick={() => loadPanel(market, assetType, page - 1, searched || undefined)}
-          disabled={page <= 1 || loading}
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+          disabled={page <= 1 || (loading && quotes.length === 0)}
           aria-label="Página anterior"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -179,8 +168,8 @@ export function QuotesPage() {
           variant="outline"
           size="sm"
           className="h-8 cursor-pointer px-2"
-          onClick={() => loadPanel(market, assetType, page + 1, searched || undefined)}
-          disabled={page >= totalPages || loading}
+          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          disabled={page >= totalPages || (loading && quotes.length === 0)}
           aria-label="Página siguiente"
         >
           <ChevronRight className="h-4 w-4" />
@@ -213,7 +202,7 @@ export function QuotesPage() {
       </div>
 
       {/* Selector de mercado + tipo de activo */}
-      <Tabs value={market} onValueChange={setMarket}>
+      <Tabs value={market} onValueChange={(v) => { setMarket(v); setPage(1); }}>
         <div className="overflow-x-auto pb-1">
           <TabsList className="w-max">
             {MARKETS.map((m) => (
@@ -225,7 +214,7 @@ export function QuotesPage() {
         </div>
       </Tabs>
 
-      <Tabs value={assetType} onValueChange={setAssetType}>
+      <Tabs value={assetType} onValueChange={(v) => { setAssetType(v); setPage(1); }}>
         <div className="overflow-x-auto pb-1">
           <TabsList className="w-max">
             {(ASSET_TYPES[market] ?? []).map((t) => (
@@ -247,9 +236,9 @@ export function QuotesPage() {
           >
             {panelIsUp ? "▲" : "▼"} {Math.abs(summary?.totalVariationPct ?? 0).toFixed(2)}%
           </Badge>
-          {lastUpdated && (
-            <span className="text-xs text-muted-foreground">
-              Actualizado {lastUpdated.toLocaleTimeString("es-AR")}
+          {isRefreshing && (
+            <span className="text-xs text-muted-foreground animate-pulse">
+              Actualizando…
             </span>
           )}
         </div>
@@ -302,15 +291,15 @@ export function QuotesPage() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => loadPanel(market, assetType, page, searched || undefined)}
+              onClick={() => refetch()}
               title="Actualizar"
             >
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`h-4 w-4 ${isRefreshing || loading ? "animate-spin" : ""}`} />
             </Button>
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {loading && quotes.length === 0 ? (
             <div className="space-y-2">
               {Array.from({ length: 6 }).map((_, i) => (
                 <Skeleton key={i} className="h-10" />

@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { portfolioApi, ratesApi, type DolarQuote, type PortfolioSummary } from "@/lib/api";
+import { portfolioApi, ratesApi } from "@/lib/api";
+import { useApiData } from "@/hooks/useApiData";
 import { HomeHero } from "@/components/home/HomeHero";
 import { AvailableCard } from "@/components/home/AvailableCard";
 import { QuickActions } from "@/components/home/QuickActions";
@@ -17,41 +18,31 @@ import { DolarCard } from "@/components/home/DolarCard";
  * El panel detallado sigue en /portfolio (renombrado de /dashboard).
  */
 export function HomePage() {
-  const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
-  const [dolares, setDolares] = useState<DolarQuote[] | null>(null);
-  const [ratesLoading, setRatesLoading] = useState(true);
 
-  const load = useCallback(async (isSync = false) => {
-    if (isSync) setSyncing(true);
-    else setLoading(true);
-    setError(null);
+  const {
+    data: portfolioData,
+    isLoading: portfolioLoading,
+    error: portfolioError,
+    refetch: refetchPortfolio,
+  } = useApiData("portfolio", () => portfolioApi.get());
+
+  const {
+    data: ratesData,
+    isLoading: ratesLoading,
+  } = useApiData("rates:dolares", () => ratesApi.getDolares());
+
+  const portfolio = portfolioData?.portfolio ?? null;
+  const dolares = ratesData?.dolares ?? null;
+
+  const handleSync = async () => {
+    setSyncing(true);
     try {
-      const res = await portfolioApi.get();
-      setPortfolio(res.portfolio);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo cargar tu cartera");
+      await refetchPortfolio();
     } finally {
-      setLoading(false);
       setSyncing(false);
     }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  // Cotizaciones del dólar (dolarapi.com vía server) — para la conversión
-  // del Total valorizado y la card "Dólar hoy".
-  useEffect(() => {
-    ratesApi
-      .getDolares()
-      .then((r) => setDolares(r.dolares))
-      .catch(() => setDolares(null))
-      .finally(() => setRatesLoading(false));
-  }, []);
+  };
 
   // Dólar de referencia para conversión: "bolsa" (CCL) — el estándar
   // para valorizar carteras. Usamos la PUNTA COMPRA (lo que recibís
@@ -68,7 +59,7 @@ export function HomePage() {
     return portfolio.totalArs + portfolio.totalUsd * usdRate.compra;
   }, [portfolio, usdRate]);
 
-  if (loading) {
+  if (portfolioLoading && !portfolio) {
     return (
       <div className="space-y-4 p-4 sm:p-6 lg:p-8">
         <Skeleton className="h-32 rounded-xl" />
@@ -79,12 +70,24 @@ export function HomePage() {
     );
   }
 
-  if (error || !portfolio) {
+  if (portfolioError && !portfolio) {
     return (
       <div className="p-4 sm:p-6 lg:p-8">
         <Alert variant="destructive">
           <AlertDescription>
-            {error ?? "No hay datos de cartera. Conectá tu cuenta IOL para empezar."}
+            {portfolioError ?? "No hay datos de cartera. Conectá tu cuenta IOL para empezar."}
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  if (!portfolio) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8">
+        <Alert variant="destructive">
+          <AlertDescription>
+            No hay datos de cartera. Conectá tu cuenta IOL para empezar.
           </AlertDescription>
         </Alert>
       </div>
@@ -107,7 +110,7 @@ export function HomePage() {
 
           <AvailableCard cashArs={portfolio.cashArs} cashUsd={portfolio.cashUsd} hidden={false} />
 
-          <QuickActions syncing={syncing} onSync={() => load(true)} />
+          <QuickActions syncing={syncing} onSync={handleSync} />
 
           <DolarCard dolares={dolares} loading={ratesLoading} />
         </div>

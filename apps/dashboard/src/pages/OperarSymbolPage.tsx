@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ChevronDown, ChevronUp, Info } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { quotesApi, portfolioApi, type OrderMarket, type OrderSide, type Quote } from "@/lib/api";
+import { quotesApi, portfolioApi, type OrderMarket, type OrderSide } from "@/lib/api";
+import { useApiData } from "@/hooks/useApiData";
 import { TradeForm, formatMoney } from "@/components/trade/TradeDialog";
 
 function MarketBadge({ market }: { market: string }) {
@@ -26,37 +27,34 @@ export function OperarSymbolPage() {
   const marketParam = (searchParams.get("market") as OrderMarket | null) ?? "bcba";
   const specieParam = searchParams.get("specie") === "D" ? "D" : undefined;
 
-  const [quote, setQuote] = useState<Quote | null>(null);
-  const [history, setHistory] = useState<{ date: string; close: number }[]>([]);
-  const [availableArs, setAvailableArs] = useState<number | null>(null);
-  const [availableUsd, setAvailableUsd] = useState<number | null>(null);
-  const [availableQty, setAvailableQty] = useState<number | null>(null);
   const [showData, setShowData] = useState(true);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!symbol) return;
-    setLoading(true);
-    setError(null);
-    Promise.all([
-      quotesApi.getQuote(symbol, marketParam),
-      quotesApi.getQuoteHistory(symbol, marketParam, 90),
-      portfolioApi.get().catch(() => null),
-    ])
-      .then(([q, h, pf]) => {
-        setQuote(q.quote);
-        setHistory(h.history);
-        if (pf) {
-          setAvailableArs(pf.portfolio.cashArs);
-          setAvailableUsd(pf.portfolio.cashUsd);
-          const pos = pf.portfolio.positions.find((p) => p.symbol === q.quote.symbol);
-          setAvailableQty(pos?.quantity ?? null);
-        }
-      })
-      .catch((err) => setError(err instanceof Error ? err.message : "No se pudo cargar el activo"))
-      .finally(() => setLoading(false));
-  }, [symbol, marketParam]);
+  const cacheKey = symbol ? `operar:${symbol}:${marketParam}` : null;
+  const { data, isLoading: loading, error } = useApiData(
+    cacheKey,
+    async () => {
+      const [q, h, pf] = await Promise.all([
+        quotesApi.getQuote(symbol!, marketParam),
+        quotesApi.getQuoteHistory(symbol!, marketParam, 90),
+        portfolioApi.get().catch(() => null),
+      ]);
+      const pos = pf ? pf.portfolio.positions.find((p) => p.symbol === q.quote.symbol) : null;
+      return {
+        quote: q.quote,
+        history: h.history,
+        availableArs: pf ? pf.portfolio.cashArs : null,
+        availableUsd: pf ? pf.portfolio.cashUsd : null,
+        availableQty: pos?.quantity ?? null,
+      };
+    },
+    { enabled: Boolean(symbol) }
+  );
+
+  const quote = data?.quote ?? null;
+  const history = data?.history ?? [];
+  const availableArs = data?.availableArs ?? null;
+  const availableUsd = data?.availableUsd ?? null;
+  const availableQty = data?.availableQty ?? null;
 
   const chartData = useMemo(
     () =>
@@ -67,7 +65,7 @@ export function OperarSymbolPage() {
     [history]
   );
 
-  if (loading) {
+  if (loading && !quote) {
     return (
       <div className="space-y-4 p-4 sm:p-6 lg:p-8">
         <Skeleton className="h-8 w-48" />
@@ -76,11 +74,21 @@ export function OperarSymbolPage() {
     );
   }
 
-  if (error || !quote) {
+  if (error && !quote) {
     return (
       <div className="p-4 sm:p-6 lg:p-8">
         <Alert variant="destructive">
           <AlertDescription>{error ?? "Activo no encontrado"}</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  if (!quote) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8">
+        <Alert variant="destructive">
+          <AlertDescription>Activo no encontrado</AlertDescription>
         </Alert>
       </div>
     );

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Star } from "lucide-react";
 import { useSmartBack } from "@/lib/use-smart-back";
@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TradingViewWidget, tradingViewSymbol } from "@/components/ui/tradingview-widget";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { quotesApi, type Quote } from "@/lib/api";
+import { quotesApi } from "@/lib/api";
+import { useApiData } from "@/hooks/useApiData";
 
 const formatterARS = new Intl.NumberFormat("es-AR", {
   style: "currency",
@@ -33,31 +34,28 @@ function formatPrice(value: number, currency: string) {
 export function QuoteDetailPage() {
   const { symbol } = useParams<{ symbol: string }>();
   const { goBack } = useSmartBack("/quotes");
-  const [quote, setQuote] = useState<Quote | null>(null);
-  const [history, setHistory] = useState<{ date: string; close: number }[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
   const [chartMode, setChartMode] = useState<"simple" | "tradingview">("simple");
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!symbol) return;
-    setLoading(true);
-    setError(null);
-    Promise.all([
-      quotesApi.getQuote(symbol, "bcba"),
-      quotesApi.getQuoteHistory(symbol, "bcba", 90),
-    ])
-      .then(([quoteRes, histRes]) => {
-        setQuote(quoteRes.quote);
-        setHistory(histRes.history);
-      })
-      .catch((err) =>
-        setError(err instanceof Error ? err.message : "No se pudo cargar el activo")
-      )
-      .finally(() => setLoading(false));
-  }, [symbol]);
+  const cacheKey = symbol ? `quote:${symbol}` : null;
+  const { data, isLoading: loading, error } = useApiData(
+    cacheKey,
+    async () => {
+      const [quoteRes, histRes] = await Promise.all([
+        quotesApi.getQuote(symbol!, "bcba"),
+        quotesApi.getQuoteHistory(symbol!, "bcba", 90),
+      ]);
+      return {
+        quote: quoteRes.quote,
+        history: histRes.history,
+      };
+    },
+    { enabled: Boolean(symbol) }
+  );
+
+  const quote = data?.quote ?? null;
+  const history = data?.history ?? [];
 
   const chartData = useMemo(
     () =>
@@ -71,7 +69,7 @@ export function QuoteDetailPage() {
     [history]
   );
 
-  if (loading) {
+  if (loading && !quote) {
     return (
       <div className="space-y-4 p-4 sm:p-6 lg:p-8">
         <Skeleton className="h-8 w-40" />
@@ -85,11 +83,21 @@ export function QuoteDetailPage() {
     );
   }
 
-  if (error || !quote) {
+  if (error && !quote) {
     return (
       <div className="p-4 sm:p-6 lg:p-8">
         <Alert variant="destructive">
           <AlertDescription>{error ?? "Activo no encontrado"}</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  if (!quote) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8">
+        <Alert variant="destructive">
+          <AlertDescription>Activo no encontrado</AlertDescription>
         </Alert>
       </div>
     );
