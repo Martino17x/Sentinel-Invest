@@ -4,14 +4,16 @@ import {
   uuid,
   text,
   timestamp,
+  date,
   numeric,
   integer,
   boolean,
   jsonb,
   index,
   uniqueIndex,
+  check,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 
 // ============================================================
 // ENUMS
@@ -29,6 +31,11 @@ export const chatRoleEnum = pgEnum("chat_role", ["user", "assistant", "tool"]);
 
 export const apiKeyScopeEnum = pgEnum("api_key_scope", ["read", "trade"]);
 export const pendingOrderStatusEnum = pgEnum("pending_order_status", ["pending", "approved", "rejected", "cancelled"]);
+
+// Enums del cash ledger (creados vía DO block idempotente en ensure-schema
+// para bases sin drizzle migrate — ver CASH_ENUM_MIGRATIONS)
+export const cashMovementSourceEnum = pgEnum("cash_movement_source", ["manual", "imported", "detected"]);
+export const cashMovementStatusEnum = pgEnum("cash_movement_status", ["confirmed", "pending", "rejected"]);
 
 // ============================================================
 // USERS — el corazón del multitenant
@@ -112,6 +119,7 @@ export const accountsRelations = relations(accounts, ({ one, many }) => ({
   positions: many(positions),
   operations: many(operations),
   snapshots: many(portfolioSnapshots),
+  cashMovements: many(cashMovements),
 }));
 
 // ============================================================
@@ -201,17 +209,103 @@ export const portfolioSnapshots = pgTable(
     unrealizedGain: numeric("unrealized_gain", { precision: 20, scale: 2 }).default("0").notNull(),
     dayChangePct: numeric("day_change_pct", { precision: 10, scale: 4 }).default("0").notNull(),
     currency: currencyEnum("currency").default("ARS").notNull(),
+    // Origen del snapshot: 'real' = captura IOL / cron; 'reconstructed' = backfill
+    source: text("source").notNull().default("real"),
     capturedAt: timestamp("captured_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
     index("snapshots_account_idx").on(table.accountId),
     index("snapshots_captured_at_idx").on(table.capturedAt),
     uniqueIndex("snapshots_account_time_unique").on(table.accountId, table.capturedAt),
+    check("snapshots_source_check", sql`source IN ('real', 'reconstructed')`),
   ]
 );
 
-export const portfolioSnapshotsRelations = relations(portfolioSnapshots, ({ one }) => ({
+export const portfolioSnapshotsRelations = relations(portfolioSnapshots, ({ one, many }) => ({
   account: one(accounts, { fields: [portfolioSnapshots.accountId], references: [accounts.id] }),
+  positions: many(snapshotPositions),
+}));
+
+// ============================================================
+// SNAPSHOT POSITIONS — composición del portafolio por snapshot
+// (la materia prima de la contribución por activo, diferida)
+// ============================================================
+
+export const snapshotPositions = pgTable(
+  "snapshot_positions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    snapshotId: uuid("snapshot_id")
+      .notNull()
+      .references(() => portfolioSnapshots.id, { onDelete: "cascade" }),
+    symbol: text("symbol").notNull(),
+    market: marketEnum("market").notNull(),
+    assetType: text("asset_type"),
+    quantity: numeric("quantity", { precision: 20, scale: 6 }).notNull(),
+    avgPrice: numeric("avg_price", { precision: 20, scale: 6 }),
+    lastPrice: numeric("last_price", { precision: 20, scale: 6 }),
+    totalValue: numeric("total_value", { precision: 20, scale: 2 }).notNull(),
+    currency: currencyEnum("currency").default("ARS").notNull(),
+  },
+  (table) => [
+    index("snapshot_positions_snapshot_idx").on(table.snapshotId),
+    uniqueIndex("snapshot_positions_snapshot_symbol_market_unique").on(table.snapshotId, table.symbol, table.market),
+  ]
+);
+
+export const snapshotPositionsRelations = relations(snapshotPositions, ({ one }) => ({
+  snapshot: one(portfolioSnapshots, {
+    fields: [snapshotPositions.snapshotId],
+    references: [portfolioSnapshots.id],
+  }),
+}));
+
+// ============================================================
+// CASH MOVEMENTS — libro mayor de efectivo (aportes/egresos)
+// amount firmado: +ingreso / -egreso. IOL NO expone esto: el
+// usuario registra manual, importa, o la reconciliación detecta.
+// ============================================================
+
+export const cashMovements = pgTable(
+  "cash_movements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    date: date("date").notNull(),
+    // Firmado: +ingreso (depósito, dividendo) / -egreso (extracción)
+    amount: numeric("amount", { precision: 20, scale: 2 }).notNull(),
+    currency: currencyEnum("currency").notNull(),
+    type: text("type").notNull().default("deposit"),
+    source: cashMovementSourceEnum("source").notNull().default("manual"),
+    status: cashMovementStatusEnum("status").notNull().default("pending"),
+    description: text("description"),
+    iolReference: text("iol_reference"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+  },
+  (table) => [
+    check("cash_movements_type_check", sql`type IN ('deposit', 'withdrawal', 'dividend', 'caucion', 'adjustment')`),
+    index("cash_movements_account_idx").on(table.accountId),
+    index("cash_movements_date_idx").on(table.date),
+    // Dedup manual/importado: mismo día+monto+moneda+tipo+origen = duplicado.
+    // Los DETECTED son 1/día por definición (partial unique aparte — D5).
+    uniqueIndex("cash_movements_dedup_unique").on(
+      table.accountId,
+      table.date,
+      table.amount,
+      table.currency,
+      table.type,
+      table.source
+    ),
+    uniqueIndex("cash_movements_detected_1per_day").on(table.accountId, table.date).where(sql`source = 'detected'`),
+  ]
+);
+
+export const cashMovementsRelations = relations(cashMovements, ({ one }) => ({
+  account: one(accounts, { fields: [cashMovements.accountId], references: [accounts.id] }),
 }));
 
 // ============================================================
