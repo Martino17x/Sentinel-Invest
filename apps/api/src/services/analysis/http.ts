@@ -1,8 +1,12 @@
 // ============================================================
-// Shared fetch helper — portfolio-analysis
-// Timeout 8000ms interno + unión con opts.signal
-// NUNCA lanza por red → {status:0, json:null}
+// Shared fetch helper — portfolio-analysis + content-providers
+// Timeout 8000ms interno + unión con opts.signal (Batch1 verified)
+// NUNCA lanza por red → {status:0, json:null} → caller mapea a degraded
 // Provider traduce 429 → rate_limited
+// Content-providers:
+//   - GNews: sin header especial, token va en query `?token=` (no X- header)
+//   - Finnhub: header `X-Finnhub-Token: FINNHUB_API_KEY` vía opts.headers
+//   - Señal: controller union con opts.signal (abort externo propaga timeout)
 // ============================================================
 
 const FETCH_TIMEOUT_MS = 8000;
