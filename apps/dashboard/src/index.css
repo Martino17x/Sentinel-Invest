@@ -22,6 +22,7 @@
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(1 0 0);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -66,6 +67,7 @@
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(1 0 0);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
@@ -105,6 +107,7 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -148,22 +151,24 @@
     @apply bg-background text-foreground;
   }
 
-  /* Evitar layout shift y desaparición de sticky headers (Header/Navigation)
-     cuando Radix o react-remove-scroll bloquean el scroll al abrir Select, Dropdowns o Dialogs.
-     - Como html ya maneja el scroll con scrollbar-gutter: stable y overflow-y: scroll,
-       cualquier padding-right agregado dinámicamente al body duplica el gutter y corre la UI a la izquierda.
-     - Además, react-remove-scroll inyecta 'overflow: hidden !important; position: relative !important;'
-       en body[data-scroll-locked], lo cual rompe el contexto de posicionamiento sticky del <header>
-       cuando el usuario tiene scroll vertical, haciéndolo desaparecer fuera de pantalla.
-     - Sobrescribir overflow: visible !important y position: static !important mantiene el viewport como
-       contenedor de scroll y el header sticky 100% visible e intacto en todo momento. */
+  /* Evitar layout shift y mantener bloqueo de scroll limpio cuando se abren Dialogs o Modales.
+     - html maneja el scroll con scrollbar-gutter: stable y overflow-y: scroll por defecto.
+     - Cuando un modal/dialog bloquea el scroll (body[data-scroll-locked]), bloqueamos el overflow
+       tanto en html como en body para que el fondo no sea scrolleable.
+     - Como scrollbar-gutter: stable está activo, no hay layout shift ni saltos horizontales.
+     - Sobrescribir padding-right: 0px y --removed-body-scroll-bar-size: 0px evita duplicar gutters.
+     - position: static !important en body evita alterar el contexto de posición del header sticky. */
   :root {
     --removed-body-scroll-bar-size: 0px !important;
   }
 
+  html:has(body[data-scroll-locked]) {
+    overflow: hidden !important;
+  }
+
   body[data-scroll-locked],
   [data-radix-scroll-lock] {
-    overflow: visible !important;
+    overflow: hidden !important;
     position: static !important;
     padding-right: 0px !important;
     margin-right: 0px !important;

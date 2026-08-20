@@ -105,13 +105,19 @@ export function AgentChatFullScreen({
     return () => clearTimeout(t);
   }, [open]);
 
-  // Scroll lock mientras el modal está montado
+  // Bloquear scroll de la página de fondo mientras el modal está montado
   useEffect(() => {
     if (!mounted) return;
-    const prev = document.body.style.overflow;
+
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+    const originalBodyOverflow = document.body.style.overflow;
+
+    document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
+
     return () => {
-      document.body.style.overflow = prev;
+      document.documentElement.style.overflow = originalHtmlOverflow;
+      document.body.style.overflow = originalBodyOverflow;
     };
   }, [mounted]);
 
