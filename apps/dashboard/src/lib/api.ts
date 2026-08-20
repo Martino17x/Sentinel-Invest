@@ -26,7 +26,7 @@ export function getAccessToken() {
 }
 
 /** Pide un access token nuevo usando la cookie httpOnly */
-async function refreshAccessToken(): Promise<string | null> {
+export async function refreshAccessToken(): Promise<string | null> {
   // Si ya hay un refresh en curso, reusarlo (evita refreshes en paralelo)
   if (!refreshPromise) {
     refreshPromise = (async () => {
@@ -35,11 +35,15 @@ async function refreshAccessToken(): Promise<string | null> {
           method: "POST",
           credentials: "include", // obligatorio: la cookie viaja con la request
         });
-        if (!res.ok) return null;
+        if (!res.ok) {
+          accessToken = null;
+          return null;
+        }
         const data = (await res.json()) as AuthResponse;
         accessToken = data.accessToken;
         return data.accessToken;
       } catch {
+        accessToken = null;
         return null;
       } finally {
         refreshPromise = null;
@@ -54,12 +58,13 @@ export async function apiFetch<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
+  const isPublicAuthRoute = /^\/auth\/(refresh|login|register|me)(?:\/|$)/.test(path);
   const headers = new Headers(options.headers);
   if (options.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
-  if (accessToken) {
+  if (accessToken && !isPublicAuthRoute) {
     headers.set("Authorization", `Bearer ${accessToken}`);
   }
 
@@ -69,10 +74,11 @@ export async function apiFetch<T>(
     credentials: "include",
   });
 
-  // Token expirado → intentar refresh UNA vez y reintentar.
-  // Solo si HABÍA token: un 401 sin token significa "sesión inexistente",
-  // no "token expirado" — no tiene sentido intentar refrescar.
-  if (res.status === 401 && accessToken) {
+  // Token ausente o expirado → intentar refresh UNA vez y reintentar.
+  // Las rutas de autenticación manejan sus propios 401 y no deben entrar en loop.
+  let hasRetried = false;
+  if (res.status === 401 && !isPublicAuthRoute && !hasRetried) {
+    hasRetried = true;
     const newToken = await refreshAccessToken();
     if (newToken) {
       headers.set("Authorization", `Bearer ${newToken}`);
@@ -557,6 +563,8 @@ export interface ConsensusData {
   currency: string | null;
 }
 
+export type NewsProvider = "gnews" | "finnhub" | "tradingview" | "yahoo";
+
 export interface NewsItem {
   id: string;
   title: string;
@@ -565,11 +573,26 @@ export interface NewsItem {
   publishedAt: string | null;
   symbol: string | null;
   summary: string | null;
+  /** Canonical image field (primary). Null when provider has no image. */
+  image?: string | null;
+  /** Alias for image — legacy consumers reading imageUrl */
+  imageUrl?: string | null;
+  /** Canonical long description (GNews description / Finnhub summary) */
+  description?: string | null;
+  /** Full body when available (GNews content) */
+  content?: string | null;
+  /** Alias for url (legacy consumers using link) */
+  link?: string;
+  /** Origin provider of this item */
+  provider?: NewsProvider;
+  /** True when fallback degraded (TV title-only, quota hit) */
+  degraded?: boolean;
 }
 
 export interface NewsData {
-  source: "tradingview" | "yahoo";
+  source: NewsProvider;
   items: NewsItem[];
+  degraded?: boolean;
 }
 
 export interface InsightsData {

@@ -49,6 +49,10 @@ export interface ConsensusData {
   currency: string | null;
 }
 
+export type NewsProvider = "gnews" | "finnhub" | "tradingview" | "yahoo";
+/** Env flag subset (yahoo never as primary) */
+export type NewsProviderFlag = "gnews" | "finnhub" | "tradingview";
+
 export interface NewsItem {
   id: string;
   title: string;
@@ -57,11 +61,27 @@ export interface NewsItem {
   publishedAt: string | null;
   symbol: string | null;
   summary: string | null;
+  // --- content-providers extension (backward compat, Batch1) ---
+  /** Canonical image field (primary). Null when provider has no image. */
+  image?: string | null;
+  /** Alias for image — kept for legacy consumers reading imageUrl */
+  imageUrl?: string | null;
+  /** Canonical long description (GNews description / Finnhub summary) */
+  description?: string | null;
+  /** Full body when available (GNews content) */
+  content?: string | null;
+  /** Alias for url (legacy consumers using link) */
+  link?: string;
+  /** Origin provider of this item */
+  provider?: NewsProvider;
+  /** True when fallback degraded (TV title-only, quota hit) */
+  degraded?: boolean;
 }
 
 export interface NewsData {
-  source: "tradingview" | "yahoo";
+  source: NewsProvider;
   items: NewsItem[];
+  degraded?: boolean;
 }
 
 export interface ScreenerRow {
