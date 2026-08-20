@@ -69,8 +69,8 @@ export function Navigation() {
   const displayName = user?.fullName ?? user?.email ?? "Usuario";
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-16 items-center justify-between gap-2 px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-40 max-w-[100vw] overflow-x-clip border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="mx-auto flex h-16 w-full max-w-7xl min-w-0 items-center justify-between gap-2 overflow-hidden px-4 sm:px-6 lg:px-8 box-border">
         {/* Logo + navegación desktop */}
         <div className="flex min-w-0 items-center gap-6">
           <Link to="/inicio" className="flex shrink-0 items-center gap-2 font-semibold">

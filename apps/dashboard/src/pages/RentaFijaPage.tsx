@@ -41,7 +41,7 @@ export function RentaFijaPage() {
                 <Calendar className="h-5 w-5 text-primary" />
                 Calendario
               </CardTitle>
-              <CardDescription>En {`{mes}`} cobrás — rentas y amortizaciones proyectadas 12 meses</CardDescription>
+              <CardDescription>En julio cobrás — rentas y amortizaciones proyectadas 12 meses</CardDescription>
             </CardHeader>
             <CardContent>
               <Link to="/renta-fija/calendario">

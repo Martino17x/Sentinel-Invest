@@ -127,31 +127,47 @@ export function QuotesPage() {
   const quotes = panelData?.quotes ?? [];
   const total = panelData?.total ?? 0;
 
-  // Renta fija: enrich bono/on tabs with TIR/MD from curve (SwrCache 15min)
+  // Renta fija: enrich bono/on tabs — bulk panel (Task 4.5) with fallback to 4× getCurve on 404/empty
   const isBonoTab = assetType === "bono" || assetType === "on";
-  const { data: curveUsd } = useApiData(
-    isBonoTab ? "bonds:curve:USD-hard-dollar" : null,
-    () => bondsApi.getCurve("USD-hard-dollar"),
+  const { data: panelBulk, error: panelBulkError } = useApiData(
+    isBonoTab ? "bonds:panel:for-quotes:bulk" : null,
+    () => bondsApi.getPanel({ page: 1, pageSize: 100, sort: "tir", order: "desc" }),
     { enabled: isBonoTab }
+  );
+  const bulkRows = panelBulk?.data ?? panelBulk?.rows ?? [];
+  const needsFallback = isBonoTab && (panelBulkError != null || (panelBulk != null && bulkRows.length === 0));
+  const { data: curveUsd } = useApiData(
+    needsFallback ? "bonds:curve:USD-hard-dollar" : null,
+    () => bondsApi.getCurve("USD-hard-dollar"),
+    { enabled: needsFallback }
   );
   const { data: curveCer } = useApiData(
-    isBonoTab ? "bonds:curve:CER" : null,
+    needsFallback ? "bonds:curve:CER" : null,
     () => bondsApi.getCurve("CER"),
-    { enabled: isBonoTab }
+    { enabled: needsFallback }
   );
   const { data: curveBopreal } = useApiData(
-    isBonoTab ? "bonds:curve:BOPREAL" : null,
+    needsFallback ? "bonds:curve:BOPREAL" : null,
     () => bondsApi.getCurve("BOPREAL"),
-    { enabled: isBonoTab }
+    { enabled: needsFallback }
   );
   const { data: curveLecap } = useApiData(
-    isBonoTab ? "bonds:curve:LECAP/BONCAP" : null,
+    needsFallback ? "bonds:curve:LECAP/BONCAP" : null,
     () => bondsApi.getCurve("LECAP/BONCAP"),
-    { enabled: isBonoTab }
+    { enabled: needsFallback }
   );
 
   const curveMap = useMemo(() => {
     if (!isBonoTab) return new Map<string, { tir: number; md: number }>();
+    // Primary: panel bulk (1 request for 100 rows server-sorted)
+    if (bulkRows.length > 0 && !panelBulkError) {
+      const map = new Map<string, { tir: number; md: number }>();
+      for (const r of bulkRows) {
+        if (r.tir != null && r.md != null) map.set(r.symbol.toUpperCase(), { tir: r.tir, md: r.md });
+      }
+      if (map.size > 0) return map;
+    }
+    // Fallback: 4× getCurve (when panel 404/empty or BONDS_PANEL_ENABLED off)
     const map = new Map<string, { tir: number; md: number }>();
     for (const src of [curveUsd, curveCer, curveBopreal, curveLecap]) {
       for (const p of src?.points ?? []) {
@@ -159,7 +175,7 @@ export function QuotesPage() {
       }
     }
     return map;
-  }, [isBonoTab, curveUsd, curveCer, curveBopreal, curveLecap]);
+  }, [isBonoTab, bulkRows, panelBulkError, curveUsd, curveCer, curveBopreal, curveLecap]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -239,9 +255,9 @@ export function QuotesPage() {
   }
 
   return (
-    <div className="space-y-0">
+    <div className="min-w-0 max-w-full overflow-x-hidden space-y-0">
       <DisclaimerBanner />
-      <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto min-w-0 max-w-7xl space-y-6 overflow-x-hidden p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Cotizaciones</h1>
@@ -270,9 +286,9 @@ export function QuotesPage() {
       </div>
 
       {/* Selector de mercado + tipo de activo */}
-      <Tabs value={market} onValueChange={(v) => { setMarket(v); setPage(1); }}>
-        <div className="overflow-x-auto pb-1">
-          <TabsList className="w-max">
+      <Tabs value={market} onValueChange={(v) => { setMarket(v); setPage(1); }} className="min-w-0 max-w-full overflow-x-hidden">
+        <div className="-mx-4 max-w-[100vw] overflow-x-auto overflow-y-hidden px-4 pb-1 sm:mx-0 sm:max-w-full sm:px-0 box-border">
+          <TabsList className="w-max max-w-none">
             {MARKETS.map((m) => (
               <TabsTrigger key={m.value} value={m.value}>
                 {m.label}
@@ -282,9 +298,9 @@ export function QuotesPage() {
         </div>
       </Tabs>
 
-      <Tabs value={assetType} onValueChange={(v) => { setAssetType(v); setPage(1); setCedearCurrency("all"); }}>
-        <div className="overflow-x-auto pb-1">
-          <TabsList className="w-max">
+      <Tabs value={assetType} onValueChange={(v) => { setAssetType(v); setPage(1); setCedearCurrency("all"); }} className="min-w-0 max-w-full overflow-x-hidden">
+        <div className="-mx-4 max-w-[100vw] overflow-x-auto overflow-y-hidden px-4 pb-1 sm:mx-0 sm:max-w-full sm:px-0 box-border">
+          <TabsList className="w-max max-w-none">
             {(ASSET_TYPES[market] ?? []).map((t) => (
               <TabsTrigger key={t.value} value={t.value}>
                 {t.label}

@@ -32,6 +32,8 @@ import { cn } from "@/lib/utils";
 
 const RadarPage = lazy(() => import("@/pages/RadarPage"));
 const RentaFijaPage = lazy(() => import("@/pages/RentaFijaPage"));
+const RentaFijaTablaPage = lazy(() => import("@/pages/RentaFijaTablaPage"));
+const BondFichaPage = lazy(() => import("@/pages/BondFichaPage"));
 const RentaFijaCurvaPage = lazy(() => import("@/pages/RentaFijaCurvaPage"));
 const RentaFijaCalendarioPage = lazy(() => import("@/pages/RentaFijaCalendarioPage"));
 
@@ -76,20 +78,20 @@ function ProtectedLayout() {
   const backClasses = cn(!isSecondary && "md:hidden"); // en desktop se oculta si no es página secundaria
 
   return (
-    <div className="min-h-svh bg-background">
+    <div className="min-h-svh max-w-[100vw] overflow-x-clip bg-background box-border">
       <Navigation />
       <IolConnectReminder />
-      <main className="relative pb-24 md:pb-0">
+      <main className="relative min-w-0 max-w-[100vw] overflow-x-clip pb-24 md:pb-0 box-border">
         {/* Botón Volver EN EL FLUJO (no overlay): nunca se superpone al contenido.
             Padding propio arriba + separación del contenido con mb */}
         {showBack && (
-          <div className={cn("px-4 pt-4 sm:px-6 lg:px-8", backClasses)}>
+          <div className={cn("mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8", backClasses)}>
             <BackButton />
           </div>
         )}
         <div
           key={pathname}
-          className="animate-in fade-in-0 slide-in-from-bottom-1 duration-200 ease-out motion-reduce:animate-none"
+          className="min-w-0 max-w-[100vw] overflow-x-clip box-border animate-in fade-in-0 slide-in-from-bottom-1 duration-200 ease-out motion-reduce:animate-none"
         >
           <Outlet />
         </div>
@@ -120,7 +122,7 @@ function GuestOnlyLayout() {
   return (
     <div
       key={pathname}
-      className="animate-in fade-in-0 slide-in-from-bottom-1 duration-200 ease-out motion-reduce:animate-none"
+      className="min-w-0 max-w-full overflow-x-hidden animate-in fade-in-0 slide-in-from-bottom-1 duration-200 ease-out motion-reduce:animate-none"
     >
       <Outlet />
     </div>
@@ -185,6 +187,20 @@ function App() {
                     </div>
                   }
                 >
+                  <RentaFijaTablaPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/renta-fija/hub"
+              element={
+                <Suspense
+                  fallback={
+                    <div className="flex min-h-48 items-center justify-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  }
+                >
                   <RentaFijaPage />
                 </Suspense>
               }
@@ -214,6 +230,20 @@ function App() {
                   }
                 >
                   <RentaFijaCalendarioPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/renta-fija/:symbol"
+              element={
+                <Suspense
+                  fallback={
+                    <div className="flex min-h-48 items-center justify-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  }
+                >
+                  <BondFichaPage />
                 </Suspense>
               }
             />
