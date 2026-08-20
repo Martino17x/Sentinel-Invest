@@ -2,6 +2,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { newsApi, type NewsItem } from "@/lib/api";
 import { useApiData } from "@/hooks/useApiData";
+import CompanyLogo from "@/components/ui/company-logo";
 
 function timeAgo(iso: string | null): string {
   if (!iso) return "";
@@ -91,6 +92,10 @@ export function NewsWidget() {
           {list.map((item) => {
             const metaTime = item.publishedAt ? timeAgo(item.publishedAt) : "";
             const meta = [metaTime, item.source].filter(Boolean).join(" · ");
+            const imageUrl = (item.imageUrl ?? item.image ?? null) as string | null;
+            const hasImage = Boolean(imageUrl?.trim());
+            const isDegraded = Boolean(item.degraded) || item.provider === "tradingview";
+            const symbolForLogo = item.symbol?.trim() ?? null;
             return (
               <article
                 key={item.id}
@@ -103,18 +108,48 @@ export function NewsWidget() {
                     navigate(`/news/${encodeURIComponent(item.id)}`);
                   }
                 }}
-                className="group flex cursor-pointer flex-col gap-2.5 rounded-xl p-3 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-safe:transition-colors md:p-4"
+                className="group flex cursor-pointer flex-col gap-2.5 overflow-hidden rounded-xl p-3 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-safe:transition-colors md:p-4"
               >
-                <span
-                  aria-hidden
-                  className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-[10px] font-semibold tracking-wide text-muted-foreground ring-1 ring-border/50"
-                >
-                  {initialsFromSource(item.source)}
-                </span>
+                {hasImage && (
+                  <div className="overflow-hidden rounded-lg bg-muted">
+                    <img
+                      src={imageUrl!}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      className="aspect-[16/9] w-full object-cover"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  {symbolForLogo ? (
+                    <CompanyLogo symbol={symbolForLogo} size={28} className="shrink-0" />
+                  ) : (
+                    <span
+                      aria-hidden
+                      className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-[10px] font-semibold tracking-wide text-muted-foreground ring-1 ring-border/50"
+                    >
+                      {initialsFromSource(item.source)}
+                    </span>
+                  )}
+                  {isDegraded && (
+                    <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300">
+                      Degradado
+                    </span>
+                  )}
+                </div>
                 {meta && <p className="text-xs leading-none text-muted-foreground">{meta}</p>}
                 <h3 className="line-clamp-3 text-sm font-medium leading-snug text-foreground">
                   {item.title}
                 </h3>
+                {(item.description ?? item.summary) && !isDegraded && (
+                  <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                    {item.description ?? item.summary}
+                  </p>
+                )}
               </article>
             );
           })}

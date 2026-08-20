@@ -5,7 +5,6 @@ import { useSmartBack } from "@/lib/use-smart-back";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TradingViewWidget, tradingViewSymbol } from "@/components/ui/tradingview-widget";
@@ -15,6 +14,7 @@ import { useApiData } from "@/hooks/useApiData";
 import { ConsensusTab } from "@/components/analysis/ConsensusTab";
 import { FundamentalsTab } from "@/components/analysis/FundamentalsTab";
 import { NewsTab } from "@/components/analysis/NewsTab";
+import CompanyLogo from "@/components/ui/company-logo";
 
 const formatterARS = new Intl.NumberFormat("es-AR", {
   style: "currency",
@@ -149,6 +149,7 @@ export function QuoteDetailPage() {
             Cotizaciones
           </button>
           <span className="text-muted-foreground">/</span>
+          <CompanyLogo symbol={quote.symbol} market={quote.market} size={40} className="shrink-0" />
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-semibold tracking-tight">{quote.symbol}</h1>
             <button
@@ -178,9 +179,9 @@ export function QuoteDetailPage() {
               Ver análisis
             </Button>
           </Link>
-          <Badge variant="secondary" className="font-mono text-xs">
+          <span className="font-mono text-xs font-medium text-muted-foreground">
             {quote.market.toUpperCase()}
-          </Badge>
+          </span>
         </div>
       </div>
 

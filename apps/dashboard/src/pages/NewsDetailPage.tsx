@@ -5,10 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { newsApi, type NewsItem } from "@/lib/api";
 import { useApiData } from "@/hooks/useApiData";
+import CompanyLogo from "@/components/ui/company-logo";
 
 function timeAgo(iso: string | null): string {
   if (!iso) return "";
@@ -189,9 +189,13 @@ export function NewsDetailPage() {
   }
 
   const imageUrl =
-    (item as unknown as { image?: string; imageUrl?: string }).image ??
-    (item as unknown as { imageUrl?: string }).imageUrl ??
-    null;
+    (item.imageUrl ?? item.image ?? null) as string | null;
+  const hasImage = Boolean(imageUrl?.trim());
+  const description = (item.description ?? item.summary ?? null) as string | null;
+  const content = (item.content ?? null) as string | null;
+  const hasBody = Boolean((content ?? description)?.trim());
+  const isDegraded = Boolean(item.degraded) || item.provider === "tradingview";
+  const symbolForLogo = item.symbol?.trim() ?? null;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-4 sm:p-6 lg:p-8 motion-safe:animate-in motion-safe:fade-in motion-reduce:animate-none">
@@ -203,8 +207,9 @@ export function NewsDetailPage() {
 
       <Card className="overflow-hidden motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-1 motion-reduce:animate-none">
         <CardHeader className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <Badge variant="secondary">{item.source}</Badge>
+          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+            {symbolForLogo && <CompanyLogo symbol={symbolForLogo} size={32} className="shrink-0" />}
+            <span className="font-medium text-foreground">Fuente: {item.source}</span>
             {item.publishedAt && (
               <span className="inline-flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5" />
@@ -212,9 +217,17 @@ export function NewsDetailPage() {
               </span>
             )}
             {item.symbol && (
-              <Badge variant="outline" className="font-mono text-xs">
-                {item.symbol}
-              </Badge>
+              <span className="font-mono text-xs font-medium text-foreground">{item.symbol}</span>
+            )}
+            {isDegraded && (
+              <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-medium tracking-wide text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300">
+                Degradado
+              </span>
+            )}
+            {item.provider && (
+              <span className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
+                {item.provider}
+              </span>
             )}
           </div>
           <CardTitle className="text-xl leading-tight sm:text-2xl">{item.title}</CardTitle>
@@ -223,25 +236,64 @@ export function NewsDetailPage() {
           )}
         </CardHeader>
         <CardContent className="space-y-4">
-          {imageUrl && (
+          {hasImage ? (
             <img
-              src={imageUrl}
+              src={imageUrl!}
               alt=""
-              className="w-full rounded-lg object-cover"
+              className="aspect-[16/9] w-full rounded-lg object-cover"
               loading="lazy"
+              decoding="async"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+              }}
             />
+          ) : (
+            <div
+              aria-hidden="true"
+              aria-label="Imagen no disponible"
+              className="flex aspect-[16/9] w-full items-center justify-center rounded-lg bg-gradient-to-br from-primary/15 via-primary/8 to-muted ring-1 ring-border/40"
+            >
+              <Newspaper className="h-10 w-10 text-muted-foreground/60" />
+            </div>
           )}
 
           <Separator />
 
           <div className="space-y-3">
             <h3 className="text-sm font-semibold">Resumen</h3>
-            {item.summary ? (
-              <p className="text-sm leading-relaxed text-muted-foreground">{item.summary}</p>
+            {isDegraded || !hasBody ? (
+              <div className="flex flex-col gap-3 rounded-lg border border-dashed border-border/60 bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
+                    <Newspaper className="h-4 w-4 text-muted-foreground/70" />
+                  </span>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-foreground">Resumen no disponible</p>
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      Esta noticia está en modo degradado (solo título). Abrí la fuente original para el contenido completo.
+                    </p>
+                  </div>
+                </div>
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  Ver original <span aria-hidden>→</span>
+                </a>
+              </div>
             ) : (
-              <p className="text-sm italic text-muted-foreground">Resumen no disponible</p>
+              <div className="space-y-3">
+                {description && (
+                  <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
+                )}
+                {content && content !== description && (
+                  <p className="text-sm leading-relaxed text-foreground/90">{content}</p>
+                )}
+              </div>
             )}
-            {/* D.7 no-body rule: NEVER invent body if not available — only summary */}
+            {/* D.7 no-body rule: NEVER invent body if not available — only render description/content when present, else degraded CTA */}
           </div>
 
           <Separator />

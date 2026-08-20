@@ -4,13 +4,13 @@ import { Search, Star, Zap, RefreshCw, ChevronLeft, ChevronRight } from "lucide-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { quotesApi } from "@/lib/api";
 import { useApiData } from "@/hooks/useApiData";
+import CompanyLogo from "@/components/ui/company-logo";
 
 const formatterARS = new Intl.NumberFormat("es-AR", {
   style: "currency",
@@ -53,24 +53,12 @@ const ASSET_TYPES: Record<string, { value: string; label: string }[]> = {
 
 function VariationBadge({ pct }: { pct: number }) {
   if (pct > 0.01) {
-    return (
-      <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600">
-        ▲ {pct.toFixed(2)}%
-      </Badge>
-    );
+    return <span className="font-medium tabular-nums text-emerald-600">▲ {pct.toFixed(2)}%</span>;
   }
   if (pct < -0.01) {
-    return (
-      <Badge variant="outline" className="border-red-500/30 bg-red-500/10 text-red-600">
-        ▼ {Math.abs(pct).toFixed(2)}%
-      </Badge>
-    );
+    return <span className="font-medium tabular-nums text-red-600">▼ {Math.abs(pct).toFixed(2)}%</span>;
   }
-  return (
-    <Badge variant="secondary" className="text-muted-foreground">
-      = 0,00%
-    </Badge>
-  );
+  return <span className="font-medium tabular-nums text-muted-foreground">= 0,00%</span>;
 }
 
 export function QuotesPage() {
@@ -230,12 +218,9 @@ export function QuotesPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <span className="text-sm text-muted-foreground">Panel</span>
-          <Badge
-            variant={panelIsUp ? "default" : "destructive"}
-            className={panelIsUp ? "bg-emerald-600" : ""}
-          >
+          <span className={`font-medium tabular-nums ${panelIsUp ? "text-emerald-600" : "text-red-600"}`}>
             {panelIsUp ? "▲" : "▼"} {Math.abs(summary?.totalVariationPct ?? 0).toFixed(2)}%
-          </Badge>
+          </span>
           {isRefreshing && (
             <span className="text-xs text-muted-foreground animate-pulse">
               Actualizando…
@@ -311,7 +296,7 @@ export function QuotesPage() {
               <div className="space-y-3 lg:hidden">
                 {sortedQuotes.map((quote) => (
                   <div key={quote.symbol} className="rounded-xl border bg-card p-4 shadow-sm">
-                    {/* Nivel 1: favorito + símbolo + nombre */}
+                    {/* Nivel 1: favorito + logo + símbolo + nombre */}
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex min-w-0 items-start gap-2">
                         <button
@@ -325,6 +310,7 @@ export function QuotesPage() {
                             }`}
                           />
                         </button>
+                        <CompanyLogo symbol={quote.symbol} market={quote.market} size={28} className="mt-0.5 shrink-0" />
                         <div className="min-w-0">
                           <Link
                             to={`/quotes/${quote.symbol}`}
@@ -413,15 +399,18 @@ export function QuotesPage() {
                       sortable: true,
                       sortValue: (q) => q.symbol,
                       render: (quote) => (
-                        <div className="min-w-0">
-                          <Link
-                            to={`/quotes/${quote.symbol}`}
-                            className="font-medium text-foreground transition-colors hover:text-primary"
-                          >
-                            {quote.symbol}
-                          </Link>
-                          <div className="max-w-56 truncate text-xs text-muted-foreground">
-                            {quote.name}
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <CompanyLogo symbol={quote.symbol} market={quote.market} size={28} className="shrink-0" />
+                          <div className="min-w-0">
+                            <Link
+                              to={`/quotes/${quote.symbol}`}
+                              className="font-medium text-foreground transition-colors hover:text-primary"
+                            >
+                              {quote.symbol}
+                            </Link>
+                            <div className="max-w-56 truncate text-xs text-muted-foreground">
+                              {quote.name}
+                            </div>
                           </div>
                         </div>
                       ),
