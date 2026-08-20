@@ -156,6 +156,21 @@ const REPORT_TABLE_MIGRATIONS = [
   sql`CREATE UNIQUE INDEX IF NOT EXISTS cash_movements_detected_1per_day ON cash_movements (account_id, date) WHERE source = 'detected'`,
 ];
 
+/** Tabla de snapshots de cotizaciones al cierre (BYMA) — ADDITIVE. */
+const QUOTES_SNAPSHOT_MIGRATIONS = [
+  sql`CREATE TABLE IF NOT EXISTS quotes_snapshots (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        market text NOT NULL,
+        asset_type text NOT NULL,
+        snapshot_date date NOT NULL,
+        payload jsonb NOT NULL,
+        captured_at timestamptz NOT NULL DEFAULT now(),
+        UNIQUE (market, asset_type, snapshot_date)
+      )`,
+  sql`CREATE INDEX IF NOT EXISTS quotes_snapshots_market_idx ON quotes_snapshots (market, asset_type)`,
+  sql`CREATE INDEX IF NOT EXISTS quotes_snapshots_date_idx ON quotes_snapshots (snapshot_date)`,
+];
+
 /**
  * Aplica las migraciones idempotentes. Llamar al boot del server.
  * Nunca debe romper el arranque: cualquier fallo queda registrado
@@ -168,6 +183,7 @@ export async function ensureSchema(): Promise<void> {
     ...CASH_ENUM_MIGRATIONS,
     ...AGENT_TABLE_MIGRATIONS,
     ...REPORT_TABLE_MIGRATIONS,
+    ...QUOTES_SNAPSHOT_MIGRATIONS,
   ]) {
     await db.execute(statement);
   }

@@ -17,12 +17,15 @@ import { schedule, type ScheduledTask } from "node-cron";
 import { pool } from "../db/index.js";
 import { makeDailySnapshotDeps, runDailySnapshots } from "./dailySnapshot.js";
 import { runDailyReconciliation } from "./reconciliation.js";
+import { makeQuotesSnapshotDeps, runQuotesSnapshots } from "./quotesSnapshot.js";
 
 const SNAPSHOT_CRON = "30 17 * * 1-5"; // 17:30 ART, lunes a viernes (F1-R1)
+const QUOTES_SNAPSHOT_CRON = "5 17 * * 1-5"; // 17:05 ART, lun-vie — snapshot de cotizaciones al cierre
 const RECONCILIATION_CRON = "30 18 * * 1-5"; // 18:30 ART, tras el snapshot (se afina en F3-4)
 const CRON_TZ = "America/Argentina/Buenos_Aires";
 
 const SNAPSHOT_TASK_NAME = "daily-snapshot";
+const QUOTES_SNAPSHOT_TASK_NAME = "quotes-snapshot";
 const RECONCILIATION_TASK_NAME = "daily-reconciliation";
 
 export interface ScheduledJobState {
@@ -34,6 +37,7 @@ export interface ScheduledJobState {
 export interface ScheduledJobs {
   started: boolean;
   snapshot: ScheduledJobState;
+  quotesSnapshot: ScheduledJobState;
   reconciliation: ScheduledJobState;
   stop: () => void;
 }
@@ -42,8 +46,12 @@ export interface SchedulerDeps {
   log?: Pick<Console, "log" | "warn" | "error">;
   /** Guard de tabla inyectable (tests lo reemplazan por un fake). */
   tablesReady?: () => Promise<boolean>;
+  /** Guard de tabla quotes — inyectable para tests del nuevo job. */
+  quotesTablesReady?: () => Promise<boolean>;
   /** Handler del snapshot diario — por defecto runDailySnapshots real. */
   runSnapshot?: () => Promise<unknown>;
+  /** Handler de snapshot de cotizaciones — por defecto runQuotesSnapshots real. */
+  runQuotesSnapshot?: () => Promise<unknown>;
   /** Handler de reconciliación — lo conecta F3-4. */
   runReconciliation?: () => Promise<unknown>;
 }
@@ -52,6 +60,17 @@ async function defaultTablesReady(): Promise<boolean> {
   try {
     const result = await pool.query<{ exists: boolean }>(
       "SELECT to_regclass('public.portfolio_snapshots') IS NOT NULL AS exists"
+    );
+    return result.rows[0]?.exists ?? false;
+  } catch {
+    return false;
+  }
+}
+
+async function defaultQuotesTablesReady(): Promise<boolean> {
+  try {
+    const result = await pool.query<{ exists: boolean }>(
+      "SELECT to_regclass('public.quotes_snapshots') IS NOT NULL AS exists"
     );
     return result.rows[0]?.exists ?? false;
   } catch {
@@ -71,6 +90,14 @@ function defaultRunSnapshot(
   };
 }
 
+function defaultRunQuotesSnapshot(
+  log: Pick<Console, "log" | "warn" | "error">
+): () => Promise<unknown> {
+  return async () => {
+    await runQuotesSnapshots(makeQuotesSnapshotDeps({ log }));
+  };
+}
+
 /**
  * Arranca los jobs diarios. Idempotente por diseño (cada boot lo vuelve
  * a llamar una vez). La idempotencia del snapshot (unique(account_id,
@@ -85,21 +112,54 @@ export async function startScheduledJobs(deps: SchedulerDeps = {}): Promise<Sche
     tasks.length = 0;
   };
 
-  const ready = await (deps.tablesReady ?? defaultTablesReady)();
-  if (!ready) {
-    log.warn("⚠️ scheduler: portfolio_snapshots ausente — jobs diarios NO arrancan");
+  const portfolioReady = await (deps.tablesReady ?? defaultTablesReady)();
+  const quotesReady = await (deps.quotesTablesReady ?? deps.tablesReady ?? defaultQuotesTablesReady)();
+
+  if (!portfolioReady && !quotesReady) {
+    log.warn("⚠️ scheduler: portfolio_snapshots y quotes_snapshots ausentes — jobs NO arrancan");
     return {
       started: false,
       snapshot: { enabled: false, scheduled: false },
+      quotesSnapshot: { enabled: false, scheduled: false },
       reconciliation: { enabled: false, scheduled: false },
       stop,
     };
   }
 
+  if (!portfolioReady) {
+    log.warn("⚠️ scheduler: portfolio_snapshots ausente — snapshot/reconciliación NO arrancan (quotes sí)");
+  }
+
   const snapshotEnabled = process.env.SNAPSHOT_JOB_ENABLED !== "false";
   const reconciliationEnabled = process.env.RECONCILIATION_JOB_ENABLED !== "false";
+  const quotesEnabled = process.env.QUOTES_SNAPSHOT_ENABLED !== "false";
 
-  if (snapshotEnabled) {
+  // — Quotes snapshot 17:05 (independiente de portfolio) —
+  let quotesScheduled = false;
+  if (quotesReady && quotesEnabled) {
+    const run = deps.runQuotesSnapshot ?? defaultRunQuotesSnapshot(log);
+    const task = schedule(QUOTES_SNAPSHOT_CRON, () => {
+      run().catch((err) => {
+        log.error("⚠️ scheduler: quotes-snapshot falló:", err instanceof Error ? err : new Error(String(err)));
+      });
+    }, {
+      timezone: CRON_TZ,
+      name: QUOTES_SNAPSHOT_TASK_NAME,
+      noOverlap: true,
+      unref: true,
+    });
+    tasks.push(task);
+    quotesScheduled = true;
+    log.log("🕒 scheduler: snapshot de cotizaciones 17:05 ART (L–V) activo");
+  } else if (!quotesReady) {
+    log.warn("⚠️ scheduler: quotes_snapshots ausente — snapshot de cotizaciones NO arranca");
+  } else {
+    log.log("🕒 scheduler: QUOTES_SNAPSHOT_ENABLED=false → snapshot de cotizaciones deshabilitado");
+  }
+
+  // — Portfolio snapshot 17:30 —
+  let snapshotScheduled = false;
+  if (portfolioReady && snapshotEnabled) {
     const run = deps.runSnapshot ?? defaultRunSnapshot(log);
     const task = schedule(SNAPSHOT_CRON, () => {
       run().catch((err) => {
@@ -112,18 +172,19 @@ export async function startScheduledJobs(deps: SchedulerDeps = {}): Promise<Sche
       unref: true,
     });
     tasks.push(task);
+    snapshotScheduled = true;
     if (process.env.IOL_PROVIDER !== "api") {
       log.log("🕒 scheduler: snapshot diario 17:30 ART activo (IOL_PROVIDER no es 'api' → no captura hasta que lo sea)");
     } else {
       log.log("🕒 scheduler: snapshot diario 17:30 ART (L–V) activo");
     }
-  } else {
+  } else if (portfolioReady) {
     log.log("🕒 scheduler: SNAPSHOT_JOB_ENABLED=false → snapshot diario deshabilitado");
   }
 
-  if (reconciliationEnabled) {
-    // Handler inyectable (D3): por defecto el job productivo real;
-    // los tests pasan deps.runReconciliation con fakes.
+  // — Reconciliación 18:30 —
+  let reconciliationScheduled = false;
+  if (portfolioReady && reconciliationEnabled) {
     const run = deps.runReconciliation ?? (async () => {
       await runDailyReconciliation();
     });
@@ -138,15 +199,18 @@ export async function startScheduledJobs(deps: SchedulerDeps = {}): Promise<Sche
       unref: true,
     });
     tasks.push(task);
+    reconciliationScheduled = true;
     log.log("🕒 scheduler: reconciliación 18:30 ART (L–V) activa");
-  } else {
+  } else if (portfolioReady) {
     log.log("🕒 scheduler: RECONCILIATION_JOB_ENABLED=false → reconciliación deshabilitada");
   }
 
+  const started = quotesScheduled || snapshotScheduled || reconciliationScheduled;
   return {
-    started: true,
-    snapshot: { enabled: snapshotEnabled, scheduled: snapshotEnabled },
-    reconciliation: { enabled: reconciliationEnabled, scheduled: reconciliationEnabled && !!deps.runReconciliation },
+    started,
+    snapshot: { enabled: portfolioReady && snapshotEnabled, scheduled: snapshotScheduled },
+    quotesSnapshot: { enabled: quotesReady && quotesEnabled, scheduled: quotesScheduled },
+    reconciliation: { enabled: portfolioReady && reconciliationEnabled, scheduled: reconciliationScheduled },
     stop,
   };
 }

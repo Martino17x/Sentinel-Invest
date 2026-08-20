@@ -16,6 +16,7 @@ import ordersRouter from "./routes/orders.js";
 import quotesRouter from "./routes/quotes.js";
 import analysisRouter from "./routes/analysis.js";
 import ratesRouter from "./routes/rates.js";
+import radarRouter from "./routes/radar.js";
 import agentRouter from "./routes/agent.js";
 import apiKeysRouter from "./routes/api-keys.js";
 import { mountMcpHttp } from "./mcp/http.js";
@@ -60,6 +61,7 @@ app.use("/api/orders", ordersRouter);
 app.use("/api/quotes", quotesRouter);
 app.use("/api/analysis", analysisRouter);
 app.use("/api/rates", ratesRouter);
+app.use("/api/radar", radarRouter);
 // API keys — infraestructura de credenciales para agentes externos
 // (el consumo MCP se monta/desmonta con AGENT_ENABLED en fase G).
 // Se monta SIEMPRE: el usuario debe poder gestionar sus keys aunque

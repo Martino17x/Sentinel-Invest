@@ -336,6 +336,33 @@ export const priceHistory = pgTable(
 export const priceHistoryRelations = relations(priceHistory, () => ({}));
 
 // ============================================================
+// QUOTES SNAPSHOTS — snapshot del panel de cotizaciones al cierre
+// (DATO DE MERCADO: compartido, NO por usuario — es público)
+// Guarda el panel completo (quotes + summary) al cierre de BYMA
+// para servirlo cuando BYMA da 502 fuera de horario, como hace IOL.
+// ============================================================
+
+export const quotesSnapshots = pgTable(
+  "quotes_snapshots",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    market: text("market").notNull(),
+    assetType: text("asset_type").notNull(),
+    // snapshot_date en ART (YYYY-MM-DD) — un snapshot por día por panel
+    snapshotDate: date("snapshot_date").notNull(),
+    payload: jsonb("payload").$type<{ summary: unknown; quotes: unknown[]; total: number }>().notNull(),
+    capturedAt: timestamp("captured_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("quotes_snapshots_market_idx").on(table.market, table.assetType),
+    index("quotes_snapshots_date_idx").on(table.snapshotDate),
+    uniqueIndex("quotes_snapshots_market_date_unique").on(table.market, table.assetType, table.snapshotDate),
+  ]
+);
+
+export const quotesSnapshotsRelations = relations(quotesSnapshots, () => ({}));
+
+// ============================================================
 // AI CHAT SESSIONS — sesiones del asistente conversacional
 // (motor de agente, dominio aislado por usuario)
 // ============================================================
