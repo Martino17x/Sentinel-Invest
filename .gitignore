@@ -51,7 +51,9 @@ pnpm-debug.log*
 *.tsbuildinfo
 .astro/
 
-# Capturas de la landing (assets del producto)
+# Capturas de la landing y dashboard (assets del producto)
 !apps/landing/public/screens/
 !apps/landing/public/screens/**
+!apps/dashboard/public/screens/
+!apps/dashboard/public/screens/**
 
