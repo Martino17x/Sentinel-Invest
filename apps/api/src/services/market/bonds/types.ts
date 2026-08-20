@@ -28,6 +28,38 @@ export interface BondSchedule {
   cerAjustado?: boolean;
 }
 
+export interface BondMarketData {
+  bid: number | null;
+  ask: number | null;
+  spread: number | null;
+  volumeNominal: number | null;
+  volumeEfectivo: number | null;
+  low: number | null;
+  high: number | null;
+  open: number | null;
+  close: number | null;
+}
+
+export interface BondCuadroTecnico {
+  vt: number | null;
+  vr: number | null;
+  paridad: number | null;
+  accrued: number | null;
+  couponRate: number | null;
+  frequency: 1 | 2 | 4 | null;
+  dayCount: "30/360" | "Actual/365";
+  nextCouponDate: string | null;
+  isin: string | null;
+  ley: string | null;
+  emisor: string | null;
+  denominacionMinima: number | null;
+  outstanding: number | null;
+  isParidadCalculable: boolean;
+  /** Alias compat spec (paridadCalculable === isParidadCalculable) */
+  paridadCalculable?: boolean;
+  scheduleSource: "mae" | "byma" | "synthetic";
+}
+
 export interface BondAnalytics {
   symbol: string;
   /** Precio dirty (trade BYMA) usado para TIR. */
@@ -48,6 +80,35 @@ export interface BondAnalytics {
   /** Fuente del cálculo: MAE directo vs motor local. */
   source: "mae" | "local";
   disclaimer: string;
+  /** @since renta-fija-fase1 — enriquecimiento panel */
+  marketData?: BondMarketData | null;
+  cuadroTecnico?: BondCuadroTecnico | null;
+}
+
+export interface BondPanelRow extends BondAnalytics {
+  marketData: BondMarketData;
+  cuadroTecnico: BondCuadroTecnico;
+  vencimiento: string;
+  ley: string | null;
+  isin: string | null;
+  moneda: "ARS" | "USD";
+  tipo: BondSchedule["tipo"];
+}
+
+export interface BondPanelResponse {
+  data: BondPanelRow[];
+  pagination: { page: number; pageSize: number; total: number };
+  meta: { isStale: boolean; snapshotAt: string | null; generatedAt: string };
+  // Aliases compat design
+  rows?: BondPanelRow[];
+  total?: number;
+  page?: number;
+  pageSize?: number;
+  sort?: string;
+  order?: string;
+  generatedAt?: string;
+  disclaimer?: string;
+  stale?: boolean;
 }
 
 export interface CurvePoint {
