@@ -3,16 +3,34 @@
 // Mapa estático: 54 CEDEARs + 23 acciones líderes AR
 // Spec: content-providers Track B — sin fetch server-side
 // Basado en apps/api/src/services/iol/instrumentNames.ts
-// URL: https://cdn.brandfetch.io/{domain|ticker}/{id}/w/{2*size}/h/{2*size}/fallback/lettermark/theme/{light|dark}?c=CLIENT_ID
+// Brandfetch hotlink con retina + fallback (verificado, no da 404 con ?c=):
+//   https://cdn.brandfetch.io/ticker/{TICKER}/w/{2*size}/h/{2*size}/fallback/lettermark/theme/{light|dark}?c=CLIENT_ID
+//   https://cdn.brandfetch.io/domain/{domain}/w/{2*size}/h/{2*size}/fallback/lettermark/theme/{light|dark}?c=CLIENT_ID
+// Google favicon fallback (garantizado, sin API key):
+//   https://www.google.com/s2/favicons?domain={domain}&sz={size*2}
 // ============================================================
+
+/**
+ * Strippea sufijos de mercado argentinos/brasileños antes de lookup.
+ * Ej: VALE.CI -> VALE, VRTX.CI -> VRTX, AEG.CI -> AEG, XLY.CI -> XLY
+ * TIMS3 (sin punto) se mantiene idéntico.
+ */
+export function stripMarketSuffix(symbol: string): string {
+  return symbol.trim().toUpperCase().replace(/\.(CI|BA|BR|AR|US)$/i, "");
+}
 
 export const CEDEAR_DOMAIN_MAP: Record<string, string> = {
   AAPL: "apple.com",
+  // Variante BYMA/CEDEAR con sufijo D (ej: AALD en panel CEDEARs = Apple Inc.)
+  AALD: "apple.com",
+  AAPLD: "apple.com",
   MSFT: "microsoft.com",
   GOOGL: "google.com",
   GOOG: "google.com",
   AMZN: "amazon.com",
   NVDA: "nvidia.com",
+  // Variantes BYMA/CEDEAR de Nvidia: NVD (ticker corto usado en algunos panels), NVDAC/NVDAD con sufijos C/D
+  NVD: "nvidia.com",
   NVDAC: "nvidia.com",
   NVDAD: "nvidia.com",
   META: "meta.com",
@@ -62,6 +80,28 @@ export const CEDEAR_DOMAIN_MAP: Record<string, string> = {
   COST: "costco.com",
   AVGO: "broadcom.com",
   QCOM: "qualcomm.com",
+  // === faltantes detectados (Brandfetch verificado: tienen logo real) ===
+  VALE: "vale.com",
+  VRTX: "vrtx.com",
+  TIMS3: "tim.com.br",
+  AEG: "aesandes.com",
+  XLY: "statestreet.com",
+  SLV: "ishares.com",
+  SLVC: "ishares.com",
+  BMNR: "bitminetech.io",
+  MU: "micron.com",
+  NU: "nubank.com.br",
+  // === Radar CCL — 10 CEDEARs faltantes para completar 60 ratios (S3.3) ===
+  TXN: "ti.com",
+  HD: "homedepot.com",
+  UNH: "unitedhealthgroup.com",
+  ABBV: "abbvie.com",
+  MRK: "merck.com",
+  LLY: "lilly.com",
+  PYPL: "paypal.com",
+  UBER: "uber.com",
+  SHOP: "shopify.com",
+  ABNB: "airbnb.com",
 };
 
 export const AR_DOMAIN_MAP: Record<string, string> = {
@@ -124,19 +164,109 @@ export function isBond(symbol: string): boolean {
 
 export function getBrandDomain(symbol: string): string | null {
   if (!symbol) return null;
-  const key = symbol.trim().toUpperCase();
-  return SYMBOL_DOMAIN_MAP[key] ?? null;
+  const key = stripMarketSuffix(symbol);
+  // 1) directo
+  if (SYMBOL_DOMAIN_MAP[key]) return SYMBOL_DOMAIN_MAP[key];
+  // 2) variantes CEDEAR con sufijo D/C (ej: NVDAC,NVDAD) o dígito (JNJ2)
+  //    Si termina en D/C y el base sin última letra existe, usarlo (AALD → AAL, AAPLD → AAPL)
+  if (/^[A-Z]{3,5}[DC]$/.test(key)) {
+    const base = key.slice(0, -1);
+    if (SYMBOL_DOMAIN_MAP[base]) return SYMBOL_DOMAIN_MAP[base];
+  }
+  // 3) fallback genérico: probar stripping progresivo de 1 char si base existe (cubre AALD→AAPL si AAPL existe? no, pero cubre NVDAD→NVDA)
+  //    Para CEDEARs tipo AAPLD (5 chars + D), probar sin última letra
+  const withoutLast = key.slice(0, -1);
+  if (withoutLast.length >= 2 && SYMBOL_DOMAIN_MAP[withoutLast]) {
+    return SYMBOL_DOMAIN_MAP[withoutLast];
+  }
+  // 4) CEDEARs con sufijo numérico (ej: JNJ2) o letra+num: probar base de 3-4 chars
+  const alpha = key.replace(/[^A-Z]/g, "");
+  if (alpha !== key && SYMBOL_DOMAIN_MAP[alpha]) return SYMBOL_DOMAIN_MAP[alpha];
+  return null;
+}
+
+/**
+ * Devuelve el ticker canónico para Brandfetch /ticker/ fallback.
+ * Si el símbolo tiene sufijo D/C pero su base existe, usa la base (AALD→AAL, NVDAD→NVDA).
+ * Así el lettermark también es más reconocible.
+ */
+export function getCanonicalTicker(symbol: string): string {
+  const key = stripMarketSuffix(symbol);
+  if (SYMBOL_DOMAIN_MAP[key]) return key;
+  if (/^[A-Z]{3,5}[DC]$/.test(key)) {
+    const base = key.slice(0, -1);
+    if (SYMBOL_DOMAIN_MAP[base]) return base;
+  }
+  const withoutLast = key.slice(0, -1);
+  if (withoutLast.length >= 2 && SYMBOL_DOMAIN_MAP[withoutLast]) return withoutLast;
+  const alpha = key.replace(/[^A-Z]/g, "");
+  if (alpha !== key && SYMBOL_DOMAIN_MAP[alpha]) return alpha;
+  return key;
 }
 
 export type BrandTheme = "light" | "dark";
 
+function resolveClientId(clientId?: string): string | undefined {
+  if (clientId !== undefined) return clientId;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const env = (import.meta as unknown as { env?: Record<string, string> })?.env;
+    return env?.["VITE_BRANDFETCH_CLIENT_ID"] ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Brandfetch ticker hotlink con w/h retina + fallback lettermark (formato verificado). */
+export function symbolToBrandfetchTickerUrl(
+  symbol: string,
+  clientId?: string,
+  size: number = 32,
+  theme: BrandTheme = "light",
+): string | null {
+  if (!symbol || typeof symbol !== "string") return null;
+  const sym = stripMarketSuffix(symbol);
+  if (!sym) return null;
+  const ticker = getCanonicalTicker(sym);
+  const resolved = resolveClientId(clientId);
+  const clampedSize = Math.min(Math.max(Math.floor(size) || 32, 16), 128);
+  const wh = clampedSize * 2;
+  const safeTheme: BrandTheme = theme === "dark" ? "dark" : "light";
+  const base = `https://cdn.brandfetch.io/ticker/${encodeURIComponent(ticker)}/w/${wh}/h/${wh}/fallback/lettermark/theme/${safeTheme}`;
+  if (!resolved) return base;
+  return `${base}?c=${encodeURIComponent(resolved)}`;
+}
+
+/** Brandfetch domain hotlink con w/h retina + fallback lettermark — solo si hay dominio mapeado. */
+export function symbolToBrandfetchDomainUrl(
+  symbol: string,
+  clientId?: string,
+  size: number = 32,
+  theme: BrandTheme = "light",
+): string | null {
+  const domain = getBrandDomain(symbol);
+  if (!domain) return null;
+  const resolved = resolveClientId(clientId);
+  const clampedSize = Math.min(Math.max(Math.floor(size) || 32, 16), 128);
+  const wh = clampedSize * 2;
+  const safeTheme: BrandTheme = theme === "dark" ? "dark" : "light";
+  const base = `https://cdn.brandfetch.io/domain/${encodeURIComponent(domain)}/w/${wh}/h/${wh}/fallback/lettermark/theme/${safeTheme}`;
+  if (!resolved) return base;
+  return `${base}?c=${encodeURIComponent(resolved)}`;
+}
+
+/** Google S2 favicon — fallback universal sin API key, sigue 301 a t2.gstatic. */
+export function getGoogleFaviconUrl(symbol: string, size: number = 32): string | null {
+  const domain = getBrandDomain(symbol);
+  if (!domain) return null;
+  const clamped = Math.min(Math.max(Math.floor(size) || 32, 16), 128) * 2;
+  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=${clamped}`;
+}
+
 /**
  * Pure mapper: symbol → Brandfetch CDN URL o null.
- * Nunca hace fetch. Retorna null si no hay mapping usable → caller usa ticker fallback.
- * - Si SYMBOL_DOMAIN_MAP tiene entrada → type=domain
- * - Si es bono o sin dominio → type=ticker (lettermark fallback siempre presente en URL)
- * - size se duplica para retina (w=2*size h=2*size)
- * - clientId se appendea como ?c= (si no se pasa, en dashboard se lee VITE_BRANDFETCH_CLIENT_ID)
+ * Usa dominio si existe (mejor calidad que ticker genérico), sino ticker.
+ * Incluye w/h retina (2*size), fallback/lettermark y theme — nunca hace fetch.
  */
 export function symbolToBrandfetchUrl(
   symbol: string,
@@ -146,37 +276,15 @@ export function symbolToBrandfetchUrl(
   clientId?: string,
 ): string | null {
   if (!symbol || typeof symbol !== "string") return null;
-  const sym = symbol.trim().toUpperCase();
+  const sym = stripMarketSuffix(symbol);
   if (!sym) return null;
-
-  const clampedSize = Math.min(Math.max(Math.floor(size) || 32, 16), 128);
-  const wh = clampedSize * 2;
-  const safeTheme: BrandTheme = theme === "dark" ? "dark" : "light";
-
+  if (isBond(sym)) {
+    // bonos → ticker sin dominio, siempre lettermark
+    return symbolToBrandfetchTickerUrl(sym, clientId, size, theme);
+  }
   const domain = getBrandDomain(sym);
-  // Resolver clientId en dashboard si no se pasó explícitamente
-  let resolvedClientId = clientId;
-  if (resolvedClientId === undefined) {
-    try {
-      // Vite env — safe check
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const env = (import.meta as unknown as { env?: Record<string, string> })?.env;
-      resolvedClientId = env?.["VITE_BRANDFETCH_CLIENT_ID"] ?? undefined;
-    } catch {
-      resolvedClientId = undefined;
-    }
-  }
-
-  let base: string;
   if (domain) {
-    base = `https://cdn.brandfetch.io/domain/${encodeURIComponent(domain)}/w/${wh}/h/${wh}/fallback/lettermark/theme/${safeTheme}`;
-  } else {
-    // Bonos, ONs o símbolos sin dominio → ticker fallback (lettermark garantizado)
-    base = `https://cdn.brandfetch.io/ticker/${encodeURIComponent(sym)}/w/${wh}/h/${wh}/fallback/lettermark/theme/${safeTheme}`;
+    return symbolToBrandfetchDomainUrl(sym, clientId, size, theme);
   }
-
-  if (resolvedClientId) {
-    return `${base}?c=${encodeURIComponent(resolvedClientId)}`;
-  }
-  return base;
+  return symbolToBrandfetchTickerUrl(sym, clientId, size, theme);
 }
