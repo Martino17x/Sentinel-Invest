@@ -67,38 +67,39 @@ export function AuthSplitLayout({
       </div>
 
       {/* Columna Derecha: Showcase Visual / Portafolio (Desktop) */}
-      <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden border-l border-border/40 bg-zinc-950 p-12 text-zinc-100 lg:flex xl:p-16">
-        {/* Encabezado Visual Sobrio */}
-        <div className="space-y-2 z-10">
-          <h2 className="text-2xl xl:text-3xl font-semibold tracking-tight text-zinc-100">
-            Control patrimonial en tiempo real
+      <div className="relative hidden w-1/2 flex-col items-center justify-between overflow-hidden border-l border-border/40 bg-zinc-950 p-8 lg:p-10 xl:p-12 text-zinc-100 lg:flex">
+        {/* Encabezado Visual Centrado y Contundente */}
+        <div className="space-y-2.5 text-center max-w-xl z-10">
+          <h2 className="text-3xl xl:text-4xl font-bold tracking-tight text-zinc-100 text-balance">
+            Tu cartera de inversiones, clara y en tiempo real
           </h2>
-          <p className="text-sm leading-relaxed text-zinc-400 max-w-md">
-            Visualizá la evolución consolidada de tu cartera, métricas de rendimiento TWR y composición por activos directamente desde InvertirOnline.
+          <p className="text-sm xl:text-base text-zinc-400 text-balance">
+            Sincronizá tu cuenta de InvertirOnline y visualizá tus rendimientos reales al instante.
           </p>
         </div>
 
-        {/* Captura Limpia del Portafolio (Sin falsos marcos de navegador) */}
-        <div className="my-6 z-10">
-          <div className="relative rounded-lg border border-zinc-800/80 bg-zinc-900/30 shadow-2xl overflow-hidden">
+        {/* Captura Prominente del Portafolio */}
+        <div className="w-full max-w-2xl xl:max-w-3xl flex-1 flex items-center justify-center my-4 z-10 px-2 lg:px-4">
+          <div className="relative w-full rounded-xl border border-zinc-800 bg-zinc-900/40 shadow-2xl overflow-hidden">
             <img
               src="/screens/portfolio.png"
               alt="Vista previa del Portafolio Sentinel"
-              className="w-full h-auto max-h-[380px] object-cover object-top"
+              className="w-full h-auto max-h-[480px] object-cover object-top"
               loading="eager"
             />
           </div>
         </div>
 
-        {/* Indicadores de Confianza Funcionales y Planos */}
-        <div className="flex items-center gap-6 text-xs text-zinc-400 border-t border-zinc-900 pt-6 z-10">
-          <div className="flex items-center gap-2">
+        {/* Indicadores de Confianza Centrados */}
+        <div className="flex items-center justify-center gap-6 text-xs text-zinc-400 border-t border-zinc-900/80 pt-4 w-full z-10">
+          <div className="flex items-center gap-1.5">
             <ShieldCheck className="h-4 w-4 text-zinc-400 shrink-0" />
             <span>Acceso solo lectura</span>
           </div>
-          <div className="flex items-center gap-2">
+          <span className="text-zinc-700">•</span>
+          <div className="flex items-center gap-1.5">
             <Lock className="h-4 w-4 text-zinc-400 shrink-0" />
-            <span>Cifrado AES-256-GCM</span>
+            <span>Cifrado AES-256</span>
           </div>
         </div>
       </div>
