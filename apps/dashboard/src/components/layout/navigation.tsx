@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   TrendingUp,
   Home,
@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/context/AuthContext";
+import { isRouteActive } from "@/lib/nav";
+import { cn } from "@/lib/utils";
 
 function getInitials(name: string | null | undefined, email: string): string {
   if (name && name.trim().length > 0) {
@@ -39,7 +41,7 @@ const NAV_LINKS = [
   { to: "/portfolio", label: "Portafolio", icon: Briefcase },
   { to: "/operations", label: "Operaciones", icon: Link2 },
   { to: "/quotes", label: "Cotizaciones", icon: LineChart },
-  { to: "/screener", label: "Screener", icon: Search },
+  { to: "/explorar", label: "Explorar", icon: Search },
   { to: "/news", label: "Noticias", icon: Newspaper },
   { to: "/reports", label: "Reportes", icon: BarChart3 },
 ];
@@ -53,6 +55,7 @@ const NAV_LINKS = [
 export function Navigation() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   async function handleLogout() {
     await logout();
@@ -71,16 +74,25 @@ export function Navigation() {
             <span>Sentinel</span>
           </Link>
           <nav className="hidden items-center gap-5 md:flex">
-            {NAV_LINKS.map(({ to, label, icon: Icon }) => (
-              <Link
-                key={to}
-                to={to}
-                className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-              </Link>
-            ))}
+            {NAV_LINKS.map(({ to, label, icon: Icon }) => {
+              const isActive = isRouteActive(to, location.pathname);
+              return (
+                <Link
+                  key={to}
+                  to={to}
+                  aria-current={isActive ? "page" : undefined}
+                  className={cn(
+                    "flex items-center gap-1.5 text-sm font-medium transition-colors",
+                    isActive
+                      ? "text-foreground font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Icon className={cn("h-4 w-4", isActive && "text-primary")} />
+                  {label}
+                </Link>
+              );
+            })}
           </nav>
         </div>
 

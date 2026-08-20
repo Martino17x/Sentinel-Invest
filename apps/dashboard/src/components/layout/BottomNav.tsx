@@ -1,5 +1,6 @@
-import { NavLink } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Home, Briefcase, LineChart, BarChart3 } from "lucide-react";
+import { isRouteActive } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
@@ -15,29 +16,33 @@ const ITEMS = [
  * dropdown del avatar (header), no hay ítem "Más".
  */
 export function BottomNav() {
+  const location = useLocation();
+
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden"
       aria-label="Navegación principal"
     >
       <div className="grid grid-cols-4">
-        {ITEMS.map(({ to, label, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            className={({ isActive }) =>
-              cn(
+        {ITEMS.map(({ to, label, icon: Icon }) => {
+          const isActive = isRouteActive(to, location.pathname);
+          return (
+            <Link
+              key={to}
+              to={to}
+              aria-current={isActive ? "page" : undefined}
+              className={cn(
                 "flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition-colors",
                 isActive
-                  ? "text-primary"
+                  ? "text-primary font-semibold"
                   : "text-muted-foreground hover:text-foreground"
-              )
-            }
-          >
-            <Icon className="h-5 w-5" />
-            {label}
-          </NavLink>
-        ))}
+              )}
+            >
+              <Icon className="h-5 w-5" />
+              {label}
+            </Link>
+          );
+        })}
       </div>
     </nav>
   );
