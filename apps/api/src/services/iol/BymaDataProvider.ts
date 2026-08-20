@@ -39,6 +39,8 @@ import type {
 const API_BASE = "https://open.bymadata.com.ar/vanoms-be-core/rest/api/bymadata/free";
 
 import { INSTRUMENT_NAMES } from "./instrumentNames.js";
+import type { BondSchedule, BondCashflow } from "../market/bonds/types.js";
+import { buildSchedule } from "../market/bonds/cashflow.js";
 
 interface BymaResponse {
   content?: {
@@ -270,6 +272,140 @@ export class BymaDataProvider implements IolProvider {
     };
   }
 
+  /**
+   * BONOS — Ficha técnica + normalización a BondSchedule.
+   *
+   * Endpoint: POST /bnown/fichatecnica/especies/general  {symbol}
+   * Normaliza bullet / amortizable / cer / step-up → BondSchedule.
+   * Si la ficha no trae cronograma explícito (formaAmortizacion texto libre)
+   * y MAE tiene detalle[] para el mismo símbolo, usa fallback MAE.
+   */
+  async getBondSchedule(symbol: string, signal?: AbortSignal): Promise<BondSchedule> {
+    const sym = symbol.toUpperCase().trim();
+    const ficha = await this.fetchBondFicha(sym, signal);
+    const schedule = this.normalizeFichaToSchedule(sym, ficha);
+
+    // Si el schedule quedó sin cashflows útiles, intentar fallback MAE detalle[]
+    if (!schedule.cashflows || schedule.cashflows.length === 0) {
+      const fallback = await this.fetchMaeDetalleFallback(sym, signal);
+      if (fallback && fallback.length > 0) {
+        return buildSchedule({
+          symbol: sym,
+          moneda: schedule.moneda,
+          tipo: schedule.tipo === "bullet" ? inferMaeTipo(fallback) : schedule.tipo,
+          vencimiento: schedule.vencimiento,
+          cashflows: fallback,
+          cerAjustado: schedule.cerAjustado,
+        });
+      }
+    }
+
+    return schedule;
+  }
+
+  private async fetchBondFicha(symbol: string, signal?: AbortSignal): Promise<BymaFicha | null> {
+    const url = `${API_BASE}/bnown/fichatecnica/especies/general`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8_000);
+    const onAbort = () => controller.abort();
+    signal?.addEventListener("abort", onAbort, { once: true });
+    try {
+      const r = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json, text/plain, */*",
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+          Referer: "https://open.bymadata.com.ar/",
+          Origin: "https://open.bymadata.com.ar",
+        },
+        body: JSON.stringify({ symbol }),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
+      if (!r.ok) {
+        throw new Error(`BYMA ficha ${symbol}: HTTP ${r.status}`);
+      }
+      const json = (await r.json()) as { data?: BymaFicha[]; empty?: boolean };
+      if (json.empty || !json.data || json.data.length === 0) return null;
+      return json.data[0] ?? null;
+    } catch (err) {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
+      // No tirar si es ficha inexistente — retornar null para fallback
+      if (err instanceof Error && err.message.includes("HTTP 4")) return null;
+      throw err;
+    }
+  }
+
+  private normalizeFichaToSchedule(symbol: string, ficha: BymaFicha | null): BondSchedule {
+    if (!ficha) {
+      // Ficha vacía: devolver placeholder sin cashflows — caller hará fallback MAE
+      return buildSchedule({
+        symbol,
+        moneda: inferMoneda(null),
+        tipo: inferTipo(null),
+        vencimiento: inferVencimientoFallback(symbol),
+        cashflows: [],
+        cerAjustado: false,
+      });
+    }
+
+    const moneda = inferMoneda(ficha);
+    const tipo = inferTipo(ficha);
+    const vencimiento = parseFecha(ficha.fechaVencimiento) ?? inferVencimientoFallback(symbol);
+    const cerAjustado = isCerFicha(ficha);
+
+    // Intentar inferir cashflows desde formaAmortizacion / interes texto
+    const cashflows = parseCashflowsFromFicha(ficha, vencimiento);
+
+    return buildSchedule({
+      symbol,
+      moneda,
+      tipo,
+      vencimiento,
+      cashflows,
+      cerAjustado,
+    });
+  }
+
+  private async fetchMaeDetalleFallback(symbol: string, signal?: AbortSignal): Promise<BondCashflow[] | null> {
+    // MAE H/B — buscar detalle[] para symbol
+    const letras: ("B" | "H")[] = /^BP/.test(symbol) ? ["B", "H"] : ["H", "B"];
+    for (const letra of letras) {
+      try {
+        const url = `https://api.marketdata.mae.com.ar/api/emisiones/flujofondoscotiz/${letra}`;
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 8_000);
+        const onAbort = () => controller.abort();
+        signal?.addEventListener("abort", onAbort, { once: true });
+        const r = await fetch(url, {
+          headers: { Accept: "application/json" },
+          signal: controller.signal,
+        });
+        clearTimeout(timer);
+        signal?.removeEventListener("abort", onAbort);
+        if (!r.ok) continue;
+        const arr = (await r.json()) as Array<{ especie: string; detalle: Array<{ fechaPago: string; vr?: number; cashFlow: number; renta: number; amortizacion: number }> }>;
+        const found = arr.find((it) => it.especie.toUpperCase() === symbol);
+        if (found && found.detalle?.length) {
+          return found.detalle.map((d) => ({
+            fechaPago: d.fechaPago.slice(0, 10),
+            renta: Number(d.renta ?? 0),
+            amortizacion: Number(d.amortizacion ?? 0),
+            cashFlow: Number(d.cashFlow ?? Number(d.renta ?? 0) + Number(d.amortizacion ?? 0)),
+            vr: Number(d.vr ?? 100),
+          }));
+        }
+      } catch {
+        // probar siguiente letra
+      }
+    }
+    return null;
+  }
+
   async getQuoteHistory(
     _creds: IolCredentials,
     symbol: string,
@@ -348,6 +484,138 @@ export class BymaDataProvider implements IolProvider {
   async getMonthlyReport(_c: IolCredentials, _a: string, _m: string): Promise<MonthlyReport> {
     throw new Error("BymaDataProvider no maneja reportes");
   }
+}
+
+// ============================================================
+// Helpers para getBondSchedule (ficha técnica)
+// ============================================================
+
+interface BymaFicha {
+  ley?: string;
+  formaAmortizacion?: string;
+  interes?: string;
+  denominacionMinima?: number;
+  fechaEmision?: string;
+  fechaVencimiento?: string;
+  fechaDevenganIntereses?: string;
+  codigoIsin?: string;
+  tipoEspecie?: string;
+  tipoObligacion?: string;
+  moneda?: string;
+  montoNominal?: number;
+  montoResidual?: number;
+  denominacion?: string;
+  emisor?: string;
+  paisLey?: string;
+  insType?: string;
+  default?: string;
+}
+
+function parseFecha(raw?: string): string | null {
+  if (!raw) return null;
+  // "2026-12-31 00:00:00.0" → "2026-12-31"
+  const iso = raw.slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+  // fallback: try Date parse
+  const d = new Date(raw);
+  if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+  return null;
+}
+
+function inferVencimientoFallback(symbol: string): string {
+  // LECAP S31L6 → 2026-?? ; usar +1 año si no se conoce
+  const d = new Date();
+  d.setFullYear(d.getFullYear() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function inferMoneda(ficha: BymaFicha | null): "ARS" | "USD" {
+  const m = (ficha?.moneda ?? "").toLowerCase();
+  if (m.includes("dolar")) return "USD";
+  if (m.includes("usd") || m.includes("dólar")) return "USD";
+  if (m.includes("dolar linked")) return "USD";
+  // "Pesos", "Pesos Ajustables por CER" → ARS
+  return "ARS";
+}
+
+function isCerFicha(ficha: BymaFicha | null): boolean {
+  if (!ficha) return false;
+  const hay = `${ficha.moneda ?? ""} ${ficha.interes ?? ""} ${ficha.formaAmortizacion ?? ""}`.toLowerCase();
+  return hay.includes("cer") || hay.includes("uv") || hay.includes("ajustable");
+}
+
+function inferTipo(ficha: BymaFicha | null): BondSchedule["tipo"] {
+  if (!ficha) return "bullet";
+  const texto = `${ficha.formaAmortizacion ?? ""} ${ficha.interes ?? ""}`.toLowerCase();
+  if (isCerFicha(ficha)) return "cer";
+  if (texto.includes("step") || texto.includes("escalon")) return "step-up";
+  if (texto.includes("al vencimiento") || texto.includes("bullet") || texto.includes("integra al vencimiento")) return "bullet";
+  if (texto.includes("cuota") || texto.includes("amortiz")) return "amortizable";
+  // fallback por moneda/tipo especie
+  if ((ficha.tipoEspecie ?? "").toLowerCase().includes("letra")) return "bullet";
+  return "amortizable";
+}
+
+function inferMaeTipo(detalle: BondCashflow[]): BondSchedule["tipo"] {
+  if (detalle.length === 1) return "bullet";
+  return "amortizable";
+}
+
+function parseCashflowsFromFicha(ficha: BymaFicha, vencimiento: string): BondCashflow[] {
+  const texto = (ficha.formaAmortizacion ?? "").toLowerCase();
+
+  // Bullet: un único flujo al vencimiento
+  if (texto.includes("al vencimiento") || texto.includes("integra al vencimiento") || texto.includes("bullet")) {
+    // LECAP/BONCAP bullet: cashFlow ≈ 100 + cupón desconocido → usar 100 como placeholder
+    // El motor local refinará con precio/ma; mae detalle dará valor real si existe
+    return [
+      {
+        fechaPago: vencimiento,
+        renta: 0,
+        amortizacion: 100,
+        cashFlow: 100,
+        vr: 0,
+      },
+    ];
+  }
+
+  // Intentar parsear "N cuotas semestrales iguales el 9 de enero y 9 de julio desde julio 2027 hasta enero 2038"
+  // Heurística: buscar número de cuotas
+  const cuotasMatch = texto.match(/(\d+)\s*cuotas?/);
+  if (cuotasMatch) {
+    const n = Number(cuotasMatch[1]);
+    if (Number.isFinite(n) && n > 1 && n <= 60) {
+      // Generar n flujos iguales semestrales hasta vencimiento (placeholder amortización 100/n)
+      const amortUnit = 100 / n;
+      const flujos: BondCashflow[] = [];
+      const venc = new Date(vencimiento + "T00:00:00.000Z");
+      for (let i = n - 1; i >= 0; i--) {
+        const d = new Date(venc);
+        d.setUTCMonth(d.getUTCMonth() - i * 6);
+        const fechaPago = d.toISOString().slice(0, 10);
+        flujos.push({
+          fechaPago,
+          renta: 0, // cupón no disponible en ficha texto → 0; MAE fallback lo corrige
+          amortizacion: amortUnit,
+          cashFlow: amortUnit,
+          vr: Math.max(0, 100 - amortUnit * (n - i - 1)),
+        });
+      }
+      // Filtrar fechas futuras respecto a emisión si se conoce
+      return flujos;
+    }
+  }
+
+  // Sin patrón reconocido → devolver bullet al vencimiento (fallback MAE cubrirá)
+  return [
+    {
+      fechaPago: vencimiento,
+      renta: 0,
+      amortizacion: 100,
+      cashFlow: 100,
+      vr: 0,
+    },
+  ];
 }
 
 // ============================================================

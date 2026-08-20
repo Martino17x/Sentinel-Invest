@@ -18,14 +18,20 @@ import { pool } from "../db/index.js";
 import { makeDailySnapshotDeps, runDailySnapshots } from "./dailySnapshot.js";
 import { runDailyReconciliation } from "./reconciliation.js";
 import { makeQuotesSnapshotDeps, runQuotesSnapshots } from "./quotesSnapshot.js";
+import {
+  makeBondAnalyticsSnapshotDeps,
+  runBondAnalyticsSnapshot,
+} from "./bondAnalyticsSnapshot.js";
 
 const SNAPSHOT_CRON = "30 17 * * 1-5"; // 17:30 ART, lunes a viernes (F1-R1)
 const QUOTES_SNAPSHOT_CRON = "5 17 * * 1-5"; // 17:05 ART, lun-vie — snapshot de cotizaciones al cierre
+const BOND_ANALYTICS_CRON = "10 17 * * 1-5"; // 17:10 ART, lun-vie — snapshot analytics bonos (renta-fija-curva)
 const RECONCILIATION_CRON = "30 18 * * 1-5"; // 18:30 ART, tras el snapshot (se afina en F3-4)
 const CRON_TZ = "America/Argentina/Buenos_Aires";
 
 const SNAPSHOT_TASK_NAME = "daily-snapshot";
 const QUOTES_SNAPSHOT_TASK_NAME = "quotes-snapshot";
+const BOND_ANALYTICS_TASK_NAME = "bond-analytics-snapshot";
 const RECONCILIATION_TASK_NAME = "daily-reconciliation";
 
 export interface ScheduledJobState {
@@ -38,6 +44,7 @@ export interface ScheduledJobs {
   started: boolean;
   snapshot: ScheduledJobState;
   quotesSnapshot: ScheduledJobState;
+  bondAnalytics: ScheduledJobState;
   reconciliation: ScheduledJobState;
   stop: () => void;
 }
@@ -48,10 +55,14 @@ export interface SchedulerDeps {
   tablesReady?: () => Promise<boolean>;
   /** Guard de tabla quotes — inyectable para tests del nuevo job. */
   quotesTablesReady?: () => Promise<boolean>;
+  /** Guard de tabla bond_analytics_snapshots — inyectable para tests. */
+  bondAnalyticsTablesReady?: () => Promise<boolean>;
   /** Handler del snapshot diario — por defecto runDailySnapshots real. */
   runSnapshot?: () => Promise<unknown>;
   /** Handler de snapshot de cotizaciones — por defecto runQuotesSnapshots real. */
   runQuotesSnapshot?: () => Promise<unknown>;
+  /** Handler de snapshot de analytics bonos — por defecto runBondAnalyticsSnapshot real. */
+  runBondAnalyticsSnapshot?: () => Promise<unknown>;
   /** Handler de reconciliación — lo conecta F3-4. */
   runReconciliation?: () => Promise<unknown>;
 }
@@ -71,6 +82,17 @@ async function defaultQuotesTablesReady(): Promise<boolean> {
   try {
     const result = await pool.query<{ exists: boolean }>(
       "SELECT to_regclass('public.quotes_snapshots') IS NOT NULL AS exists"
+    );
+    return result.rows[0]?.exists ?? false;
+  } catch {
+    return false;
+  }
+}
+
+async function defaultBondAnalyticsTablesReady(): Promise<boolean> {
+  try {
+    const result = await pool.query<{ exists: boolean }>(
+      "SELECT to_regclass('public.bond_analytics_snapshots') IS NOT NULL AS exists"
     );
     return result.rows[0]?.exists ?? false;
   } catch {
@@ -98,6 +120,15 @@ function defaultRunQuotesSnapshot(
   };
 }
 
+function defaultRunBondAnalyticsSnapshot(
+  log: Pick<Console, "log" | "warn" | "error">
+): () => Promise<unknown> {
+  return async () => {
+    if (process.env.BONDS_SNAPSHOT_ENABLED !== "true") return;
+    await runBondAnalyticsSnapshot(makeBondAnalyticsSnapshotDeps({ log }));
+  };
+}
+
 /**
  * Arranca los jobs diarios. Idempotente por diseño (cada boot lo vuelve
  * a llamar una vez). La idempotencia del snapshot (unique(account_id,
@@ -114,13 +145,15 @@ export async function startScheduledJobs(deps: SchedulerDeps = {}): Promise<Sche
 
   const portfolioReady = await (deps.tablesReady ?? defaultTablesReady)();
   const quotesReady = await (deps.quotesTablesReady ?? deps.tablesReady ?? defaultQuotesTablesReady)();
+  const bondAnalyticsReady = await (deps.bondAnalyticsTablesReady ?? defaultBondAnalyticsTablesReady)();
 
-  if (!portfolioReady && !quotesReady) {
-    log.warn("⚠️ scheduler: portfolio_snapshots y quotes_snapshots ausentes — jobs NO arrancan");
+  if (!portfolioReady && !quotesReady && !bondAnalyticsReady) {
+    log.warn("⚠️ scheduler: portfolio_snapshots, quotes_snapshots y bond_analytics_snapshots ausentes — jobs NO arrancan");
     return {
       started: false,
       snapshot: { enabled: false, scheduled: false },
       quotesSnapshot: { enabled: false, scheduled: false },
+      bondAnalytics: { enabled: false, scheduled: false },
       reconciliation: { enabled: false, scheduled: false },
       stop,
     };
@@ -133,6 +166,7 @@ export async function startScheduledJobs(deps: SchedulerDeps = {}): Promise<Sche
   const snapshotEnabled = process.env.SNAPSHOT_JOB_ENABLED !== "false";
   const reconciliationEnabled = process.env.RECONCILIATION_JOB_ENABLED !== "false";
   const quotesEnabled = process.env.QUOTES_SNAPSHOT_ENABLED !== "false";
+  const bondAnalyticsEnabled = process.env.BONDS_SNAPSHOT_ENABLED === "true";
 
   // — Quotes snapshot 17:05 (independiente de portfolio) —
   let quotesScheduled = false;
@@ -182,6 +216,29 @@ export async function startScheduledJobs(deps: SchedulerDeps = {}): Promise<Sche
     log.log("🕒 scheduler: SNAPSHOT_JOB_ENABLED=false → snapshot diario deshabilitado");
   }
 
+  // — Bond analytics snapshot 17:10 —
+  let bondAnalyticsScheduled = false;
+  if (bondAnalyticsReady && bondAnalyticsEnabled) {
+    const run = deps.runBondAnalyticsSnapshot ?? defaultRunBondAnalyticsSnapshot(log);
+    const task = schedule(BOND_ANALYTICS_CRON, () => {
+      run().catch((err) => {
+        log.error("⚠️ scheduler: bond-analytics-snapshot falló:", err instanceof Error ? err : new Error(String(err)));
+      });
+    }, {
+      timezone: CRON_TZ,
+      name: BOND_ANALYTICS_TASK_NAME,
+      noOverlap: true,
+      unref: true,
+    });
+    tasks.push(task);
+    bondAnalyticsScheduled = true;
+    log.log("🕒 scheduler: snapshot analytics bonos 17:10 ART (L–V) activo");
+  } else if (!bondAnalyticsReady) {
+    log.warn("⚠️ scheduler: bond_analytics_snapshots ausente — snapshot analytics bonos NO arranca");
+  } else {
+    log.log("🕒 scheduler: BONDS_SNAPSHOT_ENABLED!=true → snapshot analytics bonos deshabilitado");
+  }
+
   // — Reconciliación 18:30 —
   let reconciliationScheduled = false;
   if (portfolioReady && reconciliationEnabled) {
@@ -205,11 +262,12 @@ export async function startScheduledJobs(deps: SchedulerDeps = {}): Promise<Sche
     log.log("🕒 scheduler: RECONCILIATION_JOB_ENABLED=false → reconciliación deshabilitada");
   }
 
-  const started = quotesScheduled || snapshotScheduled || reconciliationScheduled;
+  const started = quotesScheduled || snapshotScheduled || reconciliationScheduled || bondAnalyticsScheduled;
   return {
     started,
     snapshot: { enabled: portfolioReady && snapshotEnabled, scheduled: snapshotScheduled },
     quotesSnapshot: { enabled: quotesReady && quotesEnabled, scheduled: quotesScheduled },
+    bondAnalytics: { enabled: bondAnalyticsReady && bondAnalyticsEnabled, scheduled: bondAnalyticsScheduled },
     reconciliation: { enabled: portfolioReady && reconciliationEnabled, scheduled: reconciliationScheduled },
     stop,
   };
