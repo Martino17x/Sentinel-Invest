@@ -1,3 +1,4 @@
+import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
@@ -6,6 +7,7 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { IolConnectReminder } from "@/components/layout/IolConnectReminder";
 import { BackButton } from "@/components/layout/BackButton";
 import { AgentChatDrawer } from "@/components/agent/AgentChatDrawer";
+
 import { LoginPage } from "@/pages/LoginPage";
 import { RegisterPage } from "@/pages/RegisterPage";
 import { HomePage } from "@/pages/HomePage";
@@ -27,6 +29,16 @@ import { OperarPage } from "@/pages/OperarPage";
 import { OperarSymbolPage } from "@/pages/OperarSymbolPage";
 import { OperarFciPage } from "@/pages/OperarFciPage";
 import { cn } from "@/lib/utils";
+
+const RadarPage = lazy(() => import("@/pages/RadarPage"));
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
 
 // Rutas que requieren sesión — redirigen a /login si no hay usuario
 function ProtectedLayout() {
@@ -53,7 +65,8 @@ function ProtectedLayout() {
   const hasOwnNav =
     pathname.startsWith("/quotes/") ||
     pathname.startsWith("/analysis/") ||
-    pathname.startsWith("/news/");
+    pathname.startsWith("/news/") ||
+    pathname.startsWith("/radar");
   const isSecondary = pathname === "/profile" || pathname === "/connect" || pathname === "/agent-connect";
   const showBack = pathname !== "/inicio" && pathname !== "/portfolio" && !hasOwnNav;
   const backClasses = cn(!isSecondary && "md:hidden"); // en desktop se oculta si no es página secundaria
@@ -113,6 +126,7 @@ function GuestOnlyLayout() {
 function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <AuthProvider>
         <Routes>
           <Route element={<GuestOnlyLayout />}>
@@ -137,11 +151,26 @@ function App() {
             <Route path="/operar/fci" element={<OperarFciPage />} />
             <Route path="/quotes" element={<QuotesPage />} />
             <Route path="/quotes/:symbol" element={<QuoteDetailPage />} />
-            <Route path="/screener" element={<ScreenerPage />} />
+            <Route path="/explorar" element={<ScreenerPage />} />
+            <Route path="/screener" element={<Navigate to="/explorar" replace />} />
             <Route path="/news" element={<NewsPage />} />
             <Route path="/news/:newsId" element={<NewsDetailPage />} />
             <Route path="/analysis/:symbol" element={<StockAnalysisPage />} />
             <Route path="/reports" element={<ReportsPage />} />
+            <Route
+              path="/radar"
+              element={
+                <Suspense
+                  fallback={
+                    <div className="flex min-h-48 items-center justify-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  }
+                >
+                  <RadarPage />
+                </Suspense>
+              }
+            />
             <Route path="/connect" element={<ConnectIolPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/agent-connect" element={<AgentConnectPage />} />

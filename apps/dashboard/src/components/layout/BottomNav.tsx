@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Briefcase, LineChart, BarChart3 } from "lucide-react";
+import { Home, Briefcase, LineChart, BarChart3, ArrowLeftRight } from "lucide-react";
 import { isRouteActive } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
@@ -7,6 +7,7 @@ const ITEMS = [
   { to: "/inicio", label: "Inicio", icon: Home },
   { to: "/portfolio", label: "Portafolio", icon: Briefcase },
   { to: "/quotes", label: "Cotizaciones", icon: LineChart },
+  { to: "/radar", label: "Radar", icon: ArrowLeftRight },
   { to: "/reports", label: "Reportes", icon: BarChart3 },
 ];
 
@@ -23,7 +24,7 @@ export function BottomNav() {
       className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden"
       aria-label="Navegación principal"
     >
-      <div className="grid grid-cols-4">
+      <div className="grid grid-cols-5">
         {ITEMS.map(({ to, label, icon: Icon }) => {
           const isActive = isRouteActive(to, location.pathname);
           return (

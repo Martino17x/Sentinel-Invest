@@ -11,6 +11,7 @@ import {
   Plug,
   User,
   LogOut,
+  ArrowLeftRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,6 +44,7 @@ const NAV_LINKS = [
   { to: "/quotes", label: "Cotizaciones", icon: LineChart },
   { to: "/explorar", label: "Explorar", icon: Search },
   { to: "/news", label: "Noticias", icon: Newspaper },
+  { to: "/radar", label: "Radar", icon: ArrowLeftRight },
   { to: "/reports", label: "Reportes", icon: BarChart3 },
 ];
 
