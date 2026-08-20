@@ -13,6 +13,7 @@ const silentLog = { log() {}, warn() {}, error() {} };
 const ORIGINAL_ENV: Record<string, string | undefined> = {
   SNAPSHOT_JOB_ENABLED: process.env.SNAPSHOT_JOB_ENABLED,
   RECONCILIATION_JOB_ENABLED: process.env.RECONCILIATION_JOB_ENABLED,
+  QUOTES_SNAPSHOT_ENABLED: process.env.QUOTES_SNAPSHOT_ENABLED,
   IOL_PROVIDER: process.env.IOL_PROVIDER,
 };
 
@@ -27,56 +28,68 @@ test("tabla ausente → started:false y nada se agenda", async () => {
   const jobs = await startScheduledJobs({
     log: silentLog,
     tablesReady: async () => false,
+    quotesTablesReady: async () => false,
   });
 
   assert.equal(jobs.started, false);
   assert.equal(jobs.snapshot.scheduled, false);
   assert.equal(jobs.reconciliation.scheduled, false);
+  assert.equal(jobs.quotesSnapshot.scheduled, false);
   jobs.stop();
 });
 
 test("kill-switches=false → no-op (nada se agenda, started:true)", async () => {
   process.env.SNAPSHOT_JOB_ENABLED = "false";
   process.env.RECONCILIATION_JOB_ENABLED = "false";
+  process.env.QUOTES_SNAPSHOT_ENABLED = "false";
 
   const jobs = await startScheduledJobs({
     log: silentLog,
     tablesReady: async () => true,
+    quotesTablesReady: async () => true,
   });
 
-  assert.equal(jobs.started, true);
+  assert.equal(jobs.started, false, "todo deshabilitado → started false");
   assert.equal(jobs.snapshot.enabled, false);
   assert.equal(jobs.snapshot.scheduled, false);
   assert.equal(jobs.reconciliation.enabled, false);
   assert.equal(jobs.reconciliation.scheduled, false);
+  assert.equal(jobs.quotesSnapshot.enabled, false);
+  assert.equal(jobs.quotesSnapshot.scheduled, false);
   jobs.stop();
 });
 
-test("default: snapshot agendado; reconciliación sin handler no agenda (llega en F3-4)", async () => {
+test("default: snapshot agendado; reconciliación y quotes también agendados", async () => {
   delete process.env.SNAPSHOT_JOB_ENABLED;
   delete process.env.RECONCILIATION_JOB_ENABLED;
+  delete process.env.QUOTES_SNAPSHOT_ENABLED;
 
   const jobs = await startScheduledJobs({
     log: silentLog,
     tablesReady: async () => true,
+    quotesTablesReady: async () => true,
   });
 
   assert.equal(jobs.started, true);
   assert.equal(jobs.snapshot.scheduled, true);
   assert.equal(jobs.reconciliation.enabled, true);
-  assert.equal(jobs.reconciliation.scheduled, false, "sin handler no agenda");
+  assert.equal(jobs.reconciliation.scheduled, true);
+  assert.equal(jobs.quotesSnapshot.enabled, true);
+  assert.equal(jobs.quotesSnapshot.scheduled, true);
   jobs.stop();
 });
 
 test("el task agendado ejecuta el handler inyectado (execute) y stop() lo destruye", async () => {
   delete process.env.SNAPSHOT_JOB_ENABLED;
   delete process.env.RECONCILIATION_JOB_ENABLED;
+  delete process.env.QUOTES_SNAPSHOT_ENABLED;
   process.env.IOL_PROVIDER = "api";
 
   let runs = 0;
   const jobs = await startScheduledJobs({
     log: silentLog,
     tablesReady: async () => true,
+    quotesTablesReady: async () => true,
     runSnapshot: async () => {
       runs++;
     },
