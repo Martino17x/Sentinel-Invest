@@ -31,6 +31,9 @@ import { OperarFciPage } from "@/pages/OperarFciPage";
 import { cn } from "@/lib/utils";
 
 const RadarPage = lazy(() => import("@/pages/RadarPage"));
+const RentaFijaPage = lazy(() => import("@/pages/RentaFijaPage"));
+const RentaFijaCurvaPage = lazy(() => import("@/pages/RentaFijaCurvaPage"));
+const RentaFijaCalendarioPage = lazy(() => import("@/pages/RentaFijaCalendarioPage"));
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -66,7 +69,8 @@ function ProtectedLayout() {
     pathname.startsWith("/quotes/") ||
     pathname.startsWith("/analysis/") ||
     pathname.startsWith("/news/") ||
-    pathname.startsWith("/radar");
+    pathname.startsWith("/radar") ||
+    pathname.startsWith("/renta-fija");
   const isSecondary = pathname === "/profile" || pathname === "/connect" || pathname === "/agent-connect";
   const showBack = pathname !== "/inicio" && pathname !== "/portfolio" && !hasOwnNav;
   const backClasses = cn(!isSecondary && "md:hidden"); // en desktop se oculta si no es página secundaria
@@ -168,6 +172,48 @@ function App() {
                   }
                 >
                   <RadarPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/renta-fija"
+              element={
+                <Suspense
+                  fallback={
+                    <div className="flex min-h-48 items-center justify-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  }
+                >
+                  <RentaFijaPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/renta-fija/curva"
+              element={
+                <Suspense
+                  fallback={
+                    <div className="flex min-h-48 items-center justify-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  }
+                >
+                  <RentaFijaCurvaPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/renta-fija/calendario"
+              element={
+                <Suspense
+                  fallback={
+                    <div className="flex min-h-48 items-center justify-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  }
+                >
+                  <RentaFijaCalendarioPage />
                 </Suspense>
               }
             />

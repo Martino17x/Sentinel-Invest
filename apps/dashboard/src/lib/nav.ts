@@ -56,5 +56,12 @@ export function isRouteActive(targetPath: string, currentPathname: string): bool
     );
   }
 
+  if (targetPath === "/renta-fija") {
+    return (
+      currentPathname === "/renta-fija" ||
+      currentPathname.startsWith("/renta-fija")
+    );
+  }
+
   return currentPathname === targetPath || currentPathname.startsWith(`${targetPath}/`);
 }

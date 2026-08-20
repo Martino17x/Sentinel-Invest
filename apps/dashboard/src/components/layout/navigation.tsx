@@ -12,6 +12,7 @@ import {
   User,
   LogOut,
   ArrowLeftRight,
+  Landmark,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,6 +46,7 @@ const NAV_LINKS = [
   { to: "/explorar", label: "Explorar", icon: Search },
   { to: "/news", label: "Noticias", icon: Newspaper },
   { to: "/radar", label: "Radar", icon: ArrowLeftRight },
+  { to: "/renta-fija", label: "Renta Fija", icon: Landmark },
   { to: "/reports", label: "Reportes", icon: BarChart3 },
 ];
 

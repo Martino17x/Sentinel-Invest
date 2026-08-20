@@ -1002,6 +1002,93 @@ export const radarApi = {
 };
 
 // ============================================================
+// Renta Fija — GET /api/bonds/* (renta-fija-curva)
+// ============================================================
+
+export interface BondCashflow {
+  fechaPago: string;
+  renta: number;
+  amortizacion: number;
+  cashFlow: number;
+  vr: number;
+}
+
+export interface BondSchedule {
+  symbol: string;
+  moneda: "ARS" | "USD";
+  tipo: "bullet" | "amortizable" | "cer" | "step-up";
+  vencimiento: string;
+  cashflows: BondCashflow[];
+  cerAjustado?: boolean;
+}
+
+export interface BondAnalytics {
+  symbol: string;
+  precio: number;
+  precioDirty: number;
+  tir: number | null;
+  md: number | null;
+  duration: number | null;
+  paridad: number | null;
+  interesCorrido: number;
+  schedule: BondSchedule;
+  isRealtime: boolean;
+  source: "mae" | "local";
+  disclaimer: string;
+}
+
+export interface CurvePoint {
+  ticker: string;
+  tir: number;
+  md: number;
+  vencimiento: string;
+  segmento: string;
+}
+
+export interface CurveResponse {
+  points: CurvePoint[];
+  segment: string;
+  generatedAt: string;
+  disclaimer: string;
+  isMarketClosed: boolean;
+  stale?: boolean;
+}
+
+export interface CashflowItem {
+  symbol: string;
+  renta: number;
+  amort: number;
+  currency: string;
+}
+
+export interface CashflowMonth {
+  month: string;
+  label: string;
+  items: CashflowItem[];
+  totalArs: number;
+  totalUsd: number;
+}
+
+export interface CashflowResponse {
+  months: CashflowMonth[];
+  disclaimer: string;
+  isMarketClosed: boolean;
+  stale?: boolean;
+}
+
+export const bondsApi = {
+  async getAnalytics(symbol: string): Promise<BondAnalytics> {
+    return apiFetch<BondAnalytics>(`/bonds/${encodeURIComponent(symbol)}/analytics`);
+  },
+  async getCurve(segment: string): Promise<CurveResponse> {
+    return apiFetch<CurveResponse>(`/bonds/curve?segment=${encodeURIComponent(segment)}`);
+  },
+  async getCashflow(accountId: string): Promise<CashflowResponse> {
+    return apiFetch<CashflowResponse>(`/bonds/cashflow?accountId=${encodeURIComponent(accountId)}`);
+  },
+};
+
+// ============================================================
 // API Keys — claves personales para agentes externos (MCP).
 // El secreto se devuelve UNA vez al crearla; el listado NUNCA
 // incluye el hash ni el secreto (verifica server).

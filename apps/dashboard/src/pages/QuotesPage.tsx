@@ -8,7 +8,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { quotesApi } from "@/lib/api";
+import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
+import { quotesApi, bondsApi } from "@/lib/api";
 import { useApiData } from "@/hooks/useApiData";
 import CompanyLogo from "@/components/ui/company-logo";
 
@@ -61,10 +62,31 @@ function VariationBadge({ pct }: { pct: number }) {
   return <span className="font-medium tabular-nums text-muted-foreground">= 0,00%</span>;
 }
 
+// Helper moneda CEDEAR — solo lógica, sin UI pastel
+function getQuoteCurrencyLabel(q: { symbol: string; market: string; currency: string }): "AR$" | "US$" | "US$ C" {
+  if (q.market !== "bcba") return "US$";
+  if (q.currency === "USD") {
+    const s = q.symbol.trim().toUpperCase();
+    if (s.endsWith("C")) return "US$ C";
+    return "US$";
+  }
+  return "AR$";
+}
+
+function isMarketHoursART(now: Date = new Date()): boolean {
+  const artMs = now.getTime() - 3 * 60 * 60 * 1000;
+  const art = new Date(artMs);
+  const day = art.getUTCDay();
+  if (day === 0 || day === 6) return false;
+  const mins = art.getUTCHours() * 60 + art.getUTCMinutes();
+  return mins >= 11 * 60 && mins < 17 * 60;
+}
+
 export function QuotesPage() {
   const [market, setMarket] = useState("bcba");
   const [assetType, setAssetType] = useState("cedear");
   const [page, setPage] = useState(1);
+  const [cedearCurrency, setCedearCurrency] = useState<"all" | "ars" | "usd" | "usd_c">("all");
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [onlyFavorites, setOnlyFavorites] = useState(false);
   const [searchParams] = useSearchParams();
@@ -105,13 +127,57 @@ export function QuotesPage() {
   const quotes = panelData?.quotes ?? [];
   const total = panelData?.total ?? 0;
 
+  // Renta fija: enrich bono/on tabs with TIR/MD from curve (SwrCache 15min)
+  const isBonoTab = assetType === "bono" || assetType === "on";
+  const { data: curveUsd } = useApiData(
+    isBonoTab ? "bonds:curve:USD-hard-dollar" : null,
+    () => bondsApi.getCurve("USD-hard-dollar"),
+    { enabled: isBonoTab }
+  );
+  const { data: curveCer } = useApiData(
+    isBonoTab ? "bonds:curve:CER" : null,
+    () => bondsApi.getCurve("CER"),
+    { enabled: isBonoTab }
+  );
+  const { data: curveBopreal } = useApiData(
+    isBonoTab ? "bonds:curve:BOPREAL" : null,
+    () => bondsApi.getCurve("BOPREAL"),
+    { enabled: isBonoTab }
+  );
+  const { data: curveLecap } = useApiData(
+    isBonoTab ? "bonds:curve:LECAP/BONCAP" : null,
+    () => bondsApi.getCurve("LECAP/BONCAP"),
+    { enabled: isBonoTab }
+  );
+
+  const curveMap = useMemo(() => {
+    if (!isBonoTab) return new Map<string, { tir: number; md: number }>();
+    const map = new Map<string, { tir: number; md: number }>();
+    for (const src of [curveUsd, curveCer, curveBopreal, curveLecap]) {
+      for (const p of src?.points ?? []) {
+        map.set(p.ticker.toUpperCase(), { tir: p.tir, md: p.md });
+      }
+    }
+    return map;
+  }, [isBonoTab, curveUsd, curveCer, curveBopreal, curveLecap]);
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  // Filtro client-side SOLO para favoritas (la búsqueda ya es server-side)
+  // Filtro client-side: favoritas + moneda CEDEAR (AR$ / US$ / US$ C)
   const filteredQuotes = useMemo(() => {
-    if (!onlyFavorites) return quotes;
-    return quotes.filter((quote) => favorites.has(quote.symbol));
-  }, [quotes, onlyFavorites, favorites]);
+    let out = quotes;
+    if (onlyFavorites) out = out.filter((quote) => favorites.has(quote.symbol));
+    if (market === "bcba" && assetType === "cedear" && cedearCurrency !== "all") {
+      out = out.filter((q) => {
+        const label = getQuoteCurrencyLabel(q);
+        if (cedearCurrency === "ars") return label === "AR$";
+        if (cedearCurrency === "usd") return label === "US$";
+        if (cedearCurrency === "usd_c") return label === "US$ C";
+        return true;
+      });
+    }
+    return out;
+  }, [quotes, onlyFavorites, favorites, market, assetType, cedearCurrency]);
 
   function toggleFavorite(symbol: string) {
     setFavorites((prev) => {
@@ -133,6 +199,12 @@ export function QuotesPage() {
   }, [filteredQuotes, favorites]);
 
   const panelIsUp = (summary?.totalVariationPct ?? 0) >= 0;
+
+  // Banner rojo 502 solo en horario abierto. Fuera de horario el mensaje
+  // gris "El mercado está cerrado" (cached/emptyState) ya es suficiente.
+  const isClosedState = Boolean(panelData?.cached || summary?.isRealtime === false);
+  const isByma502 = error ? /BYMA|HTTP 502/i.test(error) : false;
+  const shouldShowError = Boolean(error && !isClosedState && !(isByma502 && !isMarketHoursART()));
 
   /** Controles de paginación (reutilizados arriba y abajo de la tabla) */
   function PaginationControls({ align }: { align?: "end" }) {
@@ -167,7 +239,9 @@ export function QuotesPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="space-y-0">
+      <DisclaimerBanner />
+      <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Cotizaciones</h1>
@@ -181,7 +255,13 @@ export function QuotesPage() {
             En tiempo real
           </span>
         )}
-        {summary && !summary.isRealtime && quotes.length === 0 && (
+        {panelData?.cached && panelData?.message && (
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-600">
+            <RefreshCw className="h-3.5 w-3.5" />
+            {panelData.message}
+          </span>
+        )}
+        {summary && !summary.isRealtime && !panelData?.cached && quotes.length === 0 && (
           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-600">
             <RefreshCw className="h-3.5 w-3.5" />
             Mercado cerrado
@@ -202,7 +282,7 @@ export function QuotesPage() {
         </div>
       </Tabs>
 
-      <Tabs value={assetType} onValueChange={(v) => { setAssetType(v); setPage(1); }}>
+      <Tabs value={assetType} onValueChange={(v) => { setAssetType(v); setPage(1); setCedearCurrency("all"); }}>
         <div className="overflow-x-auto pb-1">
           <TabsList className="w-max">
             {(ASSET_TYPES[market] ?? []).map((t) => (
@@ -213,6 +293,33 @@ export function QuotesPage() {
           </TabsList>
         </div>
       </Tabs>
+
+      {market === "bcba" && assetType === "cedear" && (
+        <div className="flex flex-wrap items-center gap-2">
+          {(
+            [
+              { value: "all" as const, label: "Todos", flag: null as string | null },
+              { value: "ars" as const, label: "AR$", flag: "🇦🇷" },
+              { value: "usd" as const, label: "US$", flag: "🇺🇸" },
+              { value: "usd_c" as const, label: "US$ C", flag: "🇺🇸" },
+            ] as const
+          ).map((opt) => {
+            const active = cedearCurrency === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setCedearCurrency(opt.value)}
+                aria-pressed={active}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium shadow-sm transition-colors ${active ? "border-foreground bg-foreground text-background ring-1 ring-foreground" : "border-border bg-white text-foreground hover:bg-muted"}`}
+              >
+                {opt.flag && <span aria-hidden>{opt.flag}</span>}
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Resumen del panel + buscador + filtro favoritas */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -252,9 +359,19 @@ export function QuotesPage() {
         </div>
       </div>
 
-      {error && (
+      {shouldShowError && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Datos cacheados al cierre — sólido per anti-vibecoded #6/#10: pastel prohibido */}
+      {panelData?.cached && panelData?.message && (
+        <Alert className="border-amber-600 bg-amber-500 text-white dark:border-amber-600 dark:bg-amber-500 dark:text-white [&_svg]:text-white">
+          <AlertDescription className="flex items-center gap-2 text-sm text-white">
+            <RefreshCw className="h-4 w-4 shrink-0 text-white" />
+            <span className="text-white">{panelData.message} — El mercado está cerrado / Las cotizaciones se muestran en horario de mercado (lun-vie 11:00-17:00).</span>
+          </AlertDescription>
         </Alert>
       )}
 
@@ -312,12 +429,12 @@ export function QuotesPage() {
                         </button>
                         <CompanyLogo symbol={quote.symbol} market={quote.market} size={28} className="mt-0.5 shrink-0" />
                         <div className="min-w-0">
-                          <Link
-                            to={`/quotes/${quote.symbol}`}
-                            className="text-base font-semibold text-foreground transition-colors hover:text-primary"
-                          >
-                            {quote.symbol}
-                          </Link>
+                            <Link
+                              to={`/quotes/${quote.symbol}`}
+                              className="text-base font-semibold text-foreground transition-colors hover:text-primary"
+                            >
+                              {quote.symbol}
+                            </Link>
                           <p className="truncate text-xs text-muted-foreground">{quote.name}</p>
                         </div>
                       </div>
@@ -367,6 +484,21 @@ export function QuotesPage() {
                           {formatVolume(quote.volume)}
                         </dd>
                       </div>
+                      {isBonoTab && (() => {
+                        const v = curveMap.get(quote.symbol.toUpperCase());
+                        return v ? (
+                          <>
+                            <div className="flex items-center justify-between gap-3">
+                              <dt className="text-xs text-muted-foreground">TIR</dt>
+                              <dd className="text-sm font-medium tabular-nums">{`${(v.tir * 100).toFixed(2)}%`}</dd>
+                            </div>
+                            <div className="flex items-center justify-between gap-3">
+                              <dt className="text-xs text-muted-foreground">MD</dt>
+                              <dd className="text-sm font-medium tabular-nums">{v.md.toFixed(2)}</dd>
+                            </div>
+                          </>
+                        ) : null;
+                      })()}
                     </dl>
                   </div>
                 ))}
@@ -485,6 +617,32 @@ export function QuotesPage() {
                         </span>
                       ),
                     },
+                    ...(isBonoTab
+                      ? [
+                          {
+                            key: "tir",
+                            header: "TIR",
+                            sortable: true,
+                            sortValue: (q: (typeof sortedQuotes)[number]) => curveMap.get(q.symbol.toUpperCase())?.tir ?? null,
+                            align: "right" as const,
+                            render: (quote: (typeof sortedQuotes)[number]) => {
+                              const v = curveMap.get(quote.symbol.toUpperCase())?.tir;
+                              return <span className="tabular-nums font-medium">{v != null ? `${(v * 100).toFixed(2)}%` : "—"}</span>;
+                            },
+                          },
+                          {
+                            key: "md",
+                            header: "MD",
+                            sortable: true,
+                            sortValue: (q: (typeof sortedQuotes)[number]) => curveMap.get(q.symbol.toUpperCase())?.md ?? null,
+                            align: "right" as const,
+                            render: (quote: (typeof sortedQuotes)[number]) => {
+                              const v = curveMap.get(quote.symbol.toUpperCase())?.md;
+                              return <span className="tabular-nums text-muted-foreground">{v != null ? v.toFixed(2) : "—"}</span>;
+                            },
+                          },
+                        ]
+                      : []),
                     {
                       key: "accion",
                       header: "",
@@ -506,7 +664,6 @@ export function QuotesPage() {
                         <p className="mb-1 font-medium">El mercado está cerrado</p>
                         <p className="text-xs">
                           Las cotizaciones se muestran en horario de mercado (lun-vie 11:00-17:00).
-                          Tu cartera y reportes siguen funcionando con datos reales.
                         </p>
                       </>
                     ) : (
@@ -526,6 +683,7 @@ export function QuotesPage() {
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

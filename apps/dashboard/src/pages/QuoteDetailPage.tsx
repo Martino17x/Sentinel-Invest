@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TradingViewWidget, tradingViewSymbol } from "@/components/ui/tradingview-widget";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { analysisApi, quotesApi, type AnalysisMarket } from "@/lib/api";
+import { analysisApi, bondsApi, quotesApi, type AnalysisMarket } from "@/lib/api";
 import { useApiData } from "@/hooks/useApiData";
 import { ConsensusTab } from "@/components/analysis/ConsensusTab";
 import { FundamentalsTab } from "@/components/analysis/FundamentalsTab";
@@ -59,6 +59,19 @@ export function QuoteDetailPage() {
 
   const quote = data?.quote ?? null;
   const history = data?.history ?? [];
+
+  // Renta fija analytics — only when symbol looks like bond (attempt always, hide on 404)
+  const bondCacheKey = quote ? `bonds:analytics:${quote.symbol}` : null;
+  const {
+    data: bondAnalytics,
+    isLoading: bondLoading,
+    error: bondError,
+  } = useApiData(
+    bondCacheKey,
+    () => bondsApi.getAnalytics(quote!.symbol),
+    { enabled: Boolean(quote?.symbol) }
+  );
+  const showBondCard = Boolean(quote && (bondAnalytics || bondLoading || bondError));
 
   const mappedInsightsMarket: AnalysisMarket | null = (() => {
     if (!quote) return null;
@@ -249,6 +262,128 @@ export function QuoteDetailPage() {
           </Card>
         ))}
       </div>
+
+      {/* Renta Fija analytics — TIR/MD/paridad + cashflow table (renta-fija-curva 4.6)
+          Visible cuando el símbolo tiene analytics (bono/cer/lecap). Oculto si 404 flag off. */}
+      {showBondCard && (
+        <div className="animate-in fade-in-0 duration-200 motion-reduce:animate-none">
+          {bondLoading && !bondAnalytics ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">Renta fija — Analytics</CardTitle>
+                <CardDescription>Cargando TIR, duration y paridad…</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Skeleton className="h-10 w-full motion-reduce:animate-none" />
+                <Skeleton className="h-20 w-full motion-reduce:animate-none" />
+              </CardContent>
+            </Card>
+          ) : bondError && !bondAnalytics ? (
+            bondError.includes("404") || bondError.toLowerCase().includes("no habilitada") ? null : (
+              <Alert variant="destructive" className="animate-in fade-in-0 duration-200 motion-reduce:animate-none">
+                <AlertDescription>{bondError}</AlertDescription>
+              </Alert>
+            )
+          ) : bondAnalytics ? (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium">Renta fija — {bondAnalytics.symbol}</CardTitle>
+                  <CardDescription>
+                    Fuente: {bondAnalytics.source === "mae" ? "MAE" : "Local"} · {bondAnalytics.isRealtime ? "Tiempo real" : "Cierre anterior"} · {bondAnalytics.disclaimer}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div className="rounded-lg border bg-muted/30 px-3 py-2">
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">TIR</p>
+                      <p className="text-base font-semibold tabular-nums">
+                        {bondAnalytics.tir != null ? `${(bondAnalytics.tir * 100).toFixed(2)}%` : "—"}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border bg-muted/30 px-3 py-2">
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">MD</p>
+                      <p className="text-base font-semibold tabular-nums">
+                        {bondAnalytics.md != null ? bondAnalytics.md.toFixed(2) : "—"}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border bg-muted/30 px-3 py-2">
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Paridad</p>
+                      <p className="text-base font-semibold tabular-nums">
+                        {bondAnalytics.paridad != null ? `${bondAnalytics.paridad.toFixed(2)}%` : "—"}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border bg-muted/30 px-3 py-2">
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Duration</p>
+                      <p className="text-base font-semibold tabular-nums">
+                        {bondAnalytics.duration != null ? bondAnalytics.duration.toFixed(2) : "—"}
+                      </p>
+                    </div>
+                  </div>
+                  <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <dt className="text-xs text-muted-foreground">Precio dirty</dt>
+                      <dd className="font-medium tabular-nums">{formatPrice(bondAnalytics.precioDirty, quote.currency)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted-foreground">Interés corrido</dt>
+                      <dd className="font-medium tabular-nums">{bondAnalytics.interesCorrido.toFixed(2)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted-foreground">Moneda / Tipo</dt>
+                      <dd className="font-medium">
+                        {bondAnalytics.schedule.moneda} · {bondAnalytics.schedule.tipo}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted-foreground">Vencimiento</dt>
+                      <dd className="font-medium tabular-nums">{bondAnalytics.schedule.vencimiento}</dd>
+                    </div>
+                  </dl>
+                </CardContent>
+              </Card>
+
+              {bondAnalytics.schedule.cashflows.length > 0 && (
+                <Card className="mt-4">
+                  <CardHeader>
+                    <CardTitle className="text-sm font-medium">Flujos — {bondAnalytics.symbol}</CardTitle>
+                    <CardDescription>{bondAnalytics.schedule.cashflows.length} cupones / amortizaciones</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b text-xs text-muted-foreground">
+                            <th className="py-2 text-left font-medium">Fecha</th>
+                            <th className="py-2 text-right font-medium">Renta</th>
+                            <th className="py-2 text-right font-medium">Amortización</th>
+                            <th className="py-2 text-right font-medium">Flujo</th>
+                            <th className="py-2 text-right font-medium">VR</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {bondAnalytics.schedule.cashflows.slice(0, 24).map((cf) => (
+                            <tr key={cf.fechaPago} className="border-b last:border-0 hover:bg-muted/30 motion-reduce:transition-none">
+                              <td className="py-1.5 tabular-nums">{cf.fechaPago}</td>
+                              <td className="py-1.5 text-right tabular-nums">{cf.renta.toFixed(2)}</td>
+                              <td className="py-1.5 text-right tabular-nums">{cf.amortizacion.toFixed(2)}</td>
+                              <td className="py-1.5 text-right tabular-nums font-medium">{cf.cashFlow.toFixed(2)}</td>
+                              <td className="py-1.5 text-right tabular-nums text-muted-foreground">{cf.vr.toFixed(2)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {bondAnalytics.schedule.cashflows.length > 24 && (
+                      <p className="mt-2 text-xs text-muted-foreground">Mostrando 24 de {bondAnalytics.schedule.cashflows.length} flujos.</p>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          ) : null}
+        </div>
+      )}
 
       {/* Gráfico histórico — tabs: Simplificado (propio) / TradingView (avanzado) */}
       <Card>

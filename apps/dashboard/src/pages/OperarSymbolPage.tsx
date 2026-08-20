@@ -4,15 +4,14 @@ import { ArrowLeft, ChevronDown, ChevronUp, Info } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { quotesApi, portfolioApi, type OrderMarket, type OrderSide } from "@/lib/api";
 import { useApiData } from "@/hooks/useApiData";
 import { TradeForm, formatMoney } from "@/components/trade/TradeDialog";
 
-function MarketBadge({ market }: { market: string }) {
+function MarketLabel({ market }: { market: string }) {
   const labels: Record<string, string> = { bcba: "BCBA", nyse: "NYSE", nasdaq: "NASDAQ", bonds: "BONOS" };
-  return <Badge variant="secondary" className="font-mono text-xs">{labels[market] ?? market.toUpperCase()}</Badge>;
+  return <span className="font-mono text-xs font-medium text-muted-foreground">{labels[market] ?? market.toUpperCase()}</span>;
 }
 
 /**
@@ -173,7 +172,7 @@ export function OperarSymbolPage() {
               <h1 className="text-xl font-semibold tracking-tight">
                 {sideParam === "buy" ? "Comprar" : "Vender"} {quote.symbol}
               </h1>
-              <MarketBadge market={marketParam} />
+               <MarketLabel market={marketParam} />
             </div>
             {quote.name && <p className="truncate text-xs text-muted-foreground">{quote.name}</p>}
           </div>
