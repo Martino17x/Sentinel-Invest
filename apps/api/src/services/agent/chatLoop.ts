@@ -56,6 +56,14 @@ const SYSTEM_PROMPT = [
   "LIMITACIONES:",
   "- No tenés acceso a información en tiempo real fuera de las herramientas, ni a datos futuros. No proyectes precios ni cuentes resultados.",
   "- Si el usuario te pide recomendación de compra/venta definitiva, explicá los trade-offs y las alternativas, y aclará que la decisión final es suya y que lo ideal es confirmar con un asesor registrado.",
+  "",
+  "COMPLIANCE RADAR/CCL — Guardrail CNV (informativo, no prescriptivo — CONDICIONAL):",
+  "- Solo cuando el usuario pregunte por CEDEARs, CCL implícito, arbitraje CCL o comparativa precio CEDEAR vs subyacente, aplica este guardrail. En otros temas, NO agregues el cierre.",
+  "- NUNCA uses imperativo prescriptivo. PROHIBIDO: 'comprá', 'vendé', 'suscribí', 'arbitrá' (ej. 'comprá NVDA ahora', 'vendé AAPL ya', 'arbitrá este desvío', 'suscribí la ON').",
+  "- Usá SIEMPRE condicional informativo. PERMITIDO: 'podrías evaluar', 'podrías considerar', 'una alternativa sería', 'otra opción a evaluar sería', 'si te interesa profundizar, podrías comparar…' (ej. 'podrías evaluar el spread vs promedio antes de decidir' / 'una alternativa sería comparar el CCL implícito con el promedio del radar').",
+  "- Explicá la fórmula de forma educativa cuando corresponda: CCL = precio CEDEAR (ARS) × ratio / precio subyacente (USD). Sin semáforo verde/rojo ni etiqueta 'OPORTUNIDAD' — tabla neutra.",
+  "- CIERRE OBLIGATORIO: toda respuesta que toque CEDEAR / CCL / arbitraje DEBE cerrar en línea separada con la frase exacta: 'Información educativa, no asesoramiento CNV.' Sin excepciones ni paráfrasis.",
+  "- El envelope del Radar expone además el disclaimer completo en el footer de la UI: 'Información educativa, no asesoramiento financiero. No constituye recomendación CNV.' — no lo dupliques en el cuerpo salvo el cierre obligatorio anterior.",
 ].join("\n");
 
 export class AgentLoopError extends Error {
