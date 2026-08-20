@@ -363,6 +363,34 @@ export const quotesSnapshots = pgTable(
 export const quotesSnapshotsRelations = relations(quotesSnapshots, () => ({}));
 
 // ============================================================
+// BOND ANALYTICS SNAPSHOTS — snapshot diario de analytics+curvas
+// (DATO DE MERCADO: compartido, NO por usuario — es público)
+// Guarda analytics y curvas al cierre para stale-fallback, igual
+// que quotes_snapshots. Payload tipado jsonb.
+// ============================================================
+
+export const bondAnalyticsSnapshots = pgTable(
+  "bond_analytics_snapshots",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    market: text("market").notNull(),
+    assetType: text("asset_type").notNull(),
+    // snapshot_date en ART (YYYY-MM-DD) — un snapshot por día por panel
+    snapshotDate: date("snapshot_date").notNull(),
+    payload: jsonb("payload")
+      .$type<{ analytics: unknown[]; curves: Record<string, unknown[]> }>()
+      .notNull(),
+    capturedAt: timestamp("captured_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("bond_analytics_snapshots_market_idx").on(table.market, table.assetType),
+    index("bond_analytics_snapshots_date_idx").on(table.snapshotDate),
+    uniqueIndex("bond_snapshots_market_date_unique").on(table.market, table.assetType, table.snapshotDate),
+  ]
+);
+
+export const bondAnalyticsSnapshotsRelations = relations(bondAnalyticsSnapshots, () => ({}));
+// ============================================================
 // AI CHAT SESSIONS — sesiones del asistente conversacional
 // (motor de agente, dominio aislado por usuario)
 // ============================================================

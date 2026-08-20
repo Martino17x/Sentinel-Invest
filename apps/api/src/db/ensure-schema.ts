@@ -171,6 +171,21 @@ const QUOTES_SNAPSHOT_MIGRATIONS = [
   sql`CREATE INDEX IF NOT EXISTS quotes_snapshots_date_idx ON quotes_snapshots (snapshot_date)`,
 ];
 
+/** Tabla de snapshots de analytics de bonos al cierre — ADDITIVE, idempotente. */
+const BOND_ANALYTICS_SNAPSHOT_MIGRATIONS = [
+  sql`CREATE TABLE IF NOT EXISTS bond_analytics_snapshots (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        market text NOT NULL,
+        asset_type text NOT NULL,
+        snapshot_date date NOT NULL,
+        payload jsonb NOT NULL,
+        captured_at timestamptz NOT NULL DEFAULT now(),
+        UNIQUE (market, asset_type, snapshot_date)
+      )`,
+  sql`CREATE INDEX IF NOT EXISTS bond_analytics_snapshots_market_idx ON bond_analytics_snapshots (market, asset_type)`,
+  sql`CREATE INDEX IF NOT EXISTS bond_analytics_snapshots_date_idx ON bond_analytics_snapshots (snapshot_date)`,
+];
+
 /**
  * Aplica las migraciones idempotentes. Llamar al boot del server.
  * Nunca debe romper el arranque: cualquier fallo queda registrado
@@ -184,6 +199,7 @@ export async function ensureSchema(): Promise<void> {
     ...AGENT_TABLE_MIGRATIONS,
     ...REPORT_TABLE_MIGRATIONS,
     ...QUOTES_SNAPSHOT_MIGRATIONS,
+    ...BOND_ANALYTICS_SNAPSHOT_MIGRATIONS,
   ]) {
     await db.execute(statement);
   }
