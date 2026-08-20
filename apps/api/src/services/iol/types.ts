@@ -139,7 +139,11 @@ export interface PanelQuote {
   low: number | null;
   high: number | null;
   close: number | null; // último cierre
-  volume: number;
+  volume: number | null;
+  /** Monto operado (volumeAmount BYMA) — nullable off-hours */
+  volumeEfectivo?: number | null;
+  /** Alias explícito nominal — tradeVolume */
+  volumeNominal?: number | null;
   currency: Currency;
   isFavorite?: boolean;
 }

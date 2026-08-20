@@ -19,6 +19,7 @@ import type { BondAnalytics, BondCashflow, BondSchedule } from "./types.js";
 import { buildSchedule } from "./cashflow.js";
 import { calcTIR } from "./tir.js";
 import { calcModifiedDuration, calcMacaulayDuration } from "./duration.js";
+import { calcCuadroTecnico } from "./paridad.js";
 
 const MAE_BASE = "https://api.marketdata.mae.com.ar/api/emisiones/flujofondoscotiz";
 const MAE_TTL_MS = 5 * 60 * 1000;
@@ -178,8 +179,12 @@ function toBondAnalytics(item: MaeFlujoItem): BondAnalytics {
     }
   }
 
-  // Interés corrido: aproximar 0 (MAE no expone), derivar si schedule tiene vr vs nominal
-  const interesCorrido = 0;
+  // Interés corrido: MAE no expone couponRate/lastCouponDate → accrued null → paridad no calculable
+  // Delegar a calcCuadroTecnico para flag paridadCalculable (evita 300bps error si accrued real 3%)
+  const interesCorrido: number | null = null;
+  const lastVr = schedule.cashflows.length > 0 ? (schedule.cashflows[0]?.vr ?? 100) : 100;
+  const cuadro = calcCuadroTecnico({ dirtyPrice: precio, vr: lastVr, accrued: interesCorrido });
+  const paridadCalculable = cuadro.isParidadCalculable;
 
   // Validación local y log divergencia >5bps (0.0005)
   if (tir != null && schedule.cashflows.length > 0 && precio > 0) {
@@ -222,8 +227,8 @@ function toBondAnalytics(item: MaeFlujoItem): BondAnalytics {
     tir,
     md,
     duration,
-    paridad: null, // MAE no expone VR+accrued directo; se calcula en capa superior con paridad.ts si hay precio/valor técnico
-    interesCorrido,
+    paridad: cuadro.paridad,
+    interesCorrido: interesCorrido ?? 0,
     schedule,
     isRealtime: true,
     source: "mae",

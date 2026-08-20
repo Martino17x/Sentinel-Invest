@@ -107,5 +107,66 @@ export function calcParidadConAccrued(dirtyPrice: number, vr: number, accrued: n
   return calcParidad(dirtyPrice, vr + accrued);
 }
 
+export interface CuadroTecnicoResult {
+  vt: number | null;
+  paridad: number | null;
+  isCalculable: boolean;
+  isParidadCalculable: boolean;
+}
+
+/**
+ * Cálculo seguro de cuadro técnico.
+ * Si accrued es null/undefined/NaN → vt=vr, paridad=null, isCalculable=false.
+ * Caso contrario vt=vr+accrued, paridad=dirty/vt*100.
+ */
+export function calcCuadroTecnico(opts: {
+  dirtyPrice: number;
+  vr: number;
+  accrued?: number | null;
+}): CuadroTecnicoResult {
+  const { dirtyPrice, vr, accrued } = opts;
+  const hasAccrued = accrued != null && Number.isFinite(accrued as number);
+  if (!hasAccrued) {
+    // Sin accrued no hay paridad fiable — vt queda como vr para no engañar
+    const vt = Number.isFinite(vr) ? vr : null;
+    return { vt, paridad: null, isCalculable: false, isParidadCalculable: false };
+  }
+  const vt = calcValorTecnico(vr, accrued as number);
+  const paridad = calcParidad(dirtyPrice, vt);
+  const isCalculable = paridad != null;
+  return { vt, paridad, isCalculable, isParidadCalculable: isCalculable };
+}
+
+/**
+ * Deriva accrued desde metadata de ficha (couponRate + lastCouponDate).
+ * Retorna null si couponRate o lastCouponDate no parseables.
+ */
+export function calcAccruedFromFicha(opts: {
+  couponRate: number | null;
+  lastCouponDate: string | null;
+  settlement: string;
+  vr?: number;
+  dayCount?: "30/360" | "Actual/365";
+  frequency?: number;
+}): number | null {
+  const { couponRate, lastCouponDate, settlement, vr, dayCount, frequency } = opts;
+  if (couponRate == null || !Number.isFinite(couponRate) || couponRate === 0) return null;
+  if (!lastCouponDate) return null;
+  if (isNaN(new Date(lastCouponDate + "T00:00:00.000Z").getTime())) return null;
+  if (isNaN(new Date(settlement + "T00:00:00.000Z").getTime())) return null;
+  try {
+    return calcAccruedInterest({
+      annualCouponRate: couponRate,
+      valorResidual: vr ?? 100,
+      lastCouponDate,
+      settlement,
+      dayCount: dayCount ?? "30/360",
+      frequency,
+    });
+  } catch {
+    return null;
+  }
+}
+
 // Helpers exportados para tests / introspección
 export const _helpers = { daysActual, days30_360 };

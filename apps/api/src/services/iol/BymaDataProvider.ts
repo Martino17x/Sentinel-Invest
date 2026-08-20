@@ -129,6 +129,8 @@ export class BymaDataProvider implements IolProvider {
       prevClose > 0 && lastPrice > 0
         ? ((lastPrice - prevClose) / prevClose) * 100
         : 0;
+    const volNom = i.tradeVolume != null ? Number(i.tradeVolume) : null;
+    const volEfe = i.volumeAmount != null ? Number(i.volumeAmount) : null;
 
     return {
       symbol,
@@ -143,9 +145,16 @@ export class BymaDataProvider implements IolProvider {
       low: i.tradingLowPrice != null ? Number(i.tradingLowPrice) : null,
       high: i.tradingHighPrice != null ? Number(i.tradingHighPrice) : null,
       close: prevClose > 0 ? prevClose : null,
-      volume: Number(i.tradeVolume ?? 0),
+      volume: Number.isFinite(volNom as number) ? (volNom as number) : null,
+      volumeNominal: Number.isFinite(volNom as number) ? (volNom as number) : null,
+      volumeEfectivo: Number.isFinite(volEfe as number) ? (volEfe as number) : null,
       currency: i.denominationCcy === "USD" ? "USD" : "ARS",
     };
+  }
+
+  /** Público — raw BYMA ficha para consumidores avanzados (panel/ficha). */
+  async getBondFichaRaw(symbol: string, signal?: AbortSignal): Promise<BymaFicha | null> {
+    return this.fetchBondFicha(symbol.toUpperCase().trim(), signal);
   }
 
   async getPanel(
@@ -490,7 +499,7 @@ export class BymaDataProvider implements IolProvider {
 // Helpers para getBondSchedule (ficha técnica)
 // ============================================================
 
-interface BymaFicha {
+export interface BymaFicha {
   ley?: string;
   formaAmortizacion?: string;
   interes?: string;
@@ -509,6 +518,108 @@ interface BymaFicha {
   paisLey?: string;
   insType?: string;
   default?: string;
+}
+
+export interface ParsedCoupon {
+  rate: number;
+  frequency: 1 | 2 | 4;
+  dayCount: "30/360" | "Actual/365";
+  lastCouponDate?: string | null;
+}
+
+export interface ParsedAmortizacion {
+  tipo: "bullet" | "amortizable";
+  cuotas: number | null;
+  frequency: 1 | 2 | 4 | null;
+  raw: string;
+}
+
+/**
+ * Parser puro de campo `interes` de BYMA ficha.
+ * Fixtures:
+ *  AL30: "0,50% semestral" o "Cupón 0,5% semestral 30/360"
+ *  GD35: "1,00% step-up semestral" / similar
+ *  TX26: "CER + 1,50%" / "Ajuste CER 1,5%"
+ *  T2X5: "CER + 2,00%"
+ *  S31L6: "A descuento" / "—" → null
+ *  BPOA7: "—" / fijo 0 → null o tasa
+ */
+export function parseInteresToCouponRate(raw: string | null | undefined): ParsedCoupon | null {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  if (!s || s === "—" || s === "-" || s === "--") return null;
+  const low = s.toLowerCase();
+  // LECAP a descuento → sin cupón
+  if (low.includes("descuento") || low.includes("a discount") || low.includes("cero cupon") || low.includes("cero cupón") || low.includes("zero")) {
+    return null;
+  }
+  // Buscar tasa % — soporta "0,50%", "0.50 %", "1,5%"
+  const pctMatch = s.match(/(\d+[.,]\d+|\d+)\s*%/);
+  if (!pctMatch) {
+    // Sin % no es parseable como cupón (evita falsos positivos con "CER")
+    // TX26 puede venir como "1,50% + CER" — ya cubierto; si solo dice "CER" → null
+    return null;
+  }
+  const numStr = pctMatch[1]!.replace(",", ".");
+  const pct = Number(numStr);
+  if (!Number.isFinite(pct)) return null;
+  const rate = pct / 100;
+
+  // Frecuencia
+  let frequency: 1 | 2 | 4 = 2; // default bonos USD semestral
+  if (low.includes("trimestral") || low.includes("trimestre")) frequency = 4;
+  else if (low.includes("semestral") || low.includes("semestre") || low.includes("6 meses")) frequency = 2;
+  else if (low.includes("anual") || low.includes("annual")) frequency = 1;
+  else if (low.includes("mensual")) frequency = 1; // map mensual → 1 para dayCount anual
+
+  // DayCount: USD hard-dollar → 30/360, ARS/CER → Actual/365
+  const isCer = low.includes("cer") || low.includes("uv");
+  const isUsdHint = low.includes("dolar") || low.includes("dólar") || low.includes("usd");
+  const dayCount: "30/360" | "Actual/365" = isCer ? "Actual/365" : isUsdHint ? "30/360" : low.includes("30/360") ? "30/360" : low.includes("actual") ? "Actual/365" : "30/360";
+
+  // lastCouponDate — intentar extraer fecha ISO si viene explícita (DD/MM/YYYY o YYYY-MM-DD)
+  let lastCouponDate: string | null = null;
+  const isoMatch = s.match(/(\d{4}-\d{2}-\d{2})/);
+  if (isoMatch) lastCouponDate = isoMatch[1]!;
+  else {
+    const dmy = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (dmy) {
+      const dd = dmy[1]!.padStart(2, "0");
+      const mm = dmy[2]!.padStart(2, "0");
+      const yyyy = dmy[3]!;
+      lastCouponDate = `${yyyy}-${mm}-${dd}`;
+    }
+  }
+
+  return { rate, frequency, dayCount, lastCouponDate };
+}
+
+export function parseFormaAmortizacion(raw: string | null | undefined): ParsedAmortizacion {
+  const s = String(raw ?? "").trim();
+  const low = s.toLowerCase();
+  if (!s || s === "—") return { tipo: "bullet", cuotas: 1, frequency: null, raw: s };
+  if (low.includes("al vencimiento") || low.includes("integra al vencimiento") || low.includes("bullet") || low.includes("pago único") || low.includes("pago unico")) {
+    return { tipo: "bullet", cuotas: 1, frequency: null, raw: s };
+  }
+  // LECAP bullet implícito por tipo letra
+  if (low.includes("letra") && !low.includes("cuota")) {
+    return { tipo: "bullet", cuotas: 1, frequency: null, raw: s };
+  }
+  const cuotasMatch = low.match(/(\d+)\s*cuotas?/);
+  if (cuotasMatch) {
+    const n = Number(cuotasMatch[1]);
+    if (Number.isFinite(n) && n > 1 && n <= 60) {
+      let freq: 1 | 2 | 4 | null = 2;
+      if (low.includes("trimestral")) freq = 4;
+      else if (low.includes("semestral") || low.includes("semestre")) freq = 2;
+      else if (low.includes("anual")) freq = 1;
+      return { tipo: "amortizable", cuotas: n, frequency: freq, raw: s };
+    }
+  }
+  if (low.includes("cuota") || low.includes("amortiz")) {
+    return { tipo: "amortizable", cuotas: null, frequency: 2, raw: s };
+  }
+  return { tipo: "bullet", cuotas: 1, frequency: null, raw: s };
 }
 
 function parseFecha(raw?: string): string | null {
