@@ -960,6 +960,7 @@ export interface RadarRow {
   status: "ok" | "symbol_not_found" | "rate_limited" | "down";
   lastCloseDate: string | null;
   stale: boolean;
+  cclSource?: "byma_usd" | "yahoo" | null;
 }
 
 export interface CclResponse {
@@ -974,11 +975,14 @@ export interface CclResponse {
   limit: number;
 }
 
+export type RadarSource = "all" | "byma_usd" | "yahoo";
+
 export interface RadarCclParams {
   q?: string;
   page?: number;
   limit?: number;
   sort?: "spread" | "symbol";
+  source?: RadarSource;
 }
 
 function buildRadarCclQuery(params: RadarCclParams = {}): string {
@@ -987,6 +991,7 @@ function buildRadarCclQuery(params: RadarCclParams = {}): string {
   if (params.page != null) qs.set("page", String(params.page));
   if (params.limit != null) qs.set("limit", String(params.limit));
   if (params.sort) qs.set("sort", params.sort);
+  if (params.source && params.source !== "all") qs.set("source", params.source);
   const s = qs.toString();
   return s ? `?${s}` : "";
 }
@@ -1076,6 +1081,62 @@ export interface CashflowResponse {
   stale?: boolean;
 }
 
+export interface BondMarketData {
+  bid: number | null;
+  ask: number | null;
+  spread: number | null;
+  volumeNominal: number | null;
+  volumeEfectivo: number | null;
+  low: number | null;
+  high: number | null;
+  open: number | null;
+  close: number | null;
+}
+
+export interface BondCuadroTecnico {
+  vt: number | null;
+  vr: number | null;
+  paridad: number | null;
+  accrued: number | null;
+  couponRate: number | null;
+  frequency: 1 | 2 | 4 | null;
+  dayCount: "30/360" | "Actual/365";
+  nextCouponDate: string | null;
+  isin: string | null;
+  ley: string | null;
+  emisor: string | null;
+  denominacionMinima: number | null;
+  outstanding: number | null;
+  isParidadCalculable: boolean;
+  paridadCalculable?: boolean;
+  scheduleSource: "mae" | "byma" | "synthetic";
+}
+
+export interface BondPanelRow extends BondAnalytics {
+  marketData: BondMarketData;
+  cuadroTecnico: BondCuadroTecnico;
+  vencimiento: string;
+  ley: string | null;
+  isin: string | null;
+  moneda: "ARS" | "USD";
+  tipo: BondSchedule["tipo"];
+}
+
+export interface BondPanelResponse {
+  data: BondPanelRow[];
+  pagination: { page: number; pageSize: number; total: number };
+  meta: { isStale: boolean; snapshotAt: string | null; generatedAt: string };
+  rows?: BondPanelRow[];
+  total?: number;
+  page?: number;
+  pageSize?: number;
+  sort?: string;
+  order?: string;
+  generatedAt?: string;
+  disclaimer?: string;
+  stale?: boolean;
+}
+
 export const bondsApi = {
   async getAnalytics(symbol: string): Promise<BondAnalytics> {
     return apiFetch<BondAnalytics>(`/bonds/${encodeURIComponent(symbol)}/analytics`);
@@ -1085,6 +1146,25 @@ export const bondsApi = {
   },
   async getCashflow(accountId: string): Promise<CashflowResponse> {
     return apiFetch<CashflowResponse>(`/bonds/cashflow?accountId=${encodeURIComponent(accountId)}`);
+  },
+  async getPanel(params: {
+    segment?: string;
+    sort?: string;
+    order?: string;
+    page?: number;
+    pageSize?: number;
+  } = {}): Promise<BondPanelResponse> {
+    const qs = new URLSearchParams();
+    if (params.segment) qs.set("segment", params.segment);
+    if (params.sort) qs.set("sort", params.sort);
+    if (params.order) qs.set("order", params.order);
+    if (params.page) qs.set("page", String(params.page));
+    if (params.pageSize) qs.set("pageSize", String(params.pageSize));
+    const q = qs.toString();
+    return apiFetch<BondPanelResponse>(`/bonds/panel${q ? `?${q}` : ""}`);
+  },
+  async getFicha(symbol: string): Promise<BondAnalytics & { marketData: BondMarketData; cuadroTecnico: BondCuadroTecnico; cuadro?: BondCuadroTecnico; market?: BondMarketData }> {
+    return apiFetch(`/bonds/${encodeURIComponent(symbol)}/ficha`);
   },
 };
 
