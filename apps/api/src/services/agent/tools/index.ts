@@ -14,6 +14,12 @@ import { analystConsensusTool } from "./analyst_consensus.js";
 import { earningsTool } from "./earnings.js";
 import { newsTool } from "./news.js";
 import { backtestStrategyTool } from "./backtest_strategy.js";
+import { getRadarCclTool } from "./radarCcl.js";
+import { getBondAnalyticsTool } from "./bondAnalytics.js";
+import { getBondCurveTool } from "./bondCurve.js";
+import { getBondCashflowTool } from "./bondCashflow.js";
+import { getBondPanelTool } from "./bondPanel.js";
+import { getBondFichaTool } from "./bondFicha.js";
 
 // ============================================================
 // Registry de tools del agente — fuente ÚNICA de definiciones
@@ -48,6 +54,12 @@ const DOMAIN_TOOLS: ToolDefinition[] = [
   cancelOrderTool,
   subscribeFciTool,
   rescueFciTool,
+  getRadarCclTool,
+  getBondAnalyticsTool,
+  getBondCurveTool,
+  getBondCashflowTool,
+  getBondPanelTool,
+  getBondFichaTool,
 ];
 
 export function createAgentRegistry(): ToolRegistry {
