@@ -67,12 +67,12 @@ test("toolsVisibleForScope: read oculta los tools de trading, trade los lista", 
   const read = toolsVisibleForScope(agentRegistry, "read");
   const trade = toolsVisibleForScope(agentRegistry, "trade");
 
-  // DOMAIN_TOOLS = 22 total; 4 con proposeOnly (place_order, cancel_order, subscribe_fci, rescue_fci)
-  // read ve 18 (22-4), trade ve 22. Estos números fallarán si se agregan tools sin actualizar el test:
+  // DOMAIN_TOOLS = 31 total; 4 con proposeOnly (place_order, cancel_order, subscribe_fci, rescue_fci)
+  // read ve 27 (31-4), trade ve 31. Estos números fallarán si se agregan tools sin actualizar el test:
   // preferir aserción derivada + hardcode como guardrail documental.
-  assert.equal(agentRegistry.list().length, 22);
-  assert.equal(trade.length, 22);
-  assert.equal(read.length, 18);
+  assert.equal(agentRegistry.list().length, 31);
+  assert.equal(trade.length, 31);
+  assert.equal(read.length, 27);
   assert.equal(read.length, trade.length - TRADE_TOOLS.length);
   for (const name of TRADE_TOOLS) {
     assert.equal(read.some((t) => t.name === name), false, `${name} no debería estar en read`);
