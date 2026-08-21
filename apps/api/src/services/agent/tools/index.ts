@@ -31,6 +31,12 @@ import {
   patchMovementTool,
   reconcileTool,
 } from "./movements.js";
+import { getPortfolioHistoryTool } from "./portfolioHistory.js";
+import { getSeriesTool } from "./series.js";
+import { getCalendarTool } from "./calendar.js";
+import { getMetricsTool } from "./metrics.js";
+import { getQuoteHistoryTool } from "./quoteHistory.js";
+import { getNewsFeedTool } from "./newsFeed.js";
 
 // ============================================================
 // Registry de tools del agente — fuente ÚNICA de definiciones
@@ -80,6 +86,12 @@ const DOMAIN_TOOLS: ToolDefinition[] = [
   importMovementsPreviewTool,
   importMovementsConfirmTool,
   reconcileTool,
+  getPortfolioHistoryTool,
+  getSeriesTool,
+  getCalendarTool,
+  getMetricsTool,
+  getQuoteHistoryTool,
+  getNewsFeedTool,
 ];
 
 export function createAgentRegistry(): ToolRegistry {
