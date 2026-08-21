@@ -1,21 +1,43 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { requireAuth } from "../middleware/auth.js";
-import { SwrCache } from "../services/market/cache.js";
 import { BONDS_ANALYTICS_ENABLED, BONDS_PANEL_ENABLED } from "../config.js";
-import { DISCLAIMER } from "../services/market/radar.js";
 import { isMarketHours } from "../services/market/isMarketHours.js";
 import { pool } from "../db/index.js";
 import { BymaDataProvider, parseInteresToCouponRate } from "../services/iol/BymaDataProvider.js";
-import { getAllMaeAnalytics, getMaeAnalyticsForSymbol } from "../services/market/bonds/maeFlujo.js";
-import { buildCurve, VALID_SEGMENTS, inferSegment } from "../services/market/bonds/curve.js";
-import { projectCashflow } from "../services/market/bonds/cashflow.js";
-import { getLatestBondAnalyticsSnapshot } from "../jobs/bondAnalyticsSnapshot.js";
+import { getMaeAnalyticsForSymbol } from "../services/market/bonds/maeFlujo.js";
+import { VALID_SEGMENTS, inferSegment } from "../services/market/bonds/curve.js";
+import { getCER } from "../services/market/bonds/cer.js";
 import { calcTIR } from "../services/market/bonds/tir.js";
 import { calcDurations } from "../services/market/bonds/duration.js";
-import { calcParidad, calcCuadroTecnico, calcAccruedFromFicha } from "../services/market/bonds/paridad.js";
-import { getCER } from "../services/market/bonds/cer.js";
-import type { BondAnalytics, CurvePoint, CashflowMonth, BondPanelRow, BondPanelResponse, BondCuadroTecnico, BondMarketData } from "../services/market/bonds/types.js";
+import { calcCuadroTecnico, calcAccruedFromFicha } from "../services/market/bonds/paridad.js";
+import type { BondAnalytics, BondPanelRow, BondPanelResponse, BondCuadroTecnico, BondMarketData } from "../services/market/bonds/types.js";
+import {
+  DISCLAIMER,
+  bondsAnalyticsCache,
+  bondsCurveCache,
+  bondsCashflowCache,
+  bondsPanelCache,
+  fetchBondAnalytics,
+  fetchCurvePoints,
+  fetchBondPanel,
+  fetchCashflow,
+  trySnapshotAnalytics,
+  trySnapshotCurve,
+  trySnapshotPanel,
+  refreshAnalyticsInBackground,
+  refreshCurveInBackground,
+  refreshPanelInBackground,
+  PANEL_CACHE_KEY,
+  panelQuerySchema,
+  getSortValue,
+  sortRowsNullsLast,
+  resetBondsCacheForTests as resetBondsQueriesForTests,
+} from "../services/market/bonds/bondsQueries.js";
+
+// Re-export for tests that imported from routes (preserve API)
+export { getSortValue, sortRowsNullsLast, panelQuerySchema };
+export { bondsAnalyticsCache, bondsCurveCache, bondsCashflowCache, bondsPanelCache, DISCLAIMER, PANEL_CACHE_KEY };
 
 const router = Router();
 
@@ -32,401 +54,25 @@ router.use((_req: Request, res: Response, next) => {
 });
 
 // ---------------------------------------------------------------------------
-// Caches — SwrCache 5-15min (spec + design)
-// analytics 10min, curve 15min, cashflow 5min
+// InFlight dedup maps kept here for route-level handlers (panel/curve/analytics)
+// The canonical maps live in bondsQueries.ts; these route-level maps are
+// shadows for request coalescing. We delegate to bondsQueries caches but keep
+// local inFlight for backwards compat with tests that check router behavior.
+// Actually route handlers now use bondsQueries caches directly; inFlight dedup
+// is handled inside bondsQueries helpers where applicable. For GET handlers we
+// keep a thin local inFlight for analytics/curve/panel to avoid double fetch
+// when bondsQueries fetch is called concurrently from route.
 // ---------------------------------------------------------------------------
-
-const ANALYTICS_TTL_MS = 10 * 60 * 1000;
-const CURVE_TTL_MS = 15 * 60 * 1000;
-const CASHFLOW_TTL_MS = 5 * 60 * 1000;
-const PANEL_TTL_MS = 5 * 60 * 1000;
-
-export const bondsAnalyticsCache = new SwrCache<BondAnalytics>(ANALYTICS_TTL_MS);
-export const bondsCurveCache = new SwrCache<{ points: CurvePoint[]; generatedAt: string }>(CURVE_TTL_MS);
-export const bondsCashflowCache = new SwrCache<{ months: CashflowMonth[] }>(CASHFLOW_TTL_MS);
-export const bondsPanelCache = new SwrCache<{ rows: BondPanelRow[]; generatedAt: string }>(PANEL_TTL_MS);
 
 const inFlightAnalytics = new Map<string, Promise<BondAnalytics>>();
-const inFlightCurve = new Map<string, Promise<CurvePoint[]>>();
-const bgInFlight = new Map<string, Promise<void>>();
+const inFlightCurve = new Map<string, Promise<import("../services/market/bonds/types.js").CurvePoint[]>>();
 const inFlightPanel = new Map<string, Promise<{ rows: BondPanelRow[]; generatedAt: string }>>();
-const bgPanelInFlight = new Map<string, Promise<void>>();
 
-// ---------------------------------------------------------------------------
-// Helpers: analytics fetch (MAE + local fallback)
-// ---------------------------------------------------------------------------
-
-async function fetchBondAnalytics(symbol: string): Promise<BondAnalytics> {
-  const sym = symbol.toUpperCase().trim();
-
-  // 1) MAE direct — covers ~50 hard-dollar + BOPREAL
-  try {
-    const mae = await getMaeAnalyticsForSymbol(sym);
-    if (mae) {
-      // MAE analytics already has tir/md in decimal, schedule, etc.
-      // Add DISCLAIMER canonical
-      return { ...mae, disclaimer: DISCLAIMER };
-    }
-  } catch {
-    // fall through to local
-  }
-
-  // 2) Local fallback: ficha BYMA + price + calcTIR/duration/paridad
-  const provider = new BymaDataProvider();
-  const schedule = await provider.getBondSchedule(sym);
-
-  // Price: try panel public-bonds first, fallback to provider.getQuote placeholder
-  let dirtyPrice = 0;
-  let lastPriceCurrency: string | undefined;
-  try {
-    // Cheap: getQuote will scan panels
-    const q = await provider.getQuote({ id: "", email: "" } as never, sym, "bcba");
-    dirtyPrice = q.lastPrice ?? 0;
-    lastPriceCurrency = q.currency;
-  } catch {
-    dirtyPrice = 0;
-  }
-
-  // If still 0, throw to trigger stale/snapshot fallback
-  if (!dirtyPrice || dirtyPrice <= 0) {
-    throw new Error(`BYMA price not available for ${sym}`);
-  }
-
-  const settlement = new Date().toISOString().slice(0, 10);
-  const dayCount: "30/360" | "Actual/365" = schedule.moneda === "USD" ? "30/360" : "Actual/365";
-
-  let tir: number | null = null;
-  let md: number | null = null;
-  let duration: number | null = null;
-  try {
-    tir = calcTIR(dirtyPrice, schedule.cashflows, { dayCount, settlement });
-    const d = calcDurations(tir, schedule.cashflows, { settlement, dayCount, periodsPerYear: schedule.moneda === "USD" ? 2 : 1 });
-    duration = d.duration;
-    md = d.modifiedDuration;
-  } catch {
-    // keep nulls — still return analytics with null tir/md (spec allows tir null)
-  }
-
-  // Paridad: precio / valor técnico *100 — VR from schedule last cashflow vr or 100
-  let paridad: number | null = null;
-  try {
-    const lastVr = schedule.cashflows.length > 0 ? (schedule.cashflows[schedule.cashflows.length - 1]?.vr ?? 100) : 100;
-    // Accrued not yet computed: approximate vt = 100 + 0
-    const vt = lastVr + 0;
-    paridad = calcParidad(dirtyPrice, vt);
-  } catch {
-    paridad = null;
-  }
-
-  // Dirty vs clean divergence log (>5bps) — spec Dirty vs Clean Convention
-  if (tir != null) {
-    const accruedPlaceholder = 0; // without ficha interes corrido real
-    if (accruedPlaceholder > 0) {
-      const clean = dirtyPrice - accruedPlaceholder;
-      // divergence check handled via tir comparison if needed
-      void clean;
-    }
-  }
-
-  const analytics: BondAnalytics = {
-    symbol: sym,
-    precio: dirtyPrice,
-    precioDirty: dirtyPrice,
-    tir,
-    md,
-    duration,
-    paridad,
-    interesCorrido: 0,
-    schedule,
-    isRealtime: true,
-    source: "local",
-    disclaimer: DISCLAIMER,
-  };
-
-  // Log divergence >5bps if we had MAE to compare — already logged in maeFlujo adapter
-  void lastPriceCurrency;
-  return analytics;
-}
-
-function refreshAnalyticsInBackground(symbol: string): void {
-  const key = `bonds:analytics:${symbol}`;
-  if (inFlightAnalytics.has(key) || bgInFlight.has(key)) return;
-  const p = fetchBondAnalytics(symbol)
-    .then((data) => {
-      bondsAnalyticsCache.set(key, data);
-    })
-    .catch(() => {
-      // keep stale
-    })
-    .finally(() => bgInFlight.delete(key));
-  bgInFlight.set(key, p as Promise<void>);
-}
-
-// ---------------------------------------------------------------------------
-// Helpers: curve
-// ---------------------------------------------------------------------------
-
-async function fetchCurvePoints(segment: string): Promise<CurvePoint[]> {
-  const all = await getAllMaeAnalytics();
-  const grouped = buildCurve(all);
-  // Normalize segment key — frontend may send "USD-hard-dollar" canonical
-  const points = grouped[segment] ?? [];
-  // Already sorted md asc by buildCurve
-  return points;
-}
-
-function refreshCurveInBackground(segment: string): void {
-  const key = `bonds:curve:${segment}`;
-  if (inFlightCurve.has(key) || bgInFlight.has(key)) return;
-  const p = fetchCurvePoints(segment)
-    .then((points) => {
-      if (points.length === 0) return;
-      bondsCurveCache.set(key, { points, generatedAt: new Date().toISOString() });
-    })
-    .catch(() => {})
-    .finally(() => bgInFlight.delete(key));
-  bgInFlight.set(key, p as Promise<void>);
-}
-
-// ---------------------------------------------------------------------------
-// Snapshot fallback helpers
-// ---------------------------------------------------------------------------
-
-async function trySnapshotAnalytics(symbol: string): Promise<BondAnalytics | null> {
-  try {
-    const snap = await getLatestBondAnalyticsSnapshot(7);
-    if (!snap) return null;
-    const found = (snap.payload.analytics as BondAnalytics[]).find((a) => a.symbol.toUpperCase() === symbol.toUpperCase());
-    if (!found) return null;
-    return { ...found, isRealtime: false, disclaimer: DISCLAIMER } as BondAnalytics;
-  } catch {
-    return null;
-  }
-}
-
-async function trySnapshotCurve(segment: string): Promise<CurvePoint[] | null> {
-  try {
-    const snap = await getLatestBondAnalyticsSnapshot(7);
-    if (!snap) return null;
-    const curves = snap.payload.curves as Record<string, CurvePoint[]>;
-    const points = curves[segment];
-    if (!points || points.length === 0) return null;
-    return points;
-  } catch {
-    return null;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Panel bulk helpers — SwrCache 5min + inFlight dedup (Task 3.1/3.2)
-// ---------------------------------------------------------------------------
-
-const PANEL_CACHE_KEY = "bonds:panel:full";
-
-const panelQuerySchema = z.object({
-  segment: z.enum(VALID_SEGMENTS as unknown as [string, ...string[]]).optional(),
-  sort: z.enum(["tir", "md", "duration", "paridad", "precio", "vencimiento", "volumeEfectivo"]).default("tir"),
-  order: z.enum(["desc", "asc"]).default("desc"),
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(25),
-});
-
-export function getSortValue(row: BondPanelRow, sort: string): number | string | null {
-  switch (sort) {
-    case "tir": return row.tir;
-    case "md": return row.md;
-    case "duration": return row.duration;
-    case "paridad": return row.cuadroTecnico?.paridad ?? row.paridad;
-    case "precio": return row.precio;
-    case "vencimiento": return row.vencimiento ?? row.schedule?.vencimiento ?? null;
-    case "volumeEfectivo": return row.marketData?.volumeEfectivo ?? null;
-    default: return row.tir;
-  }
-}
-
-export function sortRowsNullsLast(rows: BondPanelRow[], sort: string, order: "asc" | "desc"): BondPanelRow[] {
-  const dir = order === "desc" ? -1 : 1;
-  return [...rows].sort((a, b) => {
-    const av = getSortValue(a, sort);
-    const bv = getSortValue(b, sort);
-    const aNull = av == null || (typeof av === "number" && !Number.isFinite(av));
-    const bNull = bv == null || (typeof bv === "number" && !Number.isFinite(bv));
-    if (aNull && bNull) return 0;
-    if (aNull) return 1;
-    if (bNull) return -1;
-    if (typeof av === "string" && typeof bv === "string") {
-      return dir * av.localeCompare(bv);
-    }
-    return dir * ((av as number) - (bv as number));
-  });
-}
-
-async function fetchBondPanel(): Promise<{ rows: BondPanelRow[]; generatedAt: string }> {
-  const generatedAt = new Date().toISOString();
-  const provider = new BymaDataProvider();
-
-  // Parallel bulk fetch: BYMA public-bonds + MAE H+B
-  const [panelResult, maeAnalytics] = await Promise.all([
-    // BymaDataProvider.getPanel paginates locally — request big pageSize to get all
-    provider.getPanel({ id: "", email: "" } as unknown as import("../services/iol/types.js").IolCredentials, "bcba", "bono", 1, 5000).catch(() => ({ quotes: [] as import("../services/iol/types.js").PanelQuote[], total: 0, summary: null as unknown as import("../services/iol/types.js").PanelSummary })),
-    getAllMaeAnalytics().catch(() => [] as BondAnalytics[]),
-  ]);
-
-  const quotes = (panelResult as { quotes: import("../services/iol/types.js").PanelQuote[] }).quotes ?? [];
-  const maeBySymbol = new Map<string, BondAnalytics>();
-  for (const a of maeAnalytics) maeBySymbol.set(a.symbol.toUpperCase(), a);
-
-  const rows: BondPanelRow[] = quotes.map((q) => {
-    const sym = q.symbol.toUpperCase();
-    const mae = maeBySymbol.get(sym);
-
-    const marketData: BondMarketData = {
-      bid: q.bid ?? null,
-      ask: q.ask ?? null,
-      spread: q.bid != null && q.ask != null ? Number(q.ask) - Number(q.bid) : null,
-      volumeNominal: (q as unknown as { volumeNominal?: number | null }).volumeNominal ?? q.volume ?? null,
-      volumeEfectivo: (q as unknown as { volumeEfectivo?: number | null }).volumeEfectivo ?? null,
-      low: q.low ?? null,
-      high: q.high ?? null,
-      open: q.open ?? null,
-      close: q.close ?? null,
-    };
-
-    if (mae) {
-      const lastVr = mae.schedule.cashflows.length > 0 ? (mae.schedule.cashflows[0]?.vr ?? 100) : 100;
-      const cuadroRes = calcCuadroTecnico({ dirtyPrice: mae.precio, vr: lastVr, accrued: null });
-      const cuadroTecnico: BondCuadroTecnico = {
-        vt: cuadroRes.vt,
-        vr: lastVr,
-        paridad: cuadroRes.paridad,
-        accrued: null,
-        couponRate: null,
-        frequency: null,
-        dayCount: mae.schedule.moneda === "USD" ? "30/360" : "Actual/365",
-        nextCouponDate: null,
-        isin: null,
-        ley: null,
-        emisor: null,
-        denominacionMinima: null,
-        outstanding: null,
-        isParidadCalculable: cuadroRes.isParidadCalculable,
-        paridadCalculable: cuadroRes.isParidadCalculable,
-        scheduleSource: "mae",
-      };
-      return {
-        ...mae,
-        marketData,
-        cuadroTecnico,
-        vencimiento: mae.schedule.vencimiento,
-        ley: null,
-        isin: null,
-        moneda: mae.schedule.moneda,
-        tipo: mae.schedule.tipo,
-      } as BondPanelRow;
-    }
-
-    // Non-MAE synthetic row — tir null etc, schedule bullet placeholder
-    const dirtyPrice = q.lastPrice ?? 0;
-    const vr = 100;
-    const cuadroRes = calcCuadroTecnico({ dirtyPrice, vr, accrued: null });
-    const vencimiento = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const schedule = {
-      symbol: sym,
-      moneda: (q.currency === "USD" ? "USD" : "ARS") as "ARS" | "USD",
-      tipo: "bullet" as const,
-      vencimiento,
-      cashflows: [{ fechaPago: vencimiento, renta: 0, amortizacion: 100, cashFlow: 100, vr: 0 }],
-      cerAjustado: false,
-    };
-    const cuadroTecnico: BondCuadroTecnico = {
-      vt: cuadroRes.vt,
-      vr,
-      paridad: cuadroRes.paridad,
-      accrued: null,
-      couponRate: null,
-      frequency: null,
-      dayCount: schedule.moneda === "USD" ? "30/360" : "Actual/365",
-      nextCouponDate: null,
-      isin: null,
-      ley: null,
-      emisor: null,
-      denominacionMinima: null,
-      outstanding: null,
-      isParidadCalculable: false,
-      paridadCalculable: false,
-      scheduleSource: "synthetic",
-    };
-    return {
-      symbol: sym,
-      precio: dirtyPrice,
-      precioDirty: dirtyPrice,
-      tir: null,
-      md: null,
-      duration: null,
-      paridad: cuadroRes.paridad,
-      interesCorrido: 0,
-      schedule,
-      isRealtime: true,
-      source: "local" as const,
-      disclaimer: DISCLAIMER,
-      marketData,
-      cuadroTecnico,
-      vencimiento,
-      ley: null,
-      isin: null,
-      moneda: schedule.moneda,
-      tipo: schedule.tipo,
-    } as BondPanelRow;
-  });
-
-  return { rows, generatedAt };
-}
-
-function refreshPanelInBackground(): void {
-  if (bgPanelInFlight.has(PANEL_CACHE_KEY)) return;
-  const p = fetchBondPanel()
-    .then((data) => bondsPanelCache.set(PANEL_CACHE_KEY, data))
-    .catch(() => {})
-    .finally(() => bgPanelInFlight.delete(PANEL_CACHE_KEY));
-  bgPanelInFlight.set(PANEL_CACHE_KEY, p as Promise<void>);
-}
-
-async function trySnapshotPanel(): Promise<{ rows: BondPanelRow[]; generatedAt: string } | null> {
-  try {
-    const snap = await getLatestBondAnalyticsSnapshot(7);
-    if (!snap) return null;
-    const panelSnap = (snap.payload as unknown as { panelSnapshot?: BondPanelResponse | { rows: BondPanelRow[]; generatedAt: string } }).panelSnapshot;
-    if (panelSnap && Array.isArray((panelSnap as unknown as { data?: unknown }).data)) {
-      const data = (panelSnap as BondPanelResponse).data ?? (panelSnap as unknown as { rows: BondPanelRow[] }).rows ?? [];
-      return { rows: data as BondPanelRow[], generatedAt: (panelSnap as BondPanelResponse).generatedAt ?? snap.capturedAt };
-    }
-    if (panelSnap && Array.isArray((panelSnap as unknown as { rows: BondPanelRow[] }).rows)) {
-      const r = panelSnap as unknown as { rows: BondPanelRow[]; generatedAt: string };
-      return { rows: r.rows, generatedAt: r.generatedAt ?? snap.capturedAt };
-    }
-    // Fallback: build rows from analytics if no panelSnapshot stored
-    const analytics = snap.payload.analytics as BondAnalytics[];
-    if (analytics && analytics.length > 0) {
-      const rows: BondPanelRow[] = analytics.map((a) => {
-        const lastVr = a.schedule.cashflows.length > 0 ? (a.schedule.cashflows[0]?.vr ?? 100) : 100;
-        const cuadroRes = calcCuadroTecnico({ dirtyPrice: a.precio, vr: lastVr, accrued: null });
-        return {
-          ...a,
-          marketData: (a as unknown as { marketData?: BondMarketData }).marketData ?? { bid: null, ask: null, spread: null, volumeNominal: null, volumeEfectivo: null, low: null, high: null, open: null, close: null },
-          cuadroTecnico: (a as unknown as { cuadroTecnico?: BondCuadroTecnico }).cuadroTecnico ?? { vt: cuadroRes.vt, vr: lastVr, paridad: cuadroRes.paridad, accrued: null, couponRate: null, frequency: null, dayCount: "30/360", nextCouponDate: null, isin: null, ley: null, emisor: null, denominacionMinima: null, outstanding: null, isParidadCalculable: false, paridadCalculable: false, scheduleSource: "mae" as const },
-          vencimiento: a.schedule.vencimiento,
-          ley: null,
-          isin: null,
-          moneda: (a.schedule as unknown as { moneda: string }).moneda === "USD" ? "USD" : "ARS",
-          tipo: (a.schedule as unknown as { tipo: string }).tipo as BondPanelRow["tipo"],
-        } as BondPanelRow;
-      });
-      return { rows, generatedAt: snap.capturedAt };
-    }
-    return null;
-  } catch {
-    return null;
-  }
+export function resetBondsCacheForTests(): void {
+  resetBondsQueriesForTests();
+  inFlightAnalytics.clear();
+  inFlightCurve.clear();
+  inFlightPanel.clear();
 }
 
 // ---------------------------------------------------------------------------
@@ -485,7 +131,6 @@ router.get("/curve", async (req: Request, res: Response) => {
   inFlightCurve.set(cacheKey, promise);
   try {
     const points = await promise;
-    // Even if empty but market closed, try snapshot before returning empty
     if (points.length === 0) {
       const snap = await trySnapshotCurve(segment);
       if (snap) {
@@ -493,7 +138,6 @@ router.get("/curve", async (req: Request, res: Response) => {
         res.json({ points: snap, segment, generatedAt: new Date().toISOString(), disclaimer: DISCLAIMER, isMarketClosed: !isMarketHours(new Date()), stale: true });
         return;
       }
-      // Spec: ≥15 points for USD-hard-dollar and LECAP/BONCAP when available — return empty correctly
       const isClosed = !isMarketHours(new Date());
       if (isClosed) {
         res.json({ points: [], segment, generatedAt: new Date().toISOString(), disclaimer: DISCLAIMER, isMarketClosed: true });
@@ -529,11 +173,6 @@ router.get("/curve", async (req: Request, res: Response) => {
   }
 });
 
-// NOTE: /curve must be registered before /:symbol/analytics catch-all
-// Express matches in declaration order — already handled by defining curve above analytics
-// but we moved analytics earlier for symbol path specificity; both work because /curve
-// is checked first via explicit route. Re-register curve fallback check if needed.
-
 // ---------------------------------------------------------------------------
 // GET /api/bonds/cashflow?accountId=
 // ---------------------------------------------------------------------------
@@ -554,7 +193,6 @@ router.get("/cashflow", async (req: Request, res: Response) => {
   res.setHeader("X-Disclaimer", DISCLAIMER);
   res.setHeader("Disclaimer", DISCLAIMER);
 
-  // Verify account belongs to user
   try {
     const accCheck = await pool.query("SELECT id FROM accounts WHERE id = $1 AND user_id = $2 LIMIT 1", [accountId, req.user!.id]);
     if (accCheck.rowCount === 0) {
@@ -574,9 +212,7 @@ router.get("/cashflow", async (req: Request, res: Response) => {
     return;
   }
   if (entry) {
-    // stale serve + background refresh
     res.setHeader("X-Cache", "STALE");
-    // trigger background refresh without awaiting
     void (async () => {
       try {
         const fresh = await fetchCashflow(accountId);
@@ -600,7 +236,6 @@ router.get("/cashflow", async (req: Request, res: Response) => {
       res.json({ months: staleEntry.data.months, disclaimer: DISCLAIMER, isMarketClosed: !isMarketHours(new Date()), stale: true });
       return;
     }
-    // Empty portfolio fallback — spec: [] not error
     if (isMarketHours(new Date()) === false) {
       res.json({ months: [], disclaimer: DISCLAIMER, isMarketClosed: true });
       return;
@@ -612,7 +247,7 @@ router.get("/cashflow", async (req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/bonds/panel  (MUST be before /:symbol/analytics catch-all — Task 3.5)
+// GET /api/bonds/panel
 // ---------------------------------------------------------------------------
 
 router.get("/panel", async (req: Request, res: Response) => {
@@ -714,15 +349,12 @@ router.get("/panel", async (req: Request, res: Response) => {
     }
   }
 
-  // At this point fullRows is populated
   let rows = fullRows ?? [];
 
-  // Segment filter
   if (segment) {
     rows = rows.filter((r) => inferSegment(r as unknown as BondAnalytics) === segment);
   }
 
-  // Sort nulls-last
   rows = sortRowsNullsLast(rows, sort, order as "asc" | "desc");
 
   const total = rows.length;
@@ -752,7 +384,7 @@ router.get("/panel", async (req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/bonds/:symbol/ficha  (Task 3.3 — validate, enrich cuadro+market, CER stale)
+// GET /api/bonds/:symbol/ficha
 // ---------------------------------------------------------------------------
 
 router.get("/:symbol/ficha", async (req: Request, res: Response) => {
@@ -774,7 +406,6 @@ router.get("/:symbol/ficha", async (req: Request, res: Response) => {
 
   const provider = new BymaDataProvider();
 
-  // Parallel fetch: fichaRaw + quote + MAE analytics + schedule
   let fichaRaw: any = null;
   let quote: any = null;
   let maeAnalytic: BondAnalytics | null = null;
@@ -796,7 +427,6 @@ router.get("/:symbol/ficha", async (req: Request, res: Response) => {
     // individual catches handle errors
   }
 
-  // 404 if symbol not found anywhere (no price, no MAE, no ficha)
   const hasPrice = quote && quote.lastPrice > 0;
   const hasMae = maeAnalytic != null;
   const hasSchedule = schedule != null && schedule.cashflows.length > 0;
@@ -805,7 +435,6 @@ router.get("/:symbol/ficha", async (req: Request, res: Response) => {
     return;
   }
 
-  // Resolve schedule: prefer MAE then provider schedule
   const finalSchedule = maeAnalytic?.schedule ?? schedule ?? {
     symbol,
     moneda: "ARS" as const,
@@ -815,10 +444,8 @@ router.get("/:symbol/ficha", async (req: Request, res: Response) => {
     cerAjustado: false,
   };
 
-  // Resolve price
   const dirtyPrice = hasPrice ? (quote!.lastPrice as number) : maeAnalytic?.precio ?? 0;
   if (!dirtyPrice || dirtyPrice <= 0) {
-    // Try snapshot fallback before 502
     const snap = await trySnapshotAnalytics(symbol);
     if (snap) {
       res.setHeader("X-Cache", "STALE");
@@ -838,7 +465,6 @@ router.get("/:symbol/ficha", async (req: Request, res: Response) => {
     return;
   }
 
-  // TIR / duration: prefer MAE, else calc local
   let tir: number | null = maeAnalytic?.tir ?? null;
   let md: number | null = maeAnalytic?.md ?? null;
   let duration: number | null = maeAnalytic?.duration ?? null;
@@ -857,7 +483,6 @@ router.get("/:symbol/ficha", async (req: Request, res: Response) => {
     }
   }
 
-  // Accrued / cuadroTecnico via calcCuadroTecnico (Task 3.2/3.3)
   let lastVr = 100;
   if (finalSchedule.cashflows.length > 0) {
     const cand = finalSchedule.cashflows[0]?.vr;
@@ -877,19 +502,16 @@ router.get("/:symbol/ficha", async (req: Request, res: Response) => {
       frequency = parsed.frequency;
       dayCountPc = parsed.dayCount;
       nextCouponDate = parsed.lastCouponDate ?? null;
-      // Try to compute accrued if we have lastCouponDate or fechaDevenganIntereses
       const lastCouponDate = parsed.lastCouponDate ?? (fichaRaw.fechaDevenganIntereses ? String(fichaRaw.fechaDevenganIntereses).slice(0, 10) : null) ?? (fichaRaw.fechaEmision ? String(fichaRaw.fechaEmision).slice(0, 10) : null);
       if (lastCouponDate && /^\d{4}-\d{2}-\d{2}$/.test(lastCouponDate)) {
         const settlement = new Date().toISOString().slice(0, 10);
         accrued = calcAccruedFromFicha({ couponRate, lastCouponDate, settlement, vr: lastVr, dayCount: dayCountPc, frequency: frequency ?? undefined });
       }
     } else {
-      // LECAP a descuento → accrued stays null, paridad not calculable
       accrued = null;
     }
   }
 
-  // If ficha indicates synthetic fallback and no MAE, mark accordingly
   if (finalSchedule.cashflows.length === 0 || (finalSchedule.cashflows.length === 1 && finalSchedule.cashflows[0]?.cashFlow === 100 && !fichaRaw)) {
     scheduleSource = "synthetic";
   } else if (fichaRaw && scheduleSource === "synthetic") {
@@ -921,15 +543,13 @@ router.get("/:symbol/ficha", async (req: Request, res: Response) => {
     ask: quote?.ask ?? null,
     spread: quote?.bid != null && quote?.ask != null ? Number(quote.ask) - Number(quote.bid) : null,
     volumeNominal: (quote as unknown as { volume?: number | null })?.volume ?? null,
-    volumeEfectivo: null, // quote path doesn't expose volumeAmount; panel does
+    volumeEfectivo: null,
     low: quote?.low ?? null,
     high: quote?.high ?? null,
     open: quote?.open ?? null,
     close: quote?.prevClose ?? null,
   };
-  // Try to enrich volumeEfectivo from panel quote if available via getBondFichaRaw? not needed; leave null off-hours
 
-  // CER stale guard
   if (finalSchedule.cerAjustado) {
     try {
       const cer = await getCER();
@@ -965,7 +585,7 @@ router.get("/:symbol/ficha", async (req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/bonds/:symbol/analytics  (MUST be after /curve, /cashflow, /panel, /ficha)
+// GET /api/bonds/:symbol/analytics
 // ---------------------------------------------------------------------------
 
 router.get("/:symbol/analytics", async (req: Request, res: Response) => {
@@ -1051,57 +671,5 @@ router.get("/:symbol/analytics", async (req: Request, res: Response) => {
     if (inFlightAnalytics.get(cacheKey) === promise) inFlightAnalytics.delete(cacheKey);
   }
 });
-
-async function fetchCashflow(accountId: string): Promise<CashflowMonth[]> {
-  // positions WHERE market=bonds — also accept assetType bono/on from IOL sync
-  const posRes = await pool.query(
-    `SELECT symbol, quantity, market FROM positions WHERE account_id = $1 AND market = 'bonds'`,
-    [accountId]
-  );
-  const rows = posRes.rows as Array<{ symbol: string; quantity: string; market: string }>;
-  if (rows.length === 0) {
-    // Also try bcba with bono asset? But positions table has market enum, bonds only if synced as bonds.
-    // Return empty as per spec empty portfolio → []
-    return [];
-  }
-
-  const provider = new BymaDataProvider();
-  const positionsForCalc = await Promise.all(
-    rows.map(async (r) => {
-      const qty = Number(r.quantity);
-      if (!Number.isFinite(qty) || qty === 0) return null;
-      try {
-        // Prefer MAE schedule when available
-        const maeAnalytic = await getMaeAnalyticsForSymbol(r.symbol).catch(() => null);
-        if (maeAnalytic?.schedule) {
-          return { symbol: r.symbol, quantity: qty, schedule: maeAnalytic.schedule };
-        }
-        const sched = await provider.getBondSchedule(r.symbol);
-        return { symbol: r.symbol, quantity: qty, schedule: sched };
-      } catch {
-        return null;
-      }
-    })
-  );
-
-  const valid = positionsForCalc.filter(Boolean) as Array<{ symbol: string; quantity: number; schedule: import("../services/market/bonds/types.js").BondSchedule }>;
-  if (valid.length === 0) return [];
-
-  const months = projectCashflow(valid, { monthsAhead: 12, cerCoefficient: 1.42 });
-  return months;
-}
-
-// Test helpers
-export function resetBondsCacheForTests(): void {
-  bondsAnalyticsCache.resetForTests();
-  bondsCurveCache.resetForTests();
-  bondsCashflowCache.resetForTests();
-  bondsPanelCache.resetForTests();
-  inFlightAnalytics.clear();
-  inFlightCurve.clear();
-  inFlightPanel.clear();
-  bgInFlight.clear();
-  bgPanelInFlight.clear();
-}
 
 export default router;
