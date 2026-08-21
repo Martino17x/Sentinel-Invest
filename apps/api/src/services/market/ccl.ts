@@ -1,7 +1,18 @@
 /**
  * Cálculo puro del CCL implícito por CEDEAR.
  *
- *   ccl = cedearArs * ratioCedearsPerShare / underlyingUsd
+ * Dos fórmulas equivalentes (mismo resultado cuando el CEDEAR USD existe):
+ *
+ *   (1) Vía Yahoo (acción subyacente en EEUU):
+ *       ccl = cedearArs * ratioCedearsPerShare / underlyingUsd
+ *       Ej. AAPL 10:1 → 10 CEDEARs = 1 acción AAPL
+ *
+ *   (2) Vía BYMA directo (CEDEAR ARS vs CEDEAR USD, mismo panel cedears):
+ *       ccl = cedearArs / cedearUsd
+ *       Cuando BYMA publica el mismo CEDEAR en dos monedas (ej. AAPL en ARS
+ *       y AAPLD en USD, denominationCcy USD), el ratio se cancela y el CCL
+ *       es simplemente el cociente. No requiere Yahoo. Ver `radar.ts` modo
+ *       híbrido: prefiere (2) si existe, fallback a (1).
  *
  * Funciones puras, sin I/O. Ver `cedear-ratios.ts` para la tabla de ratios.
  */
@@ -32,6 +43,17 @@ export function calcCcl(
   }
   if (underlyingUsd === 0 || ratio <= 0) return null;
   return (cedearArs * ratio) / underlyingUsd;
+}
+
+/**
+ * CCL directo BYMA: CEDEAR ARS vs CEDEAR USD (mismo subyacente, mismo ratio).
+ * Equivale a `cedearArs * ratio / (cedearUsd * ratio)` → ratio se cancela.
+ * Preferido cuando BYMA publica el par ARS/USD (ej. AAPL / AAPLD).
+ */
+export function calcCclFromBymaUsd(cedearArs: number, cedearUsd: number): number | null {
+  if (!Number.isFinite(cedearArs) || !Number.isFinite(cedearUsd)) return null;
+  if (cedearUsd === 0) return null;
+  return cedearArs / cedearUsd;
 }
 
 // ---------------------------------------------------------------------------

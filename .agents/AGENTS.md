@@ -34,6 +34,11 @@ Stack: Monorepo pnpm + Turborepo — apps/dashboard (React + Vite + TypeScript +
 - Acordeones/expansiones: transición de altura con `grid-rows-[0fr]` → `grid-rows-[1fr]` manteniendo el contenido montado (así la salida también anima).
 - Componentes sin animación = bug de UI.
 
+## Diálogos nativos prohibidos (CRÍTICO)
+- **NUNCA** usar `alert`, `confirm`, `prompt` nativos del navegador (`window.alert`, `window.confirm`, `window.prompt`) en ninguna parte del sistema. Usar siempre `Dialog` / `AlertDialog` del design system (`apps/dashboard/src/components/ui/dialog.tsx` — shadcn + Radix).
+- Patrón de confirmación destructiva: `Dialog` minimalista con título `¿Eliminar ...?`, descripción del impacto irreversible, botones `Cancelar` (outline) y `Eliminar` (destructive). El `Dialog` ya incluye animaciones `animate-in/out` y respeta `prefers-reduced-motion`.
+- Toda confirmación debe ser accesible (focus trap, aria, escape) — lo que provee Radix Dialog — nunca un `confirm()` bloqueante.
+
 ## Skills de calidad OBLIGATORIAS según contexto
 
 Si el contexto aplica, **CARGAR OBLIGATORIAMENTE la skill ANTES de escribir código o ejecutar git**.
@@ -46,6 +51,21 @@ Si el contexto aplica, **CARGAR OBLIGATORIAMENTE la skill ANTES de escribir cód
 | Diseño responsive / cards / tablas | `web-quality-audit` | Al revisar UI en múltiples viewports |
 | Commits / Git / Versionado | `git-commit-rules` | Antes de staging y commit |
 | Diseño de APIs REST | `api-design-principles` | Al crear o modificar endpoints |
+| Diseño UI / Componentes genéricos | `frontend-design`, `design-taste-frontend`, `ui-ux-pro-max` | Antes de diseñar o crear componente UI |
+| Auditoría visual fina | `high-end-visual-design`, `impeccable`, `stitch-design-taste` | Al pulir UI existente |
+
+## Diseño y Componentes UI — Análisis Obligatorio de Skills (CRÍTICO)
+
+**Antes de diseñar o crear CUALQUIER componente de UI, analizar OBLIGATORIAMENTE las skills relevantes y aplicarlas. No diseñar a ciegas.**
+
+Pasos mandatorios (en orden):
+
+1. **Relevamiento de skills disponibles** — listar `anti-vibecoded`, `frontend-design`, `design-taste-frontend`, `ui-ux-pro-max`, `interface-design`, `impeccable`, `stitch-design-taste`, `high-end-visual-design`, etc. Determinar cuáles aplican al caso (banner/alert, card, tabla, modal, etc.).
+2. **Lectura efectiva** — cargar (`SKILL: Load ... before starting`) y leer la `SKILL.md` + references de cada skill aplicable (ej: `anti-vibecoded` → pastel ban, glassmorphism, pill badges; `frontend-design` → jerarquía, tipografía; `ui-ux-pro-max` → estilos/paletas recomendadas).
+3. **Aplicación verificable** — justificar en el diff/PR qué regla de qué skill se aplicó (ej: “banner sólido `bg-amber-500 text-white` per anti-vibecoded #6/#9/#10 — pastel prohibido”).
+4. **Validación** — correr `rg "bg-amber-50|bg-emerald-50|border-amber-200"` y checklist de la skill antes de entregar.
+
+> Regla espejo en `.agents/rules/ui-skills.md` — misma obligatoriedad. Si una UI se entrega sin este análisis, se considera bug de proceso.
 
 ## Reglas de Sub-agentes, Inyección de Skills y Git (CRÍTICO)
 - **Inyección Mandatoria de Skills en Sub-agentes**: Al lanzar sub-agentes para tareas de ejecución (código, UI, SQL, git), el orquestador DEBE auto-inyectar SIEMPRE las referencias de skills de calidad correspondientes (`SKILL: Load ... before starting`), incluyendo obligatoriamente `git-commit-rules` para cualquier operación de staging y commit.

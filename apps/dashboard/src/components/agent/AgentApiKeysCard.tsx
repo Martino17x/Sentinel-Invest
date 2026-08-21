@@ -10,7 +10,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiKeysApi, type ApiKeyScope, type ApiKeySummary } from "@/lib/api";
@@ -194,15 +193,14 @@ export function AgentApiKeysCard() {
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <p className="truncate text-sm font-medium">{key.name}</p>
-                    <Badge variant={key.scope === "trade" ? "default" : "secondary"}>
+                    <span className="text-xs font-medium text-muted-foreground">
                       {key.scope === "trade" ? "read + trade" : "read"}
-                    </Badge>
-                    <Badge
-                      variant={key.enabled ? "outline" : "ghost"}
-                      className={key.enabled ? "text-emerald-600" : "text-muted-foreground"}
+                    </span>
+                    <span
+                      className={`text-xs font-medium ${key.enabled ? "text-emerald-600" : "text-muted-foreground"}`}
                     >
-                      {key.enabled ? "Activa" : "Revocada"}
-                    </Badge>
+                      · {key.enabled ? "Activa" : "Revocada"}
+                    </span>
                   </div>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {key.prefix}… · creada {formatKeyDate(key.createdAt)} · última vez {formatKeyDate(key.lastUsedAt)}

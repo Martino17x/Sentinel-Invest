@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { ArrowUp, Send, Square } from "lucide-react";
+import { ArrowUp, Square } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -43,10 +43,10 @@ export function ChatComposer({
   return (
     <div
       className={cn(
-        "flex items-end gap-2 transition-colors",
+        "flex items-end gap-2 transition-all",
         variant === "default"
-          ? "rounded-xl border border-input bg-muted/40 p-1.5 pl-3 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50"
-          : "rounded-2xl border border-white/10 bg-black/20 p-2 pl-4 focus-within:border-white/30"
+          ? "rounded-2xl border border-white/40 bg-white/70 p-1.5 pl-3.5 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-white/70 focus-within:border-black/10 focus-within:bg-white/85 focus-within:shadow-md focus-within:ring-2 focus-within:ring-black/[0.06] dark:border-white/10 dark:bg-white/[0.08] dark:backdrop-blur-md dark:focus-within:border-white/15 dark:focus-within:bg-white/[0.12] dark:focus-within:ring-white/10"
+          : "rounded-2xl border border-white/10 bg-black/20 p-2 pl-4 backdrop-blur-md focus-within:border-white/20"
       )}
     >
       <textarea
@@ -60,9 +60,9 @@ export function ChatComposer({
         aria-label="Mensaje para el asistente"
         style={variant === "modal" ? { minHeight: 40, maxHeight: 160 } : undefined}
         className={cn(
-          "flex-1 resize-none py-1.5 text-sm outline-none transition-colors disabled:opacity-60",
+          "flex-1 resize-none py-1.5 text-[13.5px] leading-relaxed tracking-tight outline-none transition-colors disabled:opacity-60",
           variant === "default"
-            ? "max-h-32 min-h-9 bg-transparent placeholder:text-muted-foreground"
+            ? "max-h-32 min-h-9 bg-transparent placeholder:text-muted-foreground/60 dark:placeholder:text-white/40 dark:text-white"
             : "max-h-40 bg-transparent text-white placeholder:text-white/50"
         )}
       />
@@ -74,11 +74,11 @@ export function ChatComposer({
           className={cn(
             "flex shrink-0 items-center justify-center transition-colors animate-in fade-in-0 duration-150 motion-reduce:animate-none",
             variant === "default"
-              ? "size-8 rounded-lg border border-input bg-background text-foreground hover:bg-muted"
+              ? "size-8 rounded-full border border-black/10 bg-white text-foreground shadow-sm hover:bg-zinc-50 dark:border-white/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
               : "size-10 rounded-full bg-red-500/90 text-white hover:bg-red-500"
           )}
         >
-          <Square className="size-4 fill-current" />
+          <Square className="size-3.5 fill-current" />
         </button>
       ) : (
         <button
@@ -87,17 +87,17 @@ export function ChatComposer({
           disabled={!input.trim()}
           onClick={onSend}
           className={cn(
-            "flex shrink-0 items-center justify-center transition-colors animate-in fade-in-0 duration-150 motion-reduce:animate-none",
+            "flex shrink-0 items-center justify-center rounded-full shadow-sm transition-all animate-in fade-in-0 duration-150 motion-reduce:animate-none active:scale-[0.97]",
             variant === "default"
-              ? "size-8 rounded-lg bg-primary text-primary-foreground hover:bg-primary/80"
-              : "size-10 rounded-full bg-white text-[var(--synara-panel-bg-from)] hover:bg-white/90",
-            "disabled:pointer-events-none disabled:opacity-50"
+              ? "size-8 bg-foreground text-background hover:bg-foreground/90 dark:bg-white dark:text-zinc-900 dark:hover:bg-white/90"
+              : "size-10 bg-white text-[var(--synara-panel-bg-from)] hover:bg-white/90",
+            "disabled:pointer-events-none disabled:opacity-40"
           )}
         >
           {variant === "modal" ? (
             <ArrowUp className="size-5" />
           ) : (
-            <Send className="size-4" />
+            <ArrowUp className="size-4" />
           )}
         </button>
       )}

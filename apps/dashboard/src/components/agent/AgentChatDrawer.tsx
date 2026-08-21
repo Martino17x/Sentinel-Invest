@@ -1,55 +1,46 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  History,
-  Loader2,
-  Maximize2,
-  MessageSquare,
-  Plus,
-  Trash2,
-  X,
-} from "lucide-react";
+import { History, Loader2, MessageSquare, Plus, Trash2, X } from "lucide-react";
 
-import { Drawer, DrawerClose, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  GlassPopover,
+  GlassPopoverContent,
+  GlassPopoverTrigger,
+} from "@/components/ui/glass-popover";
 import { MessageBubble } from "@/components/agent/MessageBubble";
 import { ThinkingIndicator } from "@/components/agent/ThinkingIndicator";
 import { ToolTimeline, type TimelineTool } from "@/components/agent/ToolTimeline";
-import { PendingOrderCard, type PendingApproval, type PendingOutcome } from "@/components/agent/PendingOrderCard";
+import {
+  PendingOrderCard,
+  type PendingApproval,
+  type PendingOutcome,
+} from "@/components/agent/PendingOrderCard";
 import { WelcomePrompts } from "@/components/agent/WelcomePrompts";
 import { ChatComposer } from "@/components/agent/ChatComposer";
-import { AgentChatFullScreen } from "@/components/agent/AgentChatFullScreen";
-import {
-  AgentChatError,
-  streamAgentChat,
-  type AgentToolStatus,
-} from "@/lib/agent-chat";
+import { AgentChatError, streamAgentChat, type AgentToolStatus } from "@/lib/agent-chat";
+import { WELCOME_MESSAGE, isGreeting } from "@/lib/agent-greetings";
 import { agentApi, type AgentChatMessage, type AgentSession } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { formatSessionDate } from "@/components/agent/chat-shared";
-import {
-  CHAT_VIEW_CHANGED_EVENT,
-  getChatViewPreference,
-  setChatViewPreference,
-  type ChatView,
-} from "@/lib/chat-view";
 
 // ============================================================
-// AgentChatDrawer — chat global del asistente (FAB + drawer).
-// Montado en ProtectedLayout → disponible en toda la app.
+// AgentChatDrawer — chat global del asistente via GlassPopover
 //
-// - FAB flotante (bottom-right, arriba del BottomNav en mobile)
-// - DOS vistas con el MISMO estado (patrón Equarys / Synara):
-//     drawer → panel lateral (radix Dialog), botón "Expandir"
-//     modal  → pantalla completa (AgentChatFullScreen, portal)
-//   El estado del chat vive en AgentChatInner, que renderiza
-//   UNA de las dos vistas según `view`.
-// - La preferencia de vista persiste en localStorage
-//   ('sentinel-chat-view') y se sincroniza vía custom event
-//   'sentinel:chat-view-changed'.
-// - Streaming SSE: los deltas se anexan a la última burbuja del
-//   asistente; el timeline de tools se actualiza en vivo
-// - Sesiones: nueva, historial, restauración, borrado
-// - Abort al cerrar el drawer / botón stop
+// Reemplaza el Drawer + AgentChatFullScreen (modal pantalla
+// completa) por un único GlassPopover rectangular vertical
+// anclado al FAB negro (trigger). Reutiliza el mismo
+// GlassPopoverContent que BottomNav "Más" pero con dimensiones
+// mayores: w-[380px] h-[520px] max-h-[80vh], responsive:
+// en mobile w-[calc(100vw-2rem)] con margen, en desktop
+// popover anclado al botón.
 // ============================================================
 
 export interface ChatItem {
@@ -59,9 +50,7 @@ export interface ChatItem {
   tools: TimelineTool[];
   streaming?: boolean;
   createdAt?: string;
-  /** Orden preparada por el agente que espera confirmación (Aprobar/Rechazar). */
   pendingApproval?: PendingApproval;
-  /** Resultado de la aprobación/rechazo ya resuelto (para mostrar tras decidir). */
   pendingOutcome?: PendingOutcome | null;
 }
 
@@ -79,7 +68,6 @@ function toolsFromHistory(toolCalls: unknown): TimelineTool[] {
   return tools;
 }
 
-/** Extrae { id, summary } de un mensaje tool que contiene el marcador PENDIENTE_ORDEN= */
 function parsePendingFromTool(content: string | null): PendingApproval | null {
   if (!content) return null;
   const m = content.match(/PENDIENTE_ORDEN=([0-9a-f-]+)/);
@@ -110,7 +98,6 @@ function messagesToItems(messages: AgentChatMessage[]): ChatItem[] {
         createdAt: msg.createdAt ?? undefined,
       });
     } else {
-      // Turnos de tool-call sin texto: el timeline lleva la info
       const item: ChatItem = {
         id: msg.id,
         role: "assistant",
@@ -129,39 +116,6 @@ function messagesToItems(messages: AgentChatMessage[]): ChatItem[] {
 
 export function AgentChatDrawer() {
   const [open, setOpen] = useState(false);
-
-  return (
-    <>
-      {/* FAB — botón flotante del asistente (arriba del BottomNav en mobile) */}
-      <Button
-        type="button"
-        aria-label="Abrir chat con el asistente"
-        onClick={() => setOpen(true)}
-        className="fixed right-4 bottom-20 z-40 size-12 rounded-full shadow-lg md:right-6 md:bottom-6 md:size-11"
-      >
-        <MessageSquare className="size-5" />
-      </Button>
-
-      <AgentChatInner open={open} onOpenChange={setOpen} />
-    </>
-  );
-}
-
-// ============================================================
-// AgentChatInner — TODO el estado del chat vive acá y renderiza
-// UNA de las dos vistas (drawer | modal) con el mismo estado.
-// Al alternar vista no se pierde nada: mensajes, sesión activa,
-// streaming y handlers son compartidos.
-// ============================================================
-
-function AgentChatInner({
-  open,
-  onOpenChange,
-}: {
-  open: boolean;
-  onOpenChange: (next: boolean) => void;
-}) {
-  const [view, setView] = useState<ChatView>(getChatViewPreference);
   const [sessions, setSessions] = useState<AgentSession[] | null>(null);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [activeTitle, setActiveTitle] = useState("Nueva conversación");
@@ -171,36 +125,22 @@ function AgentChatInner({
   const [loadingSession, setLoadingSession] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  // Sincronizar la preferencia de vista entre instancias
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent<ChatView>).detail;
-      if (detail === "drawer" || detail === "modal") setView(detail);
-    };
-    window.addEventListener(CHAT_VIEW_CHANGED_EVENT, handler);
-    return () => window.removeEventListener(CHAT_VIEW_CHANGED_EVENT, handler);
-  }, []);
-
-  // Cargar sesiones al abrir el chat (cualquiera de las dos vistas)
+  // Cargar sesiones al abrir el popover
   useEffect(() => {
     if (!open) return;
-    refreshSessions();
+    void refreshSessions();
   }, [open]);
 
-  // Auto-scroll del drawer al fondo en cada actualización de mensajes
+  // Auto-scroll al fondo en cada actualización de mensajes
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [items, streaming]);
-
-  function switchView(next: ChatView) {
-    setView(next);
-    setChatViewPreference(next);
-  }
 
   async function refreshSessions() {
     try {
@@ -237,8 +177,14 @@ function AgentChatInner({
     setShowHistory(false);
   }
 
-  async function handleDeleteSession(id: string) {
-    if (!window.confirm("¿Eliminar esta conversación?")) return;
+  function handleDeleteSession(id: string) {
+    setPendingDeleteId(id);
+  }
+
+  async function confirmDeleteSession() {
+    if (!pendingDeleteId) return;
+    const id = pendingDeleteId;
+    setPendingDeleteId(null);
     try {
       await agentApi.deleteSession(id);
     } catch (err) {
@@ -251,7 +197,7 @@ function AgentChatInner({
 
   function handleOpenChange(next: boolean) {
     if (!next) abortRef.current?.abort();
-    onOpenChange(next);
+    setOpen(next);
   }
 
   function appendDelta(text: string) {
@@ -307,6 +253,76 @@ function AgentChatInner({
   async function sendMessage(raw?: string) {
     const text = (raw ?? input).trim();
     if (!text || streaming) return;
+
+    // Atajo de saludos — ahorra tokens pero SIMULA streaming (thinking + deltas)
+    if (isGreeting(text)) {
+      const now = new Date().toISOString();
+      const assistantId = `assistant-${Date.now()}`;
+      setInput("");
+      setListError(null);
+      setItems((prev) => [
+        ...prev,
+        { id: `user-${Date.now()}`, role: "user", content: text, tools: [], createdAt: now },
+        {
+          id: assistantId,
+          role: "assistant",
+          content: "",
+          tools: [],
+          streaming: true,
+          createdAt: now,
+        },
+      ]);
+      setStreaming(true);
+
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      const CHUNK_SIZE = 12;
+      const INITIAL_DELAY = 320;
+      const CHUNK_DELAY = 22;
+      const chunks: string[] = [];
+      for (let i = 0; i < WELCOME_MESSAGE.length; i += CHUNK_SIZE) {
+        chunks.push(WELCOME_MESSAGE.slice(i, i + CHUNK_SIZE));
+      }
+
+      let idx = 0;
+      const tick = () => {
+        if (controller.signal.aborted) {
+          setStreaming(false);
+          // marcar fin de streaming en el item si quedó abierto
+          setItems((prev) => {
+            const next = [...prev];
+            const last = next[next.length - 1];
+            if (last?.streaming) next[next.length - 1] = { ...last, streaming: false };
+            return next;
+          });
+          abortRef.current = null;
+          return;
+        }
+        if (idx >= chunks.length) {
+          setItems((prev) => {
+            const next = [...prev];
+            const last = next[next.length - 1];
+            if (last?.streaming) next[next.length - 1] = { ...last, streaming: false };
+            return next;
+          });
+          setStreaming(false);
+          abortRef.current = null;
+          return;
+        }
+        const chunk = chunks[idx++];
+        setItems((prev) => {
+          const next = [...prev];
+          const last = next[next.length - 1];
+          if (!last?.streaming) return prev;
+          next[next.length - 1] = { ...last, content: last.content + chunk };
+          return next;
+        });
+        setTimeout(tick, CHUNK_DELAY);
+      };
+      setTimeout(tick, INITIAL_DELAY);
+      return;
+    }
 
     setInput("");
     setListError(null);
@@ -377,7 +393,6 @@ function AgentChatInner({
         },
       });
     } catch (err) {
-      // Abort manual (stop / cierre del drawer) → dejar el texto parcial
       if (err instanceof DOMException && err.name === "AbortError") {
         finishStreaming();
       } else {
@@ -408,203 +423,207 @@ function AgentChatInner({
 
   const welcomeVisible = !loadingSession && items.length === 0 && !streaming;
 
-  // ============================================================
-  // Vista 1 — DRAWER lateral
-  // ============================================================
-  if (view === "drawer") {
-    return (
-      <Drawer open={open} onOpenChange={handleOpenChange}>
-        <DrawerContent className="w-full sm:max-w-[640px] md:max-w-[820px] lg:max-w-[920px]">
-          {/* Header: título de sesión + acciones */}
-          <div className="flex items-center justify-between gap-2 border-b px-4 py-3">
-            <DrawerTitle className="min-w-0 truncate">{activeTitle}</DrawerTitle>
-            <div className="flex shrink-0 items-center gap-0.5">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Nueva conversación"
-                onClick={newSession}
-              >
-                <Plus />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Historial de conversaciones"
-                aria-pressed={showHistory}
-                className={cn(showHistory && "bg-muted text-foreground")}
-                onClick={() => setShowHistory((v) => !v)}
-              >
-                <History />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Expandir a pantalla completa"
-                className="hidden md:inline-flex"
-                onClick={() => switchView("modal")}
-              >
-                <Maximize2 />
-              </Button>
-              <DrawerClose asChild>
-                <Button type="button" variant="ghost" size="icon-sm" aria-label="Cerrar chat">
-                  <X />
-                </Button>
-              </DrawerClose>
-            </div>
-          </div>
+  return (
+    <>
+      <GlassPopover open={open} onOpenChange={handleOpenChange}>
+      {/* FAB — trigger del GlassPopover */}
+      <GlassPopoverTrigger asChild>
+        <Button
+          type="button"
+          aria-label="Abrir chat con el asistente"
+          className="fixed bottom-20 right-4 z-40 size-12 rounded-full shadow-lg md:bottom-6 md:right-6 md:size-11"
+        >
+          <MessageSquare className="size-5" />
+        </Button>
+      </GlassPopoverTrigger>
 
-          {/* Cuerpo: historial de sesiones O conversación */}
-          <div className="min-h-0 flex-1 overflow-hidden">
-            {showHistory ? (
-              <div className="custom-scrollbar h-full animate-in fade-in-0 duration-200 motion-reduce:animate-none overflow-y-auto overflow-x-hidden p-2">
-                {sessions === null && (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="size-5 animate-spin text-muted-foreground" />
-                  </div>
-                )}
-                {sessions !== null && sessions.length === 0 && (
-                  <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-                    Todavía no tenés conversaciones.
-                  </p>
-                )}
-                <ul className="animate-in fade-in-0 duration-300 motion-reduce:animate-none space-y-0.5">
-                  {sessions?.map((session) => (
-                    <li key={session.id} className="group flex items-center gap-1 rounded-lg">
-                      <button
-                        type="button"
-                        onClick={() => void openSession(session.id)}
-                        className="min-w-0 flex-1 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-muted"
-                      >
-                        <p className="truncate text-sm font-medium">
-                          {session.title ?? "Nueva conversación"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatSessionDate(session.updatedAt)} · {session.messageCount}{" "}
-                          {session.messageCount === 1 ? "mensaje" : "mensajes"}
-                        </p>
-                      </button>
+      {/* Popover glass — rectangular vertical, reutiliza GlassPopoverContent */}
+      <GlassPopoverContent
+        side="top"
+        align="end"
+        sideOffset={12}
+        collisionPadding={16}
+        avoidCollisions
+        aria-label="Chat del asistente"
+        className={cn(
+          // Overrides de tamaño: rectangular vertical, más grande que "Más"
+          // w-72 default de GlassPopoverContent es reemplazado via twMerge
+          "flex flex-col overflow-hidden p-0",
+          "w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)]",
+          "h-[min(520px,70vh)] max-h-[80vh]",
+          "sm:w-[380px] sm:max-w-[380px] sm:h-[520px] sm:max-h-[80vh]",
+          // Glass ya viene del default (bg-white/80 backdrop-blur-xl border-white/20)
+          // Solo reforzamos forma y sombra; el interior queda translúcido para ver el blur
+          "rounded-[20px] shadow-xl shadow-black/[0.08] ring-1 ring-black/[0.04]"
+        )}
+      >
+        {/* Header — transparente, sin bloque separado: iconos flotan sobre el vidrio del GlassPopoverContent */}
+        <div className="flex shrink-0 items-center justify-between gap-2 border-0 bg-transparent px-3 py-2.5">
+          <h2 className="min-w-0 flex-1 truncate text-[13px] font-medium tracking-tight text-foreground">
+            {activeTitle}
+          </h2>
+          <div className="flex shrink-0 items-center gap-0.5">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Nueva conversación"
+              onClick={newSession}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <Plus className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Historial de conversaciones"
+              aria-pressed={showHistory}
+              className={cn(
+                "text-muted-foreground hover:text-foreground",
+                showHistory && "bg-black/[0.06] text-foreground dark:bg-white/10"
+              )}
+              onClick={() => setShowHistory((v) => !v)}
+            >
+              <History className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Cerrar chat"
+              onClick={() => handleOpenChange(false)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <X className="size-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Cuerpo: historial o conversación — transparente para glass verdadero */}
+        <div className="min-h-0 flex-1 overflow-hidden bg-transparent">
+          {showHistory ? (
+            <div className="custom-scrollbar h-full overflow-y-auto overflow-x-hidden p-2">
+              {sessions === null && (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                </div>
+              )}
+              {sessions !== null && sessions.length === 0 && (
+                <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+                  Todavía no tenés conversaciones.
+                </p>
+              )}
+              <ul className="space-y-0.5">
+                {sessions?.map((session) => (
+                  <li key={session.id} className="group flex items-center gap-1 rounded-lg">
+                    <button
+                      type="button"
+                      onClick={() => void openSession(session.id)}
+                      className="min-w-0 flex-1 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-muted"
+                    >
+                      <p className="truncate text-sm font-medium">{session.title ?? "Nueva conversación"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatSessionDate(session.updatedAt)} · {session.messageCount}{" "}
+                        {session.messageCount === 1 ? "mensaje" : "mensajes"}
+                      </p>
+                    </button>
                       <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        aria-label={`Eliminar conversación "${session.title ?? "Nueva conversación"}"`}
-                        onClick={() => void handleDeleteSession(session.id)}
-                        className="mr-1 text-muted-foreground hover:text-destructive"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : loadingSession ? (
-              <div className="flex h-full items-center justify-center">
-                <Loader2 className="size-5 animate-spin text-muted-foreground" />
-              </div>
-            ) : (
-              <div
-                ref={scrollRef}
-                className="custom-scrollbar h-full animate-in fade-in-0 duration-200 motion-reduce:animate-none space-y-3 overflow-y-auto overflow-x-hidden px-4 py-4"
-              >
-                {welcomeVisible && <WelcomePrompts onPrompt={(p) => void sendMessage(p)} />}
-                {items.map((item) => (
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      aria-label={`Eliminar conversación "${session.title ?? "Nueva conversación"}"`}
+                      onClick={() => handleDeleteSession(session.id)}
+                      className="mr-1 text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : loadingSession ? (
+            <div className="flex h-full items-center justify-center">
+              <Loader2 className="size-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <div
+              ref={scrollRef}
+              className="custom-scrollbar h-full space-y-4 overflow-y-auto overflow-x-hidden px-4 py-4"
+            >
+              {welcomeVisible && <WelcomePrompts onPrompt={(p) => void sendMessage(p)} />}
+              {items.map((item) => (
+                <div
+                  key={item.id}
+                  className={cn("flex w-full min-w-0", item.role === "user" ? "justify-end" : "justify-start")}
+                >
                   <div
-                    key={item.id}
                     className={cn(
-                      "flex w-full min-w-0",
-                      item.role === "user" ? "justify-end" : "justify-start"
+                      "flex min-w-0 flex-col gap-1.5",
+                      item.role === "user" ? "max-w-[78%] items-end" : "w-full max-w-[92%] items-start"
                     )}
                   >
-                    {/* El wrapper pone la cota de ancho (ancho definido);
-                        la burbuja es w-fit → se ajusta al contenido */}
-                    <div className="flex min-w-0 max-w-[85%] flex-col items-start gap-1.5">
-                      {item.content.trim() !== "" && (
-                        <MessageBubble
-                          role={item.role}
-                          content={item.content}
-                          timestamp={item.createdAt}
-                        />
-                      )}
-                      {item.tools.length > 0 && (
-                        <ToolTimeline tools={item.tools} live={!!item.streaming} />
-                      )}
-                      {item.pendingApproval && (
-                        <PendingOrderCard
-                          approval={item.pendingApproval}
-                          onDone={(o) => resolvePending(item.id, o)}
-                        />
-                      )}
-                      {item.pendingOutcome && (
-                        <p
-                          className={cn(
-                            "text-xs",
-                            item.pendingOutcome.ok ? "text-emerald-600" : "text-destructive"
-                          )}
-                        >
-                          {item.pendingOutcome.message}
-                        </p>
-                      )}
-                    </div>
+                    {item.content.trim() !== "" && (
+                      <MessageBubble role={item.role} content={item.content} timestamp={item.createdAt} />
+                    )}
+                    {item.tools.length > 0 && <ToolTimeline tools={item.tools} live={!!item.streaming} />}
+                    {item.pendingApproval && (
+                      <PendingOrderCard
+                        tone="modal"
+                        approval={item.pendingApproval}
+                        onDone={(o) => resolvePending(item.id, o)}
+                      />
+                    )}
+                    {item.pendingOutcome && (
+                      <p className={cn("text-xs", item.pendingOutcome.ok ? "text-emerald-600" : "text-destructive")}>
+                        {item.pendingOutcome.message}
+                      </p>
+                    )}
                   </div>
-                ))}
-                {streaming && <ThinkingIndicator className="px-1" />}
-              </div>
-            )}
-          </div>
-
-          {/* Input — SOLO en la vista de conversación */}
-          {!showHistory && (
-            <div className="border-t p-3">
-              {listError && (
-                <p className="mb-2 px-1 text-xs text-destructive">{listError}</p>
-              )}
-              <ChatComposer
-                variant="default"
-                input={input}
-                streaming={streaming}
-                onChange={setInput}
-                onKeyDown={handleInputKeyDown}
-                onSend={() => void sendMessage()}
-                onStop={stopStreaming}
-              />
+                </div>
+              ))}
+              {streaming && <ThinkingIndicator className="px-1" />}
             </div>
           )}
-        </DrawerContent>
-      </Drawer>
-    );
-  }
+        </div>
 
-  // ============================================================
-  // Vista 2 — MODAL pantalla completa (mismo estado)
-  // ============================================================
-  return (
-    <AgentChatFullScreen
-      open={open}
-      onOpenChange={handleOpenChange}
-      view={view}
-      onViewChange={switchView}
-      activeTitle={activeTitle}
-      sessions={sessions}
-      showHistory={showHistory}
-      onToggleHistory={() => setShowHistory((v) => !v)}
-      items={items}
-      streaming={streaming}
-      loadingSession={loadingSession}
-      listError={listError}
-      welcomeVisible={welcomeVisible}
-      input={input}
-      onInputChange={setInput}
-      onInputKeyDown={handleInputKeyDown}
-      onSend={(raw) => void sendMessage(raw)}
-      onStop={stopStreaming}
-      onNewSession={newSession}
-      onOpenSession={(id) => void openSession(id)}
-      onDeleteSession={(id) => void handleDeleteSession(id)}
-      onResolvePending={resolvePending}
-    />
+        {/* Composer — footer glass sutil, separado del blur central */}
+        {!showHistory && (
+          <div className="shrink-0 border-t border-white/30 bg-white/35 p-3 backdrop-blur-md supports-[backdrop-filter]:bg-white/35 dark:border-white/10 dark:bg-white/[0.06]">
+            {listError && <p className="mb-2 px-1 text-xs text-destructive">{listError}</p>}
+            <ChatComposer
+              variant="default"
+              input={input}
+              streaming={streaming}
+              onChange={setInput}
+              onKeyDown={handleInputKeyDown}
+              onSend={() => void sendMessage()}
+              onStop={stopStreaming}
+            />
+          </div>
+        )}
+      </GlassPopoverContent>
+    </GlassPopover>
+
+      <Dialog open={!!pendingDeleteId} onOpenChange={(o) => !o && setPendingDeleteId(null)}>
+        <DialogContent className="sm:max-w-[380px]">
+          <DialogHeader>
+            <DialogTitle>¿Eliminar conversación?</DialogTitle>
+            <DialogDescription>
+              Esta acción no se puede deshacer. Se eliminará la conversación y todos sus mensajes de
+              forma permanente.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingDeleteId(null)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={() => void confirmDeleteSession()}>
+              Eliminar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

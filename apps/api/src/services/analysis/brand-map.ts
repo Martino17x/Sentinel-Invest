@@ -4,13 +4,26 @@
 // Fuente única: apps/dashboard/src/lib/brand-map.ts — este es mirror para el backend
 // ============================================================
 
+/**
+ * Strippea sufijos de mercado antes de lookup.
+ * Ej: VALE.CI -> VALE, VRTX.CI -> VRTX
+ */
+export function stripMarketSuffix(symbol: string): string {
+  return symbol.trim().toUpperCase().replace(/\.(CI|BA|BR|AR|US)$/i, "");
+}
+
 export const CEDEAR_DOMAIN_MAP: Record<string, string> = {
   AAPL: "apple.com",
+  // Variante BYMA/CEDEAR con sufijo D (ej: AALD en panel CEDEARs = Apple Inc.)
+  AALD: "apple.com",
+  AAPLD: "apple.com",
   MSFT: "microsoft.com",
   GOOGL: "google.com",
   GOOG: "google.com",
   AMZN: "amazon.com",
   NVDA: "nvidia.com",
+  // Variantes BYMA/CEDEAR de Nvidia
+  NVD: "nvidia.com",
   NVDAC: "nvidia.com",
   NVDAD: "nvidia.com",
   META: "meta.com",
@@ -58,6 +71,17 @@ export const CEDEAR_DOMAIN_MAP: Record<string, string> = {
   COST: "costco.com",
   AVGO: "broadcom.com",
   QCOM: "qualcomm.com",
+  // === faltantes detectados (Brandfetch verificado) ===
+  VALE: "vale.com",
+  VRTX: "vrtx.com",
+  TIMS3: "tim.com.br",
+  AEG: "aesandes.com",
+  XLY: "statestreet.com",
+  SLV: "ishares.com",
+  SLVC: "ishares.com",
+  BMNR: "bitminetech.io",
+  MU: "micron.com",
+  NU: "nubank.com.br",
 };
 
 export const AR_DOMAIN_MAP: Record<string, string> = {
@@ -117,11 +141,45 @@ export function isBond(symbol: string): boolean {
 
 export function getBrandDomain(symbol: string): string | null {
   if (!symbol) return null;
-  const key = symbol.trim().toUpperCase();
-  return SYMBOL_DOMAIN_MAP[key] ?? null;
+  const key = stripMarketSuffix(symbol);
+  // 1) directo
+  if (SYMBOL_DOMAIN_MAP[key]) return SYMBOL_DOMAIN_MAP[key];
+  // 2) variantes CEDEAR con sufijo D/C
+  if (/^[A-Z]{3,5}[DC]$/.test(key)) {
+    const base = key.slice(0, -1);
+    if (SYMBOL_DOMAIN_MAP[base]) return SYMBOL_DOMAIN_MAP[base];
+  }
+  const withoutLast = key.slice(0, -1);
+  if (withoutLast.length >= 2 && SYMBOL_DOMAIN_MAP[withoutLast]) {
+    return SYMBOL_DOMAIN_MAP[withoutLast];
+  }
+  const alpha = key.replace(/[^A-Z]/g, "");
+  if (alpha !== key && SYMBOL_DOMAIN_MAP[alpha]) return SYMBOL_DOMAIN_MAP[alpha];
+  return null;
+}
+
+export function getCanonicalTicker(symbol: string): string {
+  const key = stripMarketSuffix(symbol);
+  if (SYMBOL_DOMAIN_MAP[key]) return key;
+  if (/^[A-Z]{3,5}[DC]$/.test(key)) {
+    const base = key.slice(0, -1);
+    if (SYMBOL_DOMAIN_MAP[base]) return base;
+  }
+  const withoutLast = key.slice(0, -1);
+  if (withoutLast.length >= 2 && SYMBOL_DOMAIN_MAP[withoutLast]) return withoutLast;
+  const alpha = key.replace(/[^A-Z]/g, "");
+  if (alpha !== key && SYMBOL_DOMAIN_MAP[alpha]) return alpha;
+  return key;
 }
 
 export type BrandTheme = "light" | "dark";
+
+export function getGoogleFaviconUrl(symbol: string, size: number = 32): string | null {
+  const domain = getBrandDomain(symbol);
+  if (!domain) return null;
+  const clamped = Math.min(Math.max(Math.floor(size) || 32, 16), 128) * 2;
+  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=${clamped}`;
+}
 
 export function symbolToBrandfetchUrl(
   symbol: string,
@@ -131,8 +189,9 @@ export function symbolToBrandfetchUrl(
   clientId?: string,
 ): string | null {
   if (!symbol || typeof symbol !== "string") return null;
-  const sym = symbol.trim().toUpperCase();
+  const sym = stripMarketSuffix(symbol);
   if (!sym) return null;
+  const ticker = getCanonicalTicker(sym);
   const clampedSize = Math.min(Math.max(Math.floor(size) || 32, 16), 128);
   const wh = clampedSize * 2;
   const safeTheme: BrandTheme = theme === "dark" ? "dark" : "light";
@@ -142,7 +201,7 @@ export function symbolToBrandfetchUrl(
   if (domain) {
     base = `https://cdn.brandfetch.io/domain/${encodeURIComponent(domain)}/w/${wh}/h/${wh}/fallback/lettermark/theme/${safeTheme}`;
   } else {
-    base = `https://cdn.brandfetch.io/ticker/${encodeURIComponent(sym)}/w/${wh}/h/${wh}/fallback/lettermark/theme/${safeTheme}`;
+    base = `https://cdn.brandfetch.io/ticker/${encodeURIComponent(ticker)}/w/${wh}/h/${wh}/fallback/lettermark/theme/${safeTheme}`;
   }
   if (resolvedClientId) return `${base}?c=${encodeURIComponent(resolvedClientId)}`;
   return base;

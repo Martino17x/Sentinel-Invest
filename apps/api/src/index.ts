@@ -30,9 +30,26 @@ const PORT = Number(process.env.PORT ?? 3001);
 // y /mcp — rollback de 2 líneas, sin tocar el resto de la API.
 const agentEnabled = process.env.AGENT_ENABLED !== "false";
 
+// CORS: acepta localhost + LAN (192.168.x.x, 10.x.x.x, 172.16-31.x.x) en :5173
+// CLIENT_ORIGIN puede ser lista separada por comas: "http://localhost:5173,http://192.168.1.3:5173"
+const rawOrigin = process.env.CLIENT_ORIGIN ?? "http://localhost:5173";
+const allowedOrigins = rawOrigin
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+const lanOriginRegex =
+  /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+):5173$/;
+
 app.use(
   cors({
-    origin: process.env.CLIENT_ORIGIN ?? "http://localhost:5173",
+    origin: (origin, callback) => {
+      // Requests sin Origin (curl, health checks, mobile webview inicial) → permitir
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin) || lanOriginRegex.test(origin)) {
+        return callback(null, true);
+      }
+      callback(new Error(`CORS: origin ${origin} no permitido`));
+    },
     credentials: true, // necesario para que el navegador guarde la cookie httpOnly
   })
 );
@@ -76,7 +93,7 @@ if (agentEnabled) {
   mountMcpHttp(app);
 }
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 API escuchando en http://localhost:${PORT}`);
 });
 

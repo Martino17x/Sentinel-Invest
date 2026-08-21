@@ -50,19 +50,25 @@ export function PendingOrderCard({ approval, tone = "default", onDone }: Pending
     <div
       className={cn(
         "w-full rounded-xl border p-3",
-        isModal ? "border-white/15 bg-white/5" : "border-border bg-muted/40"
+        isModal
+          ? "border-white/40 bg-white/60 backdrop-blur-sm shadow-sm dark:border-white/15 dark:bg-white/[0.08]"
+          : "border-border bg-muted/40"
       )}
     >
       <div className="flex items-start gap-2">
-        <ShieldQuestion className={cn("mt-0.5 size-4 shrink-0", isModal ? "text-amber-300" : "text-amber-600")} />
+        <ShieldQuestion
+          className={cn("mt-0.5 size-4 shrink-0", isModal ? "text-amber-600 dark:text-amber-300" : "text-amber-600")}
+        />
         <div className="min-w-0 flex-1 space-y-1">
-          <p className={cn("text-xs font-medium", isModal ? "text-white" : "text-foreground")}>
+          <p className={cn("text-xs font-medium", isModal ? "text-foreground dark:text-white" : "text-foreground")}>
             Orden preparada — requiere tu confirmación
           </p>
-          <p className={cn("text-sm font-semibold", isModal ? "text-white" : "text-foreground")}>
+          <p className={cn("text-sm font-semibold", isModal ? "text-foreground dark:text-white" : "text-foreground")}>
             {approval.summary}
           </p>
-          {error && <p className={cn("text-xs", isModal ? "text-red-300" : "text-destructive")}>{error}</p>}
+          {error && (
+            <p className={cn("text-xs", isModal ? "text-destructive dark:text-red-300" : "text-destructive")}>{error}</p>
+          )}
           <div className="flex gap-2 pt-1">
             <Button
               type="button"
@@ -70,7 +76,11 @@ export function PendingOrderCard({ approval, tone = "default", onDone }: Pending
               size="xs"
               disabled={busy !== null}
               onClick={() => void decide("reject")}
-              className={cn("cursor-pointer", isModal && "border-white/20 text-white hover:bg-white/10")}
+              className={cn(
+                "cursor-pointer",
+                isModal &&
+                  "border-white/30 bg-white/40 text-foreground hover:bg-white/60 dark:border-white/20 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+              )}
             >
               {busy === "reject" ? <Loader2 className="size-3 animate-spin" /> : <XCircle className="size-3" />}
               Rechazar

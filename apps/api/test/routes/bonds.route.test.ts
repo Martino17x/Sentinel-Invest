@@ -121,7 +121,18 @@ function patchDbExecute(mockFn: any): () => void {
 
 describe("bonds routes — E2E", () => {
   test("flag off 404 — structural guard exists (BONDS_ANALYTICS_ENABLED -> 404)", async () => {
-    const bondsSrc = fs.readFileSync(path.join(process.cwd(), "apps/api/src/routes/bonds.ts"), "utf8");
+    const candidates = [
+      path.join(process.cwd(), "apps/api/src/routes/bonds.ts"),
+      path.join(process.cwd(), "src/routes/bonds.ts"),
+      "C:/Users/Martino/Documents/PROGRAMACION III/Invertir/apps/api/src/routes/bonds.ts",
+    ];
+    let bondsSrc = "";
+    for (const p of candidates) {
+      try {
+        bondsSrc = fs.readFileSync(p, "utf8");
+        if (bondsSrc) break;
+      } catch {}
+    }
     assert.ok(bondsSrc.includes("BONDS_ANALYTICS_ENABLED"), "must reference BONDS_ANALYTICS_ENABLED");
     assert.ok(bondsSrc.includes("404"), "must return 404 when flag off");
     assert.ok(bondsSrc.includes("Renta fija no habilitada"), "must have Spanish 404 message");

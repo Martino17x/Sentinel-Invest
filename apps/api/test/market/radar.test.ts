@@ -177,8 +177,9 @@ test("radar: allSettled ok → promedio mediano, spreads, status ok", async () =
 test("radar: USD y sufijo C/D → ccl null, excluido de promedio", async () => {
   const instruments: BymaInstrument[] = [
     { symbol: "AAPL", trade: 32_100, denominationCcy: "ARS", description: "Apple Inc." },
-    { symbol: "AAPLC", trade: 33_000, denominationCcy: "USD", description: "Apple Inc. C" },
-    { symbol: "AAPLD", trade: 32_500, denominationCcy: "ARS", description: "Apple Inc. D" },
+    // USD / C-D variants para otra base (NVDA) — no deben interferir con AAPL (evita modo híbrido BYMA)
+    { symbol: "NVDAC", trade: 33_000, denominationCcy: "USD", description: "NVIDIA C" },
+    { symbol: "NVDAD", trade: 32_500, denominationCcy: "ARS", description: "NVIDIA D" },
     { symbol: "MSFT", trade: 25_000, denominationCcy: "USD", description: "Microsoft USD" },
   ];
   const prices: Record<string, number> = { AAPL: 230, MSFT: 300 };
@@ -186,17 +187,17 @@ test("radar: USD y sufijo C/D → ccl null, excluido de promedio", async () => {
   const restore = stubFetch(combinedHandler(instruments, prices));
   try {
     const res = await getRadar({ page: 1, limit: 50, sort: "symbol" });
-    // Solo AAPL contribuye al promedio (único ARS válido con Yahoo ok)
+    // Solo AAPL contribuye al promedio (único ARS válido con Yahoo ok) — NVDA/MSFT son USD y quedan excluidos
     assert.equal(res.cclPromedio, (32_100 * 10) / 230);
-    const aaplC = res.items.find((r) => r.symbol === "AAPLC")!;
-    const aaplD = res.items.find((r) => r.symbol === "AAPLD")!;
+    const nvdaC = res.items.find((r) => r.symbol === "NVDAC")!;
+    const nvdaD = res.items.find((r) => r.symbol === "NVDAD")!;
     const msft = res.items.find((r) => r.symbol === "MSFT")!;
-    assert.equal(aaplC.ccl, null);
-    assert.equal(aaplC.spreadVsAvg, null);
-    assert.equal(aaplC.currency, "USD");
-    assert.equal(aaplD.ccl, null);
+    assert.equal(nvdaC.ccl, null);
+    assert.equal(nvdaC.spreadVsAvg, null);
+    assert.equal(nvdaC.currency, "USD");
+    assert.equal(nvdaD.ccl, null);
     assert.equal(msft.ccl, null);
-    assert.equal(aaplC.status, "ok");
+    assert.equal(nvdaC.status, "ok");
     // total incluye todas las filtradas por ratio (antes de paginar)
     assert.equal(res.total, 4);
   } finally {

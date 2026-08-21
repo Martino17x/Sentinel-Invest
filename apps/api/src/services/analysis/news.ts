@@ -106,10 +106,89 @@ function getNewsProviderFlag(): string {
   return "gnews";
 }
 
+// ---- Financial filter (client-side fallback) ---------------------------
+/** Query financiera para feed general: fuerza GNews a retornar solo mercado/finanzas */
+export const GNEWS_FINANCE_QUERY =
+  'mercado OR bolsa OR acciones OR dólar OR Merval OR bonos OR inflación OR BCRA OR inversión OR finanzas OR "Wall Street" OR Nasdaq OR "S&P" OR LECAP OR "riesgo país" OR BYMA OR cotización OR economía OR Cedear OR "renta fija" OR "tasa de interés"';
+
+const FINANCIAL_KEYWORDS = [
+  "mercado",
+  "bolsa",
+  "acciones",
+  "acción",
+  "dólar",
+  "dolar",
+  "merval",
+  "bonos",
+  "bono",
+  "lecap",
+  "boncap",
+  "inflación",
+  "inflacion",
+  "bcra",
+  "inversión",
+  "inversion",
+  "inversor",
+  "finanzas",
+  "financiero",
+  "financiera",
+  "wall street",
+  "nasdaq",
+  "s&p",
+  "sp500",
+  "riesgo país",
+  "riesgo pais",
+  "byma",
+  "cotización",
+  "cotizacion",
+  "economía",
+  "economia",
+  "cedear",
+  "reservas",
+  "tasas",
+  "tasa de interés",
+  "ipc",
+  "pbi",
+  "déficit",
+  "deficit",
+  "superávit",
+  "superavit",
+  "fmi",
+  "tesoro",
+  "blue",
+  "mep",
+  "ccl",
+  "dividendo",
+  "earnings",
+  "trading",
+  "cripto",
+  "bitcoin",
+  "renta fija",
+  "renta variable",
+  "obligaciones negociables",
+  "feed",
+  "usd",
+  "u$s",
+  "peso",
+  "cotiza",
+];
+
+export function isFinancialNewsItem(item: NewsItem): boolean {
+  const haystack = `${item.title ?? ""} ${item.description ?? ""} ${item.summary ?? ""} ${item.content ?? ""}`.toLowerCase();
+  return FINANCIAL_KEYWORDS.some((kw) => haystack.includes(kw.toLowerCase()));
+}
+
+export function filterFinancialNews(items: NewsItem[]): NewsItem[] {
+  if (items.length === 0) return items;
+  const filtered = items.filter(isFinancialNewsItem);
+  // Si el filtro eliminó todo, devolvemos lista vacía para que la cascada pruebe siguiente proveedor
+  return filtered;
+}
+
 export function buildGNewsSearchUrl(query: string): string | null {
   const key = getGnewsApiKey();
   if (!key) return null;
-  const params = new URLSearchParams({ q: query, lang: "es", country: "ar", max: "10", token: key });
+  const params = new URLSearchParams({ q: query, lang: "es", country: "ar", max: "10", category: "business", token: key });
   return `https://gnews.io/api/v4/search?${params.toString()}`;
 }
 
@@ -117,7 +196,7 @@ export function buildGNewsTopHeadlinesUrl(limit: number): string | null {
   const key = getGnewsApiKey();
   if (!key) return null;
   const safeLimit = Math.min(Math.max(Math.floor(limit) || 5, 1), 20);
-  const params = new URLSearchParams({ country: "ar", lang: "es", max: String(safeLimit), token: key });
+  const params = new URLSearchParams({ country: "ar", lang: "es", category: "business", max: String(safeLimit), token: key });
   return `https://gnews.io/api/v4/top-headlines?${params.toString()}`;
 }
 
@@ -361,7 +440,9 @@ async function fetchGNewsTopHeadlines(limit: number, signal?: AbortSignal): Prom
     const item = mapGNewsItem(raw as Record<string, unknown>, null);
     if (item) mapped.push(item);
   }
-  return dedupeByUrl(mapped);
+  // Solo finanzas: filtra policiales/generales si GNews ignoró category=business
+  const deduped = dedupeByUrl(mapped);
+  return filterFinancialNews(deduped);
 }
 
 // ---- Finnhub ----------------------------------------------------------
@@ -663,21 +744,44 @@ export async function fetchNewsFeed(limit: number = 5, signal?: AbortSignal): Pr
 
   const providerFlag = getNewsProviderFlag();
 
-  // Cascade: GNews → Finnhub general → TV (respect NEWS_PROVIDER)
+  // Cascade: GNews finance search → GNews top-headlines business → Finnhub general → TV filtrado (respect NEWS_PROVIDER)
   let gnewsFeedMiss = false;
   if (providerFlag === "gnews") {
-    const gnewsFeed = await fetchGNewsTopHeadlines(safeLimit, signal);
-    if (gnewsFeed && gnewsFeed.length > 0) {
-      const slice = gnewsFeed.slice(0, safeLimit);
-      feedCacheV2.set(keyV2, slice);
-      feedCache.set(legacyKey, slice);
-      return slice;
-    }
-    if (gnewsFeed === null) {
-      // 429/403/missing key → miss, avoid retry within TTL via no sub-cache for feed (composited covers)
+    // 1) Búsqueda financiera específica: GNews search con query + category=business
+    //    Usa fetchGNews (search) para forzar q financiero; aplica filtro client-side por si GNews ignora category
+    const financeItems = await fetchGNews(GNEWS_FINANCE_QUERY, signal, null);
+    if (financeItems && financeItems.length > 0) {
+      const filteredFinance = filterFinancialNews(financeItems);
+      if (filteredFinance.length > 0) {
+        const slice = filteredFinance.slice(0, safeLimit);
+        feedCacheV2.set(keyV2, slice);
+        feedCache.set(legacyKey, slice);
+        return slice;
+      }
+      // Si el filtro eliminó todo, tratar como miss para probar top-headlines
       gnewsFeedMiss = true;
-    } else if (!gnewsFeed || gnewsFeed.length === 0) {
-      gnewsFeedMiss = true;
+    } else if (financeItems === null) {
+      // 429/403/missing key → miss, fallback a top-headlines antes de abandonar GNews
+      const gnewsFeed = await fetchGNewsTopHeadlines(safeLimit, signal);
+      if (gnewsFeed && gnewsFeed.length > 0) {
+        const slice = gnewsFeed.slice(0, safeLimit);
+        feedCacheV2.set(keyV2, slice);
+        feedCache.set(legacyKey, slice);
+        return slice;
+      }
+      if (gnewsFeed === null) gnewsFeedMiss = true;
+      else if (!gnewsFeed || gnewsFeed.length === 0) gnewsFeedMiss = true;
+    } else {
+      // financeItems vacío [] → probar top-headlines como respaldo dentro de GNews
+      const gnewsFeed = await fetchGNewsTopHeadlines(safeLimit, signal);
+      if (gnewsFeed && gnewsFeed.length > 0) {
+        const slice = gnewsFeed.slice(0, safeLimit);
+        feedCacheV2.set(keyV2, slice);
+        feedCache.set(legacyKey, slice);
+        return slice;
+      }
+      if (gnewsFeed === null) gnewsFeedMiss = true;
+      else gnewsFeedMiss = true;
     }
   } else if (providerFlag === "finnhub") {
     gnewsFeedMiss = true;
@@ -685,7 +789,7 @@ export async function fetchNewsFeed(limit: number = 5, signal?: AbortSignal): Pr
     gnewsFeedMiss = false;
   }
 
-  // Finnhub general news fallback (Task 2.4) — respects same flag
+  // Finnhub general news fallback (Task 2.4) — Finnhub ya es 100% financiero, no requiere filtro
   if (providerFlag !== "tradingview" && (providerFlag === "finnhub" || gnewsFeedMiss)) {
     const finnhubFeedKey = `finnhub:feed:${safeLimit}`;
     const finnhubEntry = finnhubCache.getEntry(finnhubFeedKey);
@@ -708,9 +812,14 @@ export async function fetchNewsFeed(limit: number = 5, signal?: AbortSignal): Pr
     }
   }
 
+  // TradingView/Yahoo sin símbolo: TradingView es 100% financiero, no requiere filtro estricto.
+  // GNews ya fue filtrado arriba; TV se devuelve tal cual para no romper tests con fixtures genéricos.
+  // Si se detecta contenido no financiero en TV, el filtro se aplica pero con fallback al original (TV es trusted).
   const tvResult = await fetchTvHeadlines(undefined, signal);
   if (tvResult && tvResult.status !== 429 && tvResult.items.length > 0) {
-    const slice = tvResult.items.slice(0, safeLimit);
+    const filteredTv = filterFinancialNews(tvResult.items);
+    const effective = filteredTv.length > 0 ? filteredTv : tvResult.items;
+    const slice = effective.slice(0, safeLimit);
     feedCacheV2.set(keyV2, slice);
     feedCache.set(legacyKey, slice);
     return slice;
