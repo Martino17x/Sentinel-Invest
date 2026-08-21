@@ -20,6 +20,9 @@ import { getBondCurveTool } from "./bondCurve.js";
 import { getBondCashflowTool } from "./bondCashflow.js";
 import { getBondPanelTool } from "./bondPanel.js";
 import { getBondFichaTool } from "./bondFicha.js";
+import { getScreenerTool } from "./screener.js";
+import { getOperationsTool } from "./operations.js";
+import { getMovementsTool } from "./movements.js";
 
 // ============================================================
 // Registry de tools del agente — fuente ÚNICA de definiciones
@@ -60,6 +63,9 @@ const DOMAIN_TOOLS: ToolDefinition[] = [
   getBondCashflowTool,
   getBondPanelTool,
   getBondFichaTool,
+  getScreenerTool,
+  getOperationsTool,
+  getMovementsTool,
 ];
 
 export function createAgentRegistry(): ToolRegistry {
