@@ -10,7 +10,6 @@
   "scripts": {
     "test": "tsx --test \"test/**/*.test.ts\"",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src test"
   },
   "dependencies": {},
   "devDependencies": {
