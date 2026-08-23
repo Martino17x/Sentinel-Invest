@@ -11,7 +11,7 @@ import { resolveAnalysisSymbols } from "./symbol.js";
 import { fetchJson } from "./http.js";
 import { SwrCache } from "../market/cache.js";
 import type { AnalysisEnvelope, NewsData, NewsItem, AnalysisMarket, AnalysisOpts, NewsProvider } from "./types.js";
-import { INSTRUMENT_NAMES } from "../iol/instrumentNames.js";
+import { INSTRUMENT_NAMES } from "@sentinel/domain";
 import { isCedear } from "../market/ticker-map.js";
 
 // ---- TTLs -------------------------------------------------------------

@@ -9,7 +9,7 @@ import {
   getLatestQuotesSnapshot,
 } from "../services/market/quotesSnapshotStore.js";
 import { isMarketHours } from "../services/market/isMarketHours.js";
-import { getInstrumentDisplayName } from "../services/iol/instrumentNames.js";
+import { getInstrumentDisplayName } from "@sentinel/domain";
 import type { PanelQuote, PanelSummary } from "../services/iol/types.js";
 
 const router = Router();

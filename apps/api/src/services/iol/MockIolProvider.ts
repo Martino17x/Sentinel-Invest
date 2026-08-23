@@ -1,4 +1,4 @@
-import { getInstrumentDisplayName } from "./instrumentNames.js";
+import { getInstrumentDisplayName } from "@sentinel/domain";
 import type { IolProvider } from "./IolProvider.js";
 import type {
   IolCredentials,

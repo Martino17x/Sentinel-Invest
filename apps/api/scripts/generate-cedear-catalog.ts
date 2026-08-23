@@ -29,8 +29,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
-import { INSTRUMENT_NAMES } from "../src/services/iol/instrumentNames.js";
-import { RATIO_MAP } from "../src/services/market/cedear-ratios.js";
+import { INSTRUMENT_NAMES, RATIO_MAP } from "@sentinel/domain";
 
 // ============================================================
 // Config

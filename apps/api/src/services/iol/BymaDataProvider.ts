@@ -38,7 +38,7 @@ import type {
 
 const API_BASE = "https://open.bymadata.com.ar/vanoms-be-core/rest/api/bymadata/free";
 
-import { getInstrumentDisplayName } from "./instrumentNames.js";
+import { getInstrumentDisplayName } from "@sentinel/domain";
 import type { BondSchedule, BondCashflow } from "../market/bonds/types.js";
 import { buildSchedule } from "../market/bonds/cashflow.js";
 // T-006: parser dedicado BYMA ficha

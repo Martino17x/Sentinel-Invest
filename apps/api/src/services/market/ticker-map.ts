@@ -14,7 +14,7 @@ import {
   getBaseSymbol,
   getInstrumentDisplayName,
   normalizeSymbol,
-} from "../iol/instrumentNames.js";
+} from "@sentinel/domain";
 
 export type Market = "bcba" | "nyse" | "nasdaq";
 
