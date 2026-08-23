@@ -140,15 +140,9 @@ export function CompanyLogo({
   }
 
   // CLIENT_ID missing → immediate fallback + warn, never hit cdn (spec: never fetch without ?c=)
-  // Vite injects import.meta.env.VITE_BRANDFETCH_CLIENT_ID
-  let clientId: string | undefined;
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const env = (import.meta as unknown as { env?: Record<string, string> })?.env;
-    clientId = env?.["VITE_BRANDFETCH_CLIENT_ID"];
-  } catch {
-    clientId = undefined;
-  }
+  // Vite injects import.meta.env.VITE_BRANDFETCH_CLIENT_ID — acceso ESTÁTICO obligatorio
+  // (bracket dinámico env?.["KEY"] evita la inyección del preamble y deja env undefined).
+  const clientId: string | undefined = import.meta.env.VITE_BRANDFETCH_CLIENT_ID ?? undefined;
   if (!clientId) {
     if (typeof console !== "undefined" && typeof window !== "undefined") {
       // warn once per mount (avoid spam in loops)

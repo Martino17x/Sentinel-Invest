@@ -3,6 +3,9 @@
 // Mapa estático: 54 CEDEARs + 23 acciones líderes AR
 // Spec: content-providers Track B — sin fetch server-side
 // Basado en apps/api/src/services/iol/instrumentNames.ts
+// TODO(domain/ticker): Unificar normalización a domain/ticker compartido.
+// Cuando exista package compartido, importar getBaseSymbol / getInstrumentDisplayName
+// desde instrumentNames y eliminar duplicación C/D. Por ahora mirror manual.
 // Brandfetch hotlink con retina + fallback (verificado, no da 404 con ?c=):
 //   https://cdn.brandfetch.io/ticker/{TICKER}/w/{2*size}/h/{2*size}/fallback/lettermark/theme/{light|dark}?c=CLIENT_ID
 //   https://cdn.brandfetch.io/domain/{domain}/w/{2*size}/h/{2*size}/fallback/lettermark/theme/{light|dark}?c=CLIENT_ID
@@ -14,6 +17,7 @@
  * Strippea sufijos de mercado argentinos/brasileños antes de lookup.
  * Ej: VALE.CI -> VALE, VRTX.CI -> VRTX, AEG.CI -> AEG, XLY.CI -> XLY
  * TIMS3 (sin punto) se mantiene idéntico.
+ * TODO(domain/ticker): Delegar a getBaseSymbol cuando haya domain compartido.
  */
 export function stripMarketSuffix(symbol: string): string {
   return symbol.trim().toUpperCase().replace(/\.(CI|BA|BR|AR|US)$/i, "");
@@ -21,9 +25,12 @@ export function stripMarketSuffix(symbol: string): string {
 
 export const CEDEAR_DOMAIN_MAP: Record<string, string> = {
   AAPL: "apple.com",
-  // Variante BYMA/CEDEAR con sufijo D (ej: AALD en panel CEDEARs = Apple Inc.)
-  AALD: "apple.com",
   AAPLD: "apple.com",
+  // American Airlines Group (BYMA panel CEDEARs: AAL ARS / AALC CCL / AALD MEP).
+  // NO es Apple — verificado contra open.bymadata.com.ar (22/08/2026).
+  AAL: "aa.com",
+  AALC: "aa.com",
+  AALD: "aa.com",
   MSFT: "microsoft.com",
   GOOGL: "google.com",
   GOOG: "google.com",
@@ -208,13 +215,11 @@ export type BrandTheme = "light" | "dark";
 
 function resolveClientId(clientId?: string): string | undefined {
   if (clientId !== undefined) return clientId;
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const env = (import.meta as unknown as { env?: Record<string, string> })?.env;
-    return env?.["VITE_BRANDFETCH_CLIENT_ID"] ?? undefined;
-  } catch {
-    return undefined;
-  }
+  // IMPORTANTE: acceso ESTÁTICO a import.meta.env. Vite (esbuild) solo inyecta el
+  // objeto env en módulos que lo referencian como member expression estática;
+  // con bracket dinámico env?.["KEY"] el módulo queda sin preamble y env es
+  // undefined en runtime (bug de logos rotos, verificado 23/08/2026).
+  return import.meta.env.VITE_BRANDFETCH_CLIENT_ID ?? undefined;
 }
 
 /** Brandfetch ticker hotlink con w/h retina + fallback lettermark (formato verificado). */
