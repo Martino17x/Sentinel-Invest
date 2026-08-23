@@ -1,10 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { CEDEAR_RATIOS, RATIO_MAP, getRatio } from "./cedear-ratios.js";
+import { CEDEAR_RATIOS, RATIO_MAP, getRatio } from "../src";
 
 // ===================================================================
 // CEDEAR_RATIOS — tabla estática 60 entradas
-// Spec: BYMA ficha, cedear-ratios.ts:1-99
+// Spec: BYMA ficha, catalog/ratios.ts
 // ===================================================================
 
 test("CEDEAR_RATIOS: exactamente 60 entradas", () => {
