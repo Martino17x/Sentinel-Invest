@@ -38,9 +38,18 @@ import type {
 
 const API_BASE = "https://open.bymadata.com.ar/vanoms-be-core/rest/api/bymadata/free";
 
-import { INSTRUMENT_NAMES } from "./instrumentNames.js";
+import { getInstrumentDisplayName } from "./instrumentNames.js";
 import type { BondSchedule, BondCashflow } from "../market/bonds/types.js";
 import { buildSchedule } from "../market/bonds/cashflow.js";
+// T-006: parser dedicado BYMA ficha
+import {
+  parseBymaFichaToSchedule,
+  inferMaeTipo as inferMaeTipoFromParser,
+  parseInteresToCouponRate as parseInteresImpl,
+  parseFormaAmortizacion as parseFormaImpl,
+  isCallableTexto,
+} from "../market/bonds/bymaFichaParser.js";
+import type { BymaFicha as BymaFichaParserType } from "../market/bonds/bymaFichaParser.js";
 
 interface BymaResponse {
   content?: {
@@ -77,25 +86,72 @@ interface BymaInstrument {
 }
 
 const REQUEST_BODY = {
-  excludeZeroPxAndQty: true,
+  excludeZeroPxAndQty: false,
   T1: true,
   T0: false,
+  page_size: 5000,
 };
 
+// Cache simple para paneles BYMA: evita N*3 fetches concurrentes cuando
+// virtualPortfolios hace Promise.all(N getQuote). TTL 30s + dedup inflight.
+const PANEL_TTL_MS = 30_000;
+const QUOTE_TIMEOUT_MS = 4_000;
+
 export class BymaDataProvider implements IolProvider {
-  private async postPanel(endpoint: string): Promise<BymaInstrument[]> {
-    const res = await fetch(`${API_BASE}/${endpoint}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json, text/plain, */*",
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
-        Referer: "https://open.bymadata.com.ar/",
-        Origin: "https://open.bymadata.com.ar",
-      },
-      body: JSON.stringify(REQUEST_BODY),
-    });
+  // Cache de paneles (endpoint -> datos + expiración) + dedup de requests inflight
+  private panelCache = new Map<string, { data: BymaInstrument[]; expiresAt: number }>();
+  private panelInflight = new Map<string, Promise<BymaInstrument[]>>();
+
+  private async postPanel(endpoint: string, signal?: AbortSignal): Promise<BymaInstrument[]> {
+    // Hit de cache
+    const cached = this.panelCache.get(endpoint);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.data;
+    }
+    // Dedup: si ya hay un fetch inflight para este endpoint, reutilizarlo
+    const inflight = this.panelInflight.get(endpoint);
+    if (inflight) return inflight;
+
+    const promise = this.fetchPanel(endpoint, signal);
+    this.panelInflight.set(endpoint, promise);
+    try {
+      const data = await promise;
+      this.panelCache.set(endpoint, { data, expiresAt: Date.now() + PANEL_TTL_MS });
+      return data;
+    } finally {
+      this.panelInflight.delete(endpoint);
+    }
+  }
+
+  private async fetchPanel(endpoint: string, outerSignal?: AbortSignal): Promise<BymaInstrument[]> {
+    // AbortSignal con timeout 4s + propagación de signal externo si existe
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), QUOTE_TIMEOUT_MS);
+    const onOuterAbort = () => controller.abort();
+    if (outerSignal) {
+      if (outerSignal.aborted) controller.abort();
+      else outerSignal.addEventListener("abort", onOuterAbort, { once: true });
+    }
+    // También soportar AbortSignal.timeout si está disponible como fallback
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE}/${endpoint}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json, text/plain, */*",
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+          Referer: "https://open.bymadata.com.ar/",
+          Origin: "https://open.bymadata.com.ar",
+        },
+        body: JSON.stringify(REQUEST_BODY),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+      outerSignal?.removeEventListener("abort", onOuterAbort);
+    }
 
     if (!res.ok) {
       throw new Error(`BYMADATA ${endpoint}: HTTP ${res.status}`);
@@ -123,8 +179,11 @@ export class BymaDataProvider implements IolProvider {
 
   private mapInstrument(i: BymaInstrument, market: string, assetType: string): PanelQuote {
     const symbol = (i.symbol ?? i.ticker ?? "").toUpperCase();
-    const lastPrice = Number(i.trade ?? 0);
+    const tradePx = Number(i.trade ?? 0);
     const prevClose = Number(i.previousClosingPrice ?? i.previousSettlementPrice ?? 0);
+    // Fin de semana / sin volumen: BYMA devuelve trade 0 pero previousClosingPrice tiene el cierre.
+    // Mostrar el último cierre como lastPrice para que el instrumento no desaparezca fuera de horario.
+    const lastPrice = tradePx > 0 ? tradePx : prevClose > 0 ? prevClose : 0;
     const variationPct =
       prevClose > 0 && lastPrice > 0
         ? ((lastPrice - prevClose) / prevClose) * 100
@@ -134,7 +193,7 @@ export class BymaDataProvider implements IolProvider {
 
     return {
       symbol,
-      name: (i.description || i.name || INSTRUMENT_NAMES[symbol] || symbol).trim(),
+      name: (i.description || i.name || getInstrumentDisplayName(symbol)).trim(),
       assetType: mapAssetType(assetType, symbol),
       market: mapMarket(market),
       lastPrice,
@@ -188,12 +247,13 @@ export class BymaDataProvider implements IolProvider {
     const instruments = await this.postPanel(endpoint);
     const marketOpen = await this.getMarketOpen();
 
-    // Paginación local: BYMADATA pagina en bloques, nosotros tomamos la
-    // página del array completo (consistente entre endpoints)
+    // Paginación local: con page_size=5000 BYMA trae el panel completo en una call.
+    // Mapeamos todo y filtramos solo vacío (symbol vacío). El fallback de lastPrice
+    // a previousClosingPrice en mapInstrument asegura que weekend no filtre todo.
     const allQuotes = instruments
       .filter((i) => (i.symbol ?? i.ticker ?? "") !== "")
       .map((i) => this.mapInstrument(i, market, assetType))
-      .filter((q) => q.lastPrice > 0); // descartar sin precio
+      .filter((q) => q.lastPrice > 0 || q.close != null);
 
     // Búsqueda server-side: filtra por símbolo o nombre ANTES de paginar,
     // así "NVDA" aparece aunque viva en la página 20 del panel completo.
@@ -229,15 +289,18 @@ export class BymaDataProvider implements IolProvider {
   }
 
   async getQuote(_creds: IolCredentials, symbol: string, market: string): Promise<Quote> {
-    // Buscar el símbolo en los paneles disponibles
-    const panels: BymaInstrument[][] = [];
-    try {
-      panels.push(await this.postPanel("leading-equity"));
-      panels.push(await this.postPanel("cedears"));
-      panels.push(await this.postPanel("public-bonds"));
-    } catch {
-      // si fallan los paneles, devolvemos cotización vacía honesta
-    }
+    // Buscar el símbolo en los paneles disponibles — 3 fetches en paralelo
+    // con timeout 4s c/u (gestionado en fetchPanel) y tolerancia a fallo parcial.
+    // Gracias al cache + dedup inflight, N posiciones concurrentes comparten
+    // los mismos 3 fetches en vez de N*3.
+    const endpoints = ["leading-equity", "cedears", "public-bonds"] as const;
+    const settled = await Promise.allSettled(
+      endpoints.map((ep) => this.postPanel(ep))
+    );
+    const panels: BymaInstrument[][] = settled
+      .filter((r): r is PromiseFulfilledResult<BymaInstrument[]> => r.status === "fulfilled")
+      .map((r) => r.value);
+    // Si todos fallan, panels queda vacío y se devuelve cotización 0 honesta abajo
 
     const target = symbol.toUpperCase();
     const found = panels.flat().find((i) => (i.symbol ?? i.ticker ?? "").toUpperCase() === target);
@@ -260,16 +323,19 @@ export class BymaDataProvider implements IolProvider {
       };
     }
 
+    const tradePx = Number(found.trade ?? 0);
+    const prevClose = Number(found.previousClosingPrice ?? found.previousSettlementPrice ?? 0);
+    const effPrice = tradePx > 0 ? tradePx : prevClose > 0 ? prevClose : 0;
     return {
       symbol: target,
       market: mapMarket(market),
-      lastPrice: Number(found.trade ?? 0),
+      lastPrice: effPrice,
       variationPct:
-        Number(found.previousClosingPrice ?? 0) > 0 && Number(found.trade ?? 0) > 0
-          ? ((Number(found.trade) - Number(found.previousClosingPrice)) / Number(found.previousClosingPrice)) * 100
+        prevClose > 0 && effPrice > 0
+          ? ((effPrice - prevClose) / prevClose) * 100
           : 0,
       currency: found.denominationCcy === "USD" ? "USD" : "ARS",
-      name: (found.description || found.name || INSTRUMENT_NAMES[target] || undefined)?.trim() || undefined,
+      name: (found.description || found.name || getInstrumentDisplayName(target) || undefined)?.trim() || undefined,
       updatedAt: new Date().toISOString(),
       bid: found.bidPrice != null ? Number(found.bidPrice) : null,
       ask: found.offerPrice != null ? Number(found.offerPrice) : null,
@@ -350,34 +416,9 @@ export class BymaDataProvider implements IolProvider {
   }
 
   private normalizeFichaToSchedule(symbol: string, ficha: BymaFicha | null): BondSchedule {
-    if (!ficha) {
-      // Ficha vacía: devolver placeholder sin cashflows — caller hará fallback MAE
-      return buildSchedule({
-        symbol,
-        moneda: inferMoneda(null),
-        tipo: inferTipo(null),
-        vencimiento: inferVencimientoFallback(symbol),
-        cashflows: [],
-        cerAjustado: false,
-      });
-    }
-
-    const moneda = inferMoneda(ficha);
-    const tipo = inferTipo(ficha);
-    const vencimiento = parseFecha(ficha.fechaVencimiento) ?? inferVencimientoFallback(symbol);
-    const cerAjustado = isCerFicha(ficha);
-
-    // Intentar inferir cashflows desde formaAmortizacion / interes texto
-    const cashflows = parseCashflowsFromFicha(ficha, vencimiento);
-
-    return buildSchedule({
-      symbol,
-      moneda,
-      tipo,
-      vencimiento,
-      cashflows,
-      cerAjustado,
-    });
+    // Delegar al parser dedicado T-006 (soporta callable + step-up range)
+    // Mantener compat con BymaFicha local type → castear a parser type
+    return parseBymaFichaToSchedule(symbol, ficha as unknown as BymaFichaParserType | null);
   }
 
   private async fetchMaeDetalleFallback(symbol: string, signal?: AbortSignal): Promise<BondCashflow[] | null> {
@@ -520,213 +561,59 @@ export interface BymaFicha {
   default?: string;
 }
 
-export interface ParsedCoupon {
-  rate: number;
-  frequency: 1 | 2 | 4;
-  dayCount: "30/360" | "Actual/365";
-  lastCouponDate?: string | null;
+// Re-export thin wrappers delegando al parser dedicado (T-006 compat)
+// Mantiene import path estable para tests legacy (import from BymaDataProvider)
+export type { ParsedCoupon, ParsedAmortizacion } from "../market/bonds/bymaFichaParser.js";
+export function parseInteresToCouponRate(raw: string | null | undefined): import("../market/bonds/bymaFichaParser.js").ParsedCoupon | null {
+  return parseInteresImpl(raw);
 }
-
-export interface ParsedAmortizacion {
-  tipo: "bullet" | "amortizable";
-  cuotas: number | null;
-  frequency: 1 | 2 | 4 | null;
-  raw: string;
+export function parseFormaAmortizacion(raw: string | null | undefined): import("../market/bonds/bymaFichaParser.js").ParsedAmortizacion {
+  return parseFormaImpl(raw) as import("../market/bonds/bymaFichaParser.js").ParsedAmortizacion;
 }
-
-/**
- * Parser puro de campo `interes` de BYMA ficha.
- * Fixtures:
- *  AL30: "0,50% semestral" o "Cupón 0,5% semestral 30/360"
- *  GD35: "1,00% step-up semestral" / similar
- *  TX26: "CER + 1,50%" / "Ajuste CER 1,5%"
- *  T2X5: "CER + 2,00%"
- *  S31L6: "A descuento" / "—" → null
- *  BPOA7: "—" / fijo 0 → null o tasa
- */
-export function parseInteresToCouponRate(raw: string | null | undefined): ParsedCoupon | null {
-  if (!raw) return null;
-  const s = String(raw).trim();
-  if (!s || s === "—" || s === "-" || s === "--") return null;
-  const low = s.toLowerCase();
-  // LECAP a descuento → sin cupón
-  if (low.includes("descuento") || low.includes("a discount") || low.includes("cero cupon") || low.includes("cero cupón") || low.includes("zero")) {
-    return null;
-  }
-  // Buscar tasa % — soporta "0,50%", "0.50 %", "1,5%"
-  const pctMatch = s.match(/(\d+[.,]\d+|\d+)\s*%/);
-  if (!pctMatch) {
-    // Sin % no es parseable como cupón (evita falsos positivos con "CER")
-    // TX26 puede venir como "1,50% + CER" — ya cubierto; si solo dice "CER" → null
-    return null;
-  }
-  const numStr = pctMatch[1]!.replace(",", ".");
-  const pct = Number(numStr);
-  if (!Number.isFinite(pct)) return null;
-  const rate = pct / 100;
-
-  // Frecuencia
-  let frequency: 1 | 2 | 4 = 2; // default bonos USD semestral
-  if (low.includes("trimestral") || low.includes("trimestre")) frequency = 4;
-  else if (low.includes("semestral") || low.includes("semestre") || low.includes("6 meses")) frequency = 2;
-  else if (low.includes("anual") || low.includes("annual")) frequency = 1;
-  else if (low.includes("mensual")) frequency = 1; // map mensual → 1 para dayCount anual
-
-  // DayCount: USD hard-dollar → 30/360, ARS/CER → Actual/365
-  const isCer = low.includes("cer") || low.includes("uv");
-  const isUsdHint = low.includes("dolar") || low.includes("dólar") || low.includes("usd");
-  const dayCount: "30/360" | "Actual/365" = isCer ? "Actual/365" : isUsdHint ? "30/360" : low.includes("30/360") ? "30/360" : low.includes("actual") ? "Actual/365" : "30/360";
-
-  // lastCouponDate — intentar extraer fecha ISO si viene explícita (DD/MM/YYYY o YYYY-MM-DD)
-  let lastCouponDate: string | null = null;
-  const isoMatch = s.match(/(\d{4}-\d{2}-\d{2})/);
-  if (isoMatch) lastCouponDate = isoMatch[1]!;
-  else {
-    const dmy = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-    if (dmy) {
-      const dd = dmy[1]!.padStart(2, "0");
-      const mm = dmy[2]!.padStart(2, "0");
-      const yyyy = dmy[3]!;
-      lastCouponDate = `${yyyy}-${mm}-${dd}`;
-    }
-  }
-
-  return { rate, frequency, dayCount, lastCouponDate };
-}
-
-export function parseFormaAmortizacion(raw: string | null | undefined): ParsedAmortizacion {
-  const s = String(raw ?? "").trim();
-  const low = s.toLowerCase();
-  if (!s || s === "—") return { tipo: "bullet", cuotas: 1, frequency: null, raw: s };
-  if (low.includes("al vencimiento") || low.includes("integra al vencimiento") || low.includes("bullet") || low.includes("pago único") || low.includes("pago unico")) {
-    return { tipo: "bullet", cuotas: 1, frequency: null, raw: s };
-  }
-  // LECAP bullet implícito por tipo letra
-  if (low.includes("letra") && !low.includes("cuota")) {
-    return { tipo: "bullet", cuotas: 1, frequency: null, raw: s };
-  }
-  const cuotasMatch = low.match(/(\d+)\s*cuotas?/);
-  if (cuotasMatch) {
-    const n = Number(cuotasMatch[1]);
-    if (Number.isFinite(n) && n > 1 && n <= 60) {
-      let freq: 1 | 2 | 4 | null = 2;
-      if (low.includes("trimestral")) freq = 4;
-      else if (low.includes("semestral") || low.includes("semestre")) freq = 2;
-      else if (low.includes("anual")) freq = 1;
-      return { tipo: "amortizable", cuotas: n, frequency: freq, raw: s };
-    }
-  }
-  if (low.includes("cuota") || low.includes("amortiz")) {
-    return { tipo: "amortizable", cuotas: null, frequency: 2, raw: s };
-  }
-  return { tipo: "bullet", cuotas: 1, frequency: null, raw: s };
-}
-
+// Helpers internos ahora delegados — wrappers para compat
 function parseFecha(raw?: string): string | null {
   if (!raw) return null;
-  // "2026-12-31 00:00:00.0" → "2026-12-31"
   const iso = raw.slice(0, 10);
   if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
-  // fallback: try Date parse
   const d = new Date(raw);
   if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
   return null;
 }
-
 function inferVencimientoFallback(symbol: string): string {
-  // LECAP S31L6 → 2026-?? ; usar +1 año si no se conoce
   const d = new Date();
   d.setFullYear(d.getFullYear() + 1);
   return d.toISOString().slice(0, 10);
 }
-
 function inferMoneda(ficha: BymaFicha | null): "ARS" | "USD" {
   const m = (ficha?.moneda ?? "").toLowerCase();
   if (m.includes("dolar")) return "USD";
   if (m.includes("usd") || m.includes("dólar")) return "USD";
   if (m.includes("dolar linked")) return "USD";
-  // "Pesos", "Pesos Ajustables por CER" → ARS
   return "ARS";
 }
-
 function isCerFicha(ficha: BymaFicha | null): boolean {
   if (!ficha) return false;
   const hay = `${ficha.moneda ?? ""} ${ficha.interes ?? ""} ${ficha.formaAmortizacion ?? ""}`.toLowerCase();
   return hay.includes("cer") || hay.includes("uv") || hay.includes("ajustable");
 }
-
 function inferTipo(ficha: BymaFicha | null): BondSchedule["tipo"] {
   if (!ficha) return "bullet";
   const texto = `${ficha.formaAmortizacion ?? ""} ${ficha.interes ?? ""}`.toLowerCase();
+  if (texto.includes("rescat") || texto.includes("callable")) return "callable" as BondSchedule["tipo"];
   if (isCerFicha(ficha)) return "cer";
   if (texto.includes("step") || texto.includes("escalon")) return "step-up";
   if (texto.includes("al vencimiento") || texto.includes("bullet") || texto.includes("integra al vencimiento")) return "bullet";
   if (texto.includes("cuota") || texto.includes("amortiz")) return "amortizable";
-  // fallback por moneda/tipo especie
   if ((ficha.tipoEspecie ?? "").toLowerCase().includes("letra")) return "bullet";
   return "amortizable";
 }
-
 function inferMaeTipo(detalle: BondCashflow[]): BondSchedule["tipo"] {
-  if (detalle.length === 1) return "bullet";
-  return "amortizable";
+  return inferMaeTipoFromParser(detalle);
 }
-
 function parseCashflowsFromFicha(ficha: BymaFicha, vencimiento: string): BondCashflow[] {
-  const texto = (ficha.formaAmortizacion ?? "").toLowerCase();
-
-  // Bullet: un único flujo al vencimiento
-  if (texto.includes("al vencimiento") || texto.includes("integra al vencimiento") || texto.includes("bullet")) {
-    // LECAP/BONCAP bullet: cashFlow ≈ 100 + cupón desconocido → usar 100 como placeholder
-    // El motor local refinará con precio/ma; mae detalle dará valor real si existe
-    return [
-      {
-        fechaPago: vencimiento,
-        renta: 0,
-        amortizacion: 100,
-        cashFlow: 100,
-        vr: 0,
-      },
-    ];
-  }
-
-  // Intentar parsear "N cuotas semestrales iguales el 9 de enero y 9 de julio desde julio 2027 hasta enero 2038"
-  // Heurística: buscar número de cuotas
-  const cuotasMatch = texto.match(/(\d+)\s*cuotas?/);
-  if (cuotasMatch) {
-    const n = Number(cuotasMatch[1]);
-    if (Number.isFinite(n) && n > 1 && n <= 60) {
-      // Generar n flujos iguales semestrales hasta vencimiento (placeholder amortización 100/n)
-      const amortUnit = 100 / n;
-      const flujos: BondCashflow[] = [];
-      const venc = new Date(vencimiento + "T00:00:00.000Z");
-      for (let i = n - 1; i >= 0; i--) {
-        const d = new Date(venc);
-        d.setUTCMonth(d.getUTCMonth() - i * 6);
-        const fechaPago = d.toISOString().slice(0, 10);
-        flujos.push({
-          fechaPago,
-          renta: 0, // cupón no disponible en ficha texto → 0; MAE fallback lo corrige
-          amortizacion: amortUnit,
-          cashFlow: amortUnit,
-          vr: Math.max(0, 100 - amortUnit * (n - i - 1)),
-        });
-      }
-      // Filtrar fechas futuras respecto a emisión si se conoce
-      return flujos;
-    }
-  }
-
-  // Sin patrón reconocido → devolver bullet al vencimiento (fallback MAE cubrirá)
-  return [
-    {
-      fechaPago: vencimiento,
-      renta: 0,
-      amortizacion: 100,
-      cashFlow: 100,
-      vr: 0,
-    },
-  ];
+  // Delegar al parser dedicado si disponible, fallback simple bullet
+  const parsed = parseBymaFichaToSchedule("TMP", ficha as unknown as import("../market/bonds/bymaFichaParser.js").BymaFicha | null, { vencimientoOverride: vencimiento });
+  return parsed.cashflows.length ? parsed.cashflows : [{ fechaPago: vencimiento, renta: 0, amortizacion: 100, cashFlow: 100, vr: 0 }];
 }
 
 // ============================================================

@@ -1,4 +1,4 @@
-import { INSTRUMENT_NAMES } from "./instrumentNames.js";
+import { getInstrumentDisplayName } from "./instrumentNames.js";
 import type { IolProvider } from "./IolProvider.js";
 import type {
   IolCredentials,
@@ -186,11 +186,14 @@ export class MockIolProvider implements IolProvider {
     };
     const lastPrice = basePrices[symbol] ?? 100;
     const variationPct = (Math.random() - 0.45) * 3; // entre -1.35% y +1.65%
+    const displayName = getInstrumentDisplayName(symbol);
+    const normSymbol = symbol.trim().toUpperCase();
+    const resolvedName = displayName !== normSymbol ? displayName : undefined;
 
     return {
       symbol,
       market: market as Quote["market"],
-      name: INSTRUMENT_NAMES[symbol] ?? undefined,
+      name: resolvedName,
       lastPrice,
       variationPct,
       currency: market === "bcba" || market === "bonds" ? "ARS" : "USD",

@@ -9,6 +9,7 @@ import {
   getLatestQuotesSnapshot,
 } from "../services/market/quotesSnapshotStore.js";
 import { isMarketHours } from "../services/market/isMarketHours.js";
+import { getInstrumentDisplayName } from "../services/iol/instrumentNames.js";
 import type { PanelQuote, PanelSummary } from "../services/iol/types.js";
 
 const router = Router();
@@ -24,10 +25,28 @@ const quoteParamsSchema = z.object({
 // — histórico de precios para el gráfico del detalle
 // ============================================================
 
+function parseRangeToDaysQuote(range: unknown, fallback: number): number {
+  if (typeof range === "string" && /^\d+d$/.test(range.trim())) {
+    const n = Number(range.trim().slice(0, -1));
+    if (Number.isFinite(n) && n > 0) return Math.min(n, 365);
+  }
+  if (typeof range === "string" && /^\d+m$/.test(range.trim())) {
+    const n = Number(range.trim().slice(0, -1));
+    if (Number.isFinite(n) && n > 0) return Math.min(n * 30, 365);
+  }
+  return fallback;
+}
+
 router.get("/:symbol/history", async (req: Request, res: Response) => {
   const symbolParam = req.params.symbol;
   const symbol = Array.isArray(symbolParam) ? symbolParam[0] : symbolParam;
-  const days = Math.min(Number(req.query.days ?? 90), 365);
+  const rangeParam = typeof req.query.range === "string" ? req.query.range : undefined;
+  if (rangeParam && !/^\d+[dm]$/.test(rangeParam.trim())) {
+    res.status(400).json({ error: "Formato de range inválido. Usá 30d, 90d" });
+    return;
+  }
+  const daysFromRange = rangeParam ? parseRangeToDaysQuote(rangeParam, 90) : null;
+  const days = daysFromRange ?? Math.min(Number(req.query.days ?? 90), 365);
   const market = (req.query.market as string) ?? "bcba";
 
   try {
@@ -135,9 +154,10 @@ router.get("/panel/:market/:assetType", async (req: Request, res: Response) => {
     return;
   }
 
-  // Paginación: page empieza en 1, pageSize entre 10 y 100
+  // Paginación: BYMA ya trae panel completo con page_size=5000; acá paginamos local.
+  // Range amplio (10-5000) para que snapshot y InstrumentPicker puedan pedir 5000 sin clamp a 100.
   const page = Math.max(1, Number(req.query.page ?? 1));
-  const pageSize = Math.min(100, Math.max(10, Number(req.query.pageSize ?? 25)));
+  const pageSize = Math.min(5000, Math.max(10, Number(req.query.pageSize ?? 25)));
   // Búsqueda server-side por símbolo/nombre (filtra ANTES de paginar)
   const q = (req.query.q as string | undefined)?.trim() || undefined;
 
@@ -189,6 +209,25 @@ router.get("/panel/:market/:assetType", async (req: Request, res: Response) => {
 // Fallback: snapshot del cierre cuando BYMA falla o devuelve vacío
 // ============================================================
 
+/**
+ * Re-resuelve `name` contra el catálogo actual (instrumentNames).
+ * El catálogo SIEMPRE gana sobre el snapshot: nombres viejos incorrectos
+ * guardados en DB (ej. "Apple Inc. CEDEAR" para AALD) se corrigen al vuelo.
+ * Si getInstrumentDisplayName retorna == symbol (catálogo no lo conoce),
+ * preservamos el nombre cacheado tal cual.
+ */
+export function resolveSnapshotQuoteName(quote: PanelQuote): PanelQuote {
+  const resolved = getInstrumentDisplayName(quote.symbol);
+  if (resolved !== quote.symbol) {
+    return { ...quote, name: resolved };
+  }
+  return quote;
+}
+
+export function resolveSnapshotQuoteNames(quotes: PanelQuote[]): PanelQuote[] {
+  return quotes.map(resolveSnapshotQuoteName);
+}
+
 async function tryServeCachedPanel(
   market: string,
   assetType: string,
@@ -214,7 +253,7 @@ async function tryServeCachedPanel(
 
     const total = filtered.length;
     const start = (page - 1) * pageSize;
-    const quotes = filtered.slice(start, start + pageSize);
+    const quotes = resolveSnapshotQuoteNames(filtered.slice(start, start + pageSize));
 
     const labelDate = formatSnapshotDate(snapshot.capturedAt);
     return {
@@ -250,7 +289,7 @@ async function tryServeCachedQuote(
       variationPct: q.variationPct,
       currency: q.currency,
       updatedAt: hit.capturedAt,
-      name: q.name,
+      name: resolveSnapshotQuoteName(q).name,
       bid: q.bid,
       ask: q.ask,
       open: q.open,

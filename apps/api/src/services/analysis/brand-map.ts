@@ -2,11 +2,16 @@
 // brand-map.ts (API) — Symbol → Brandfetch domain mapping (mirror dashboard)
 // Pure, sin fetch — usado solo para isBond gate / validación server-side si se necesita
 // Fuente única: apps/dashboard/src/lib/brand-map.ts — este es mirror para el backend
+// TODO(domain/ticker): Unificar normalización a domain/ticker compartido.
+// Cuando exista package compartido `domain/ticker` (o alias), delegar
+// getBaseSymbol / getInstrumentDisplayName a apps/api/src/services/iol/instrumentNames.ts
+// para evitar divergencia (CEDEAR C/D → base). Por ahora duplicamos lógica con comentario.
 // ============================================================
 
 /**
  * Strippea sufijos de mercado antes de lookup.
  * Ej: VALE.CI -> VALE, VRTX.CI -> VRTX
+ * TODO: Migrar a getBaseSymbol/instrumentNames cuando haya domain compartido.
  */
 export function stripMarketSuffix(symbol: string): string {
   return symbol.trim().toUpperCase().replace(/\.(CI|BA|BR|AR|US)$/i, "");
@@ -14,9 +19,12 @@ export function stripMarketSuffix(symbol: string): string {
 
 export const CEDEAR_DOMAIN_MAP: Record<string, string> = {
   AAPL: "apple.com",
-  // Variante BYMA/CEDEAR con sufijo D (ej: AALD en panel CEDEARs = Apple Inc.)
-  AALD: "apple.com",
   AAPLD: "apple.com",
+  // American Airlines Group (BYMA panel CEDEARs: AAL ARS / AALC CCL / AALD MEP).
+  // NO es Apple — verificado contra open.bymadata.com.ar (22/08/2026).
+  AAL: "aa.com",
+  AALC: "aa.com",
+  AALD: "aa.com",
   MSFT: "microsoft.com",
   GOOGL: "google.com",
   GOOG: "google.com",
