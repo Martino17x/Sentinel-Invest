@@ -25,3 +25,20 @@ export {
   getBaseSymbol,
   type DisplayNameSources,
 } from "./catalog/names";
+export {
+  AR_DOMAIN_MAP,
+  BOND_SYMBOLS,
+  CEDEAR_DOMAIN_MAP,
+  SYMBOL_DOMAIN_MAP,
+  getBrandDomain,
+  getCanonicalTicker,
+  getGoogleFaviconUrl,
+  isBond,
+  stripMarketSuffix,
+} from "./brand/domains";
+export type { BrandTheme } from "./brand/domains";
+export {
+  symbolToBrandfetchDomainUrl,
+  symbolToBrandfetchTickerUrl,
+  symbolToBrandfetchUrl,
+} from "./brand/brandfetch";
