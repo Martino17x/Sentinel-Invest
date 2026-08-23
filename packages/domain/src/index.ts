@@ -2,4 +2,10 @@
  * @sentinel/domain — núcleo de dominio compartido (settlements, tickers,
  * catálogo CEDEAR, brands). Package source-only sin deps runtime.
  */
-export {};
+export {
+  resolveBaseSymbol,
+  resolveSettlementSuffix,
+  type BaseSources,
+  type SettlementType,
+} from "./settlement";
+export { normalizeSymbol } from "./ticker";
