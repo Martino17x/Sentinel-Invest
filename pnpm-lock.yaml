@@ -213,6 +213,24 @@ importers:
         specifier: ^5.8.0
         version: 5.9.3
 
+  packages/domain:
+    devDependencies:
+      '@sentinel/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
+      '@sentinel/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.13.3
+      tsx:
+        specifier: ^4.19.0
+        version: 4.23.12
+      typescript:
+        specifier: ^5.8.0
+        version: 5.9.3
+
   packages/eslint-config:
     dependencies:
       '@eslint/js':
