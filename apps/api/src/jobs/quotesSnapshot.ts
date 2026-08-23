@@ -51,8 +51,8 @@ export function makeQuotesSnapshotDeps(
   const dummyCreds = { username: "", password: "" };
   return {
     fetchPanel: async (market: string, assetType: string) => {
-      // pageSize grande para capturar el panel completo (BYMA pagina local)
-      const result = await provider.getPanel(dummyCreds, market, assetType, 1, 100);
+      // Panel completo: BYMA ignora page pero respeta page_size. 5000 trae todo (1018 bonos, ~2000 cedears).
+      const result = await provider.getPanel(dummyCreds, market, assetType, 1, 5000);
       return result as unknown as { summary: unknown; quotes: unknown[]; total?: number };
     },
     saveSnapshot: saveQuotesSnapshot,
