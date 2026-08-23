@@ -9,3 +9,19 @@ export {
   type SettlementType,
 } from "./settlement";
 export { normalizeSymbol } from "./ticker";
+export {
+  CEDEAR_RATIOS,
+  RATIO_MAP,
+  getRatio,
+  type CedearRatio,
+} from "./catalog/ratios";
+export { INSTRUMENT_NAMES } from "./catalog/names.manual";
+export {
+  GENERATED_CEDEAR_NAMES,
+  DEFAULT_DISPLAY_SOURCES,
+  resolveDisplayName,
+  getInstrumentDisplayName,
+  getSettlementSuffix,
+  getBaseSymbol,
+  type DisplayNameSources,
+} from "./catalog/names";
