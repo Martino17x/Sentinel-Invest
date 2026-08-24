@@ -342,6 +342,23 @@ export async function getCerCoefficient(fechaValor?: string, signal?: AbortSigna
   return q.valor;
 }
 
+// TODO T-007: WIP wrapper dinámico — delega a getCerCoefficient/getCER.
+// Preserva tests (retorna CER valor como coefficient=1.0-neutral si BCRA cae).
+// Callers duration.ts:172 y tir.ts:259 esperan { coefficient }.
+export async function getDynamicCerCoefficient(
+  fechaValor?: string,
+  signal?: AbortSignal,
+): Promise<{ coefficient: number; valor: number; fecha: string; source: string; stale?: boolean; cached?: boolean }> {
+  try {
+    const q = await getCER(fechaValor, signal);
+    return { coefficient: q.valor, valor: q.valor, fecha: q.fecha, source: q.source, stale: q.stale, cached: q.cached };
+  } catch {
+    // WIP placeholder: coeficiente neutro 1.0 si BCRA+INDEC caen
+    const key = normalizeFechaValor(fechaValor);
+    return { coefficient: 1.0, valor: 1.0, fecha: key, source: "stub (T-007)", stale: true, cached: false };
+  }
+}
+
 // Sólo para tests: limpia caches e in-flight
 export function resetCerCacheForTests(): void {
   cerCache.resetForTests();

@@ -24,7 +24,7 @@ import { artTodayKey } from "../portafolio/art-time.js";
 export interface BondAnalyticsSnapshotPayload {
   analytics: BondAnalytics[];
   curves: Record<string, CurvePoint[]>;
-  panelSnapshot?: import("../services/market/bonds/types.js").BondPanelResponse | null;
+  panelSnapshot?: import("../../services/market/bonds/types.js").BondPanelResponse | null;
 }
 
 export interface BondAnalyticsSnapshotDeps {

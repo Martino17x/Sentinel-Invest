@@ -119,7 +119,7 @@ export const getBondFichaTool: ToolDefinition = {
     let frequency: 1 | 2 | 4 | null = null;
     let dayCountPc: "30/360" | "Actual/365" = finalSchedule.moneda === "USD" ? "30/360" : "Actual/365";
     let nextCouponDate: string | null = null;
-    let scheduleSource: import("../../market/bonds/types.js").BondCuadroTecnico["scheduleSource"] = maeAnalytic
+    let scheduleSource: import("../../../services/market/bonds/types.js").BondCuadroTecnico["scheduleSource"] = maeAnalytic
       ? "mae"
       : fichaRaw
         ? "byma"
@@ -154,7 +154,7 @@ export const getBondFichaTool: ToolDefinition = {
     }
 
     const cuadroRes = calcCuadroTecnico({ dirtyPrice, vr: lastVr, accrued });
-    const cuadroTecnico: import("../../market/bonds/types.js").BondCuadroTecnico = {
+    const cuadroTecnico: import("../../../services/market/bonds/types.js").BondCuadroTecnico = {
       vt: cuadroRes.vt,
       vr: lastVr,
       paridad: cuadroRes.paridad,

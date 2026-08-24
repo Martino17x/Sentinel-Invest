@@ -61,7 +61,7 @@ export const getBondPanelTool: ToolDefinition = {
     let rows = fullRows;
 
     if (segment) {
-      rows = rows.filter((r) => inferSegment(r as unknown as import("../../market/bonds/types.js").BondAnalytics) === segment);
+      rows = rows.filter((r) => inferSegment(r as unknown as import("../../../services/market/bonds/types.js").BondAnalytics) === segment);
     }
 
     rows = sortRowsNullsLast(rows, sort, order as "asc" | "desc");
