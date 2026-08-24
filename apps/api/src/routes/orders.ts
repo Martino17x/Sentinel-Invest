@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { requireAuth } from "../middleware/auth.js";
 import { getIolProvider } from "../services/iol/index.js";
+import type { TradingPort, OperationsPort } from "../services/iol/ports.js";
 import { getIolCredentials } from "../lib/iol-credentials.js";
 import { auditAgentAction } from "../services/agent/audit.js";
 

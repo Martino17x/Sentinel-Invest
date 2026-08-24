@@ -1,10 +1,11 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { requireAuth } from "../middleware/auth.js";
-import { BONDS_ANALYTICS_ENABLED, BONDS_PANEL_ENABLED } from "../config.js";
+import { BONDS_ANALYTICS_ENABLED, BONDS_PANEL_ENABLED, BONDS_COMPARE_ENABLED, BONDS_ONS_ENABLED } from "../config.js";
 import { isMarketHours } from "../services/market/isMarketHours.js";
 import { pool } from "../db/index.js";
-import { BymaDataProvider, parseInteresToCouponRate } from "../services/iol/BymaDataProvider.js";
+import { BymaDataProvider } from "../services/iol/BymaDataProvider.js";
+import { parseInteresToCouponRate } from "../domain/bonos/ficha.js";
 import { getMaeAnalyticsForSymbol } from "../services/market/bonds/maeFlujo.js";
 import { VALID_SEGMENTS, inferSegment } from "../services/market/bonds/curve.js";
 import { getCER } from "../services/market/bonds/cer.js";
@@ -18,6 +19,7 @@ import {
   bondsCurveCache,
   bondsCashflowCache,
   bondsPanelCache,
+  bondsCompareCache,
   fetchBondAnalytics,
   fetchCurvePoints,
   fetchBondPanel,
@@ -34,10 +36,11 @@ import {
   sortRowsNullsLast,
   resetBondsCacheForTests as resetBondsQueriesForTests,
 } from "../services/market/bonds/bondsQueries.js";
+import { fitNelsonSiegelSvensson } from "../services/market/bonds/nelsonSiegel.js";
 
 // Re-export for tests that imported from routes (preserve API)
 export { getSortValue, sortRowsNullsLast, panelQuerySchema };
-export { bondsAnalyticsCache, bondsCurveCache, bondsCashflowCache, bondsPanelCache, DISCLAIMER, PANEL_CACHE_KEY };
+export { bondsAnalyticsCache, bondsCurveCache, bondsCashflowCache, bondsPanelCache, bondsCompareCache, DISCLAIMER, PANEL_CACHE_KEY };
 
 const router = Router();
 
@@ -76,11 +79,299 @@ export function resetBondsCacheForTests(): void {
 }
 
 // ---------------------------------------------------------------------------
+// GET /api/bonds/compare?symbols=AL30,GD30  (2-4, >4 ->400) — before :symbol
+// ---------------------------------------------------------------------------
+
+const compareQuerySchema = z.object({
+  symbols: z.string().min(1),
+});
+
+router.get("/compare", async (req: Request, res: Response) => {
+  if (!BONDS_COMPARE_ENABLED) {
+    res.status(404).json({ error: "Comparador no habilitado", code: "BONDS_COMPARE_DISABLED" });
+    return;
+  }
+  const parsed = compareQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Parámetro symbols requerido (2-4 separados por coma)", code: "COMPARE_SYMBOLS_INVALID" });
+    return;
+  }
+  const raw = parsed.data.symbols;
+  const symbols = raw
+    .split(",")
+    .map((s) => s.trim().toUpperCase())
+    .filter(Boolean);
+  const unique = [...new Set(symbols)];
+  if (unique.length < 2 || unique.length > 4) {
+    res.status(400).json({ error: "Comparador requiere entre 2 y 4 símbolos", code: "too_many_symbols" });
+    return;
+  }
+  for (const s of unique) {
+    if (!/^[A-Z0-9]{2,12}$/.test(s)) {
+      res.status(400).json({ error: `Símbolo inválido: ${s}`, code: "SYMBOL_INVALID" });
+      return;
+    }
+  }
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("X-Disclaimer", DISCLAIMER);
+  res.setHeader("Disclaimer", DISCLAIMER);
+
+  const sortedKey = [...unique].sort().join(",");
+  const cacheKey = `bonds:compare:${sortedKey}`;
+  const entry = bondsCompareCache.getEntry(cacheKey);
+  if (entry && bondsCompareCache.isFresh(entry)) {
+    res.setHeader("X-Cache", "HIT");
+    res.json({ ...entry.data, symbols: unique, disclaimer: DISCLAIMER, isMarketClosed: !isMarketHours(new Date()) });
+    return;
+  }
+  if (entry) {
+    // stale serve + background refresh
+    res.setHeader("X-Cache", "STALE");
+    res.json({ ...entry.data, symbols: unique, disclaimer: DISCLAIMER, isMarketClosed: !isMarketHours(new Date()), stale: true });
+    void Promise.all(unique.map((s) => fetchBondAnalytics(s).catch(() => null))).then((fresh) => {
+      const valid = fresh.filter(Boolean) as BondAnalytics[];
+      if (valid.length === unique.length) {
+        const diff = buildCompareDiff(valid);
+        bondsCompareCache.set(cacheKey, { analytics: valid, diff, generatedAt: new Date().toISOString() });
+      }
+    });
+    return;
+  }
+
+  try {
+    const results = await Promise.all(unique.map((s) => fetchBondAnalytics(s)));
+    const diff = buildCompareDiff(results);
+    const payload = { analytics: results, diff, generatedAt: new Date().toISOString(), disclaimer: DISCLAIMER, symbols: unique, isMarketClosed: !isMarketHours(new Date()) };
+    bondsCompareCache.set(cacheKey, { analytics: results, diff, generatedAt: payload.generatedAt });
+    res.setHeader("X-Cache", "MISS");
+    res.json(payload);
+    return;
+  } catch (err) {
+    // if any symbol fails, try stale fallback — re-query to avoid TS narrowing (entry narrowed to never after early returns)
+    const staleFallback = bondsCompareCache.getEntry(cacheKey);
+    if (staleFallback) {
+      res.setHeader("X-Cache", "STALE");
+      res.json({ ...staleFallback.data, symbols: unique, disclaimer: DISCLAIMER, isMarketClosed: !isMarketHours(new Date()), stale: true });
+      return;
+    }
+    const message = err instanceof Error ? err.message : "Error al comparar bonos";
+    // if is 404 for symbol not found, return 404
+    if (message.includes("not available") || message.includes("no encontrado")) {
+      res.status(404).json({ error: message, code: "BOND_NOT_FOUND" });
+      return;
+    }
+    res.status(502).json({ error: message });
+    return;
+  }
+});
+
+function buildCompareDiff(analytics: BondAnalytics[]): Record<string, unknown> {
+  const tirs = analytics.map((a) => a.tir).filter((v): v is number => v != null && Number.isFinite(v));
+  const mds = analytics.map((a) => a.md).filter((v): v is number => v != null && Number.isFinite(v));
+  const durs = analytics.map((a) => a.duration).filter((v): v is number => v != null && Number.isFinite(v));
+  const pars = analytics.map((a) => a.paridad).filter((v): v is number => v != null && Number.isFinite(v));
+  const prices = analytics.map((a) => a.precio).filter((v): v is number => Number.isFinite(v));
+  function stats(arr: number[]) {
+    if (arr.length === 0) return { min: null, max: null, diff: null, diffBps: null };
+    const min = Math.min(...arr);
+    const max = Math.max(...arr);
+    const diff = max - min;
+    return { min, max, diff, diffBps: Math.round(diff * 10000) };
+  }
+  return {
+    tir: stats(tirs),
+    md: stats(mds),
+    duration: stats(durs),
+    paridad: stats(pars),
+    precio: stats(prices),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// GET /api/bonds/screener?minTir=&maxMd=&segment=&ley=&moneda=  (in-memory <100ms)
+// ---------------------------------------------------------------------------
+
+const screenerQuerySchema = z.object({
+  minTir: z.coerce.number().optional(),
+  maxTir: z.coerce.number().optional(),
+  minMd: z.coerce.number().optional(),
+  maxMd: z.coerce.number().optional(),
+  minDuration: z.coerce.number().optional(),
+  maxDuration: z.coerce.number().optional(),
+  minParidad: z.coerce.number().optional(),
+  maxParidad: z.coerce.number().optional(),
+  segment: z.string().optional(),
+  ley: z.string().optional(),
+  moneda: z.enum(["ARS", "USD"]).optional(),
+  q: z.string().optional(),
+});
+
+router.get("/screener", async (req: Request, res: Response) => {
+  const parsed = screenerQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Parámetros de screener inválidos", code: "SCREENER_QUERY_INVALID" });
+    return;
+  }
+  const { minTir, maxTir, minMd, maxMd, minDuration, maxDuration, minParidad, maxParidad, segment, ley, moneda, q } = parsed.data;
+
+  if (segment && !VALID_SEGMENTS.includes(segment as (typeof VALID_SEGMENTS)[number])) {
+    res.status(400).json({ error: "Segmento inválido", code: "SEGMENT_INVALID" });
+    return;
+  }
+
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("X-Disclaimer", DISCLAIMER);
+  res.setHeader("Disclaimer", DISCLAIMER);
+
+  const start = Date.now();
+  let rows: BondPanelRow[] = [];
+  let generatedAt = new Date().toISOString();
+  const panelEntry = bondsPanelCache.getEntry(PANEL_CACHE_KEY);
+  if (panelEntry) {
+    rows = panelEntry.data.rows;
+    generatedAt = panelEntry.data.generatedAt;
+    if (!bondsPanelCache.isFresh(panelEntry)) refreshPanelInBackground();
+  } else {
+    try {
+      const data = await fetchBondPanel();
+      bondsPanelCache.set(PANEL_CACHE_KEY, data);
+      rows = data.rows;
+      generatedAt = data.generatedAt;
+    } catch (err) {
+      const snap = await trySnapshotPanel();
+      if (snap) {
+        rows = snap.rows;
+        generatedAt = snap.generatedAt;
+      } else {
+        const message = err instanceof Error ? err.message : "Error screener";
+        res.status(502).json({ error: message });
+        return;
+      }
+    }
+  }
+
+  let filtered = rows;
+  if (minTir != null) filtered = filtered.filter((r) => r.tir != null && r.tir >= minTir);
+  if (maxTir != null) filtered = filtered.filter((r) => r.tir != null && r.tir <= maxTir);
+  if (minMd != null) filtered = filtered.filter((r) => r.md != null && r.md >= minMd);
+  if (maxMd != null) filtered = filtered.filter((r) => r.md != null && r.md <= maxMd);
+  if (minDuration != null) filtered = filtered.filter((r) => r.duration != null && r.duration >= minDuration);
+  if (maxDuration != null) filtered = filtered.filter((r) => r.duration != null && r.duration <= maxDuration);
+  if (minParidad != null) filtered = filtered.filter((r) => {
+    const p = r.cuadroTecnico?.paridad ?? r.paridad;
+    return p != null && p >= minParidad;
+  });
+  if (maxParidad != null) filtered = filtered.filter((r) => {
+    const p = r.cuadroTecnico?.paridad ?? r.paridad;
+    return p != null && p <= maxParidad;
+  });
+  if (segment) filtered = filtered.filter((r) => inferSegment(r as unknown as BondAnalytics) === segment);
+  if (ley) filtered = filtered.filter((r) => {
+    const l = (r.ley ?? r.cuadroTecnico?.ley ?? "").toUpperCase();
+    return l.includes(ley.toUpperCase());
+  });
+  if (moneda) filtered = filtered.filter((r) => (r.moneda ?? r.schedule?.moneda) === moneda);
+  if (q) {
+    const qq = q.trim().toUpperCase();
+    filtered = filtered.filter((r) => r.symbol.toUpperCase().includes(qq));
+  }
+
+  const elapsed = Date.now() - start;
+  res.setHeader("X-Screener-Elapsed", String(elapsed));
+  res.json({
+    data: filtered,
+    rows: filtered,
+    total: filtered.length,
+    count: filtered.length,
+    generatedAt,
+    disclaimer: DISCLAIMER,
+    isMarketClosed: !isMarketHours(new Date()),
+    elapsedMs: elapsed,
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/bonds/:symbol/sensitivity?bps=25,50,100  → ΔP = -MD * Δy * P
+// ---------------------------------------------------------------------------
+
+router.get("/:symbol/sensitivity", async (req: Request, res: Response) => {
+  const symbol = String(req.params.symbol ?? "").toUpperCase().trim();
+  if (!symbol || !/^[A-Z0-9]{2,12}$/.test(symbol)) {
+    res.status(400).json({ error: "Símbolo inválido", code: "SYMBOL_INVALID" });
+    return;
+  }
+  const rawBps = String(req.query.bps ?? "25,50,100");
+  const bpsList = rawBps
+    .split(",")
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isFinite(n) && n > 0 && n <= 1000);
+  if (bpsList.length === 0) {
+    res.status(400).json({ error: "Parámetro bps inválido (ej 25,50,100)", code: "BPS_INVALID" });
+    return;
+  }
+  if (bpsList.length > 10) {
+    res.status(400).json({ error: "Máximo 10 valores bps", code: "BPS_TOO_MANY" });
+    return;
+  }
+
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("X-Disclaimer", DISCLAIMER);
+  res.setHeader("Disclaimer", DISCLAIMER);
+
+  let analytics: BondAnalytics;
+  try {
+    analytics = await fetchBondAnalytics(symbol);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Error sensitivity";
+    res.status(502).json({ error: msg });
+    return;
+  }
+  const md = analytics.md;
+  const price = analytics.precio;
+  if (md == null || !Number.isFinite(md) || price == null || !Number.isFinite(price) || price <= 0) {
+    res.status(400).json({ error: "MD no disponible para sensibilidad", code: "SENSITIVITY_NO_MD" });
+    return;
+  }
+  const dv01 = md * 0.0001 * price; // per 1bp
+  const scenarios = bpsList.flatMap((bps) => {
+    const dy = bps / 10000;
+    const deltaUp = -md * dy * price;
+    const deltaDown = -md * (-dy) * price;
+    return [
+      { bps, direction: "up" as const, deltaYield: dy, deltaPrice: deltaUp, newPrice: price + deltaUp, pctChange: (deltaUp / price) * 100, dv01: dv01 * bps, dv01PerBp: dv01 },
+      { bps, direction: "down" as const, deltaYield: -dy, deltaPrice: deltaDown, newPrice: price + deltaDown, pctChange: (deltaDown / price) * 100, dv01: -dv01 * bps, dv01PerBp: -dv01 },
+    ];
+  });
+  // also flat array with positive bps only for heatmap convenience
+  const scenariosSimple = bpsList.map((bps) => {
+    const dy = bps / 10000;
+    const delta = -md * dy * price;
+    return { bps, deltaYield: dy, deltaPrice: delta, newPrice: price + delta, pctChange: (delta / price) * 100, dv01: dv01 * bps, dv01PerBp: dv01 };
+  });
+
+  res.json({
+    symbol,
+    precio: price,
+    md,
+    duration: analytics.duration,
+    tir: analytics.tir,
+    dv01,
+    dv01PerBp: dv01,
+    bps: bpsList,
+    scenarios,
+    scenariosSimple,
+    disclaimer: DISCLAIMER,
+    generatedAt: new Date().toISOString(),
+  });
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/bonds/curve?segment=  (declare BEFORE /:symbol/analytics)
 // ---------------------------------------------------------------------------
 
 const curveQuerySchema = z.object({
   segment: z.string().min(1),
+  fit: z.string().optional(),
 });
 
 router.get("/curve", async (req: Request, res: Response) => {
@@ -100,18 +391,25 @@ router.get("/curve", async (req: Request, res: Response) => {
   res.setHeader("X-Disclaimer", DISCLAIMER);
   res.setHeader("Disclaimer", DISCLAIMER);
 
+  const fitRequested = parsed.data.fit === "true" || parsed.data.fit === "1";
   const cacheKey = `bonds:curve:${segment}`;
   const entry = bondsCurveCache.getEntry(cacheKey);
+
+  function withFit(points: import("../services/market/bonds/types.js").CurvePoint[], generatedAt: string, extra: Record<string, unknown> = {}) {
+    if (!fitRequested) return { points, segment, generatedAt, disclaimer: DISCLAIMER, isMarketClosed: !isMarketHours(new Date()), ...extra };
+    const fit = fitNelsonSiegelSvensson(points);
+    return { points, segment, generatedAt, disclaimer: DISCLAIMER, isMarketClosed: !isMarketHours(new Date()), fit: fit.fitted, fitted: fit.fitted, fittedPoints: fit.fittedPoints, fitParams: fit.params, fitRmse: fit.rmse, fitReason: fit.reason, ...extra };
+  }
 
   if (entry) {
     if (bondsCurveCache.isFresh(entry)) {
       res.setHeader("X-Cache", "HIT");
-      res.json({ points: entry.data.points, segment, generatedAt: entry.data.generatedAt, disclaimer: DISCLAIMER, isMarketClosed: !isMarketHours(new Date()) });
+      res.json(withFit(entry.data.points, entry.data.generatedAt));
       return;
     }
     refreshCurveInBackground(segment);
     res.setHeader("X-Cache", "STALE");
-    res.json({ points: entry.data.points, segment, generatedAt: entry.data.generatedAt, disclaimer: DISCLAIMER, isMarketClosed: !isMarketHours(new Date()), stale: true });
+    res.json(withFit(entry.data.points, entry.data.generatedAt, { stale: true }));
     return;
   }
 
@@ -120,7 +418,7 @@ router.get("/curve", async (req: Request, res: Response) => {
     try {
       const points = await existing;
       res.setHeader("X-Cache", "HIT");
-      res.json({ points, segment, generatedAt: new Date().toISOString(), disclaimer: DISCLAIMER, isMarketClosed: !isMarketHours(new Date()) });
+      res.json(withFit(points, new Date().toISOString()));
       return;
     } catch {
       // fall through
@@ -135,34 +433,34 @@ router.get("/curve", async (req: Request, res: Response) => {
       const snap = await trySnapshotCurve(segment);
       if (snap) {
         res.setHeader("X-Cache", "STALE");
-        res.json({ points: snap, segment, generatedAt: new Date().toISOString(), disclaimer: DISCLAIMER, isMarketClosed: !isMarketHours(new Date()), stale: true });
+        res.json(withFit(snap, new Date().toISOString(), { stale: true }));
         return;
       }
       const isClosed = !isMarketHours(new Date());
       if (isClosed) {
-        res.json({ points: [], segment, generatedAt: new Date().toISOString(), disclaimer: DISCLAIMER, isMarketClosed: true });
+        res.json(withFit([], new Date().toISOString(), { isMarketClosed: true }));
         return;
       }
     }
     bondsCurveCache.set(cacheKey, { points, generatedAt: new Date().toISOString() });
     res.setHeader("X-Cache", "MISS");
-    res.json({ points, segment, generatedAt: new Date().toISOString(), disclaimer: DISCLAIMER, isMarketClosed: !isMarketHours(new Date()) });
+    res.json(withFit(points, new Date().toISOString()));
     return;
   } catch (err) {
     const staleEntry = bondsCurveCache.getEntry(cacheKey);
     if (staleEntry) {
       res.setHeader("X-Cache", "STALE");
-      res.json({ points: staleEntry.data.points, segment, generatedAt: staleEntry.data.generatedAt, disclaimer: DISCLAIMER, isMarketClosed: !isMarketHours(new Date()), stale: true });
+      res.json(withFit(staleEntry.data.points, staleEntry.data.generatedAt, { stale: true }));
       return;
     }
     const snap = await trySnapshotCurve(segment);
     if (snap) {
       res.setHeader("X-Cache", "STALE");
-      res.json({ points: snap, segment, generatedAt: new Date().toISOString(), disclaimer: DISCLAIMER, isMarketClosed: !isMarketHours(new Date()), stale: true });
+      res.json(withFit(snap, new Date().toISOString(), { stale: true }));
       return;
     }
     if (!isMarketHours(new Date())) {
-      res.json({ points: [], segment, generatedAt: new Date().toISOString(), disclaimer: DISCLAIMER, isMarketClosed: true });
+      res.json(withFit([], new Date().toISOString(), { isMarketClosed: true }));
       return;
     }
     const message = err instanceof Error ? err.message : "Error al consultar curva";
@@ -380,6 +678,143 @@ router.get("/panel", async (req: Request, res: Response) => {
     res.json({ ...response, stale: true });
   } else {
     res.json(response);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/bonds/universe?type=ON|ALL  alias de /panel?segment=ONS (REQ-BUO-001)
+// ---------------------------------------------------------------------------
+
+router.get("/universe", async (req: Request, res: Response) => {
+  if (!BONDS_ONS_ENABLED) {
+    res.status(404).json({ error: "Universo ON no habilitado", code: "not_enabled" });
+    return;
+  }
+  const universeQuerySchema = z.object({
+    type: z.enum(["ON", "ALL"]).optional(),
+  });
+  const parsed = universeQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Parámetro type inválido (ON|ALL)", code: "UNIVERSE_TYPE_INVALID" });
+    return;
+  }
+  const type = parsed.data.type ?? "ALL";
+
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("X-Disclaimer", DISCLAIMER);
+  res.setHeader("Disclaimer", DISCLAIMER);
+
+  // Reuse panel cache/logic — filtered universe
+  let rows: BondPanelRow[] = [];
+  let generatedAt = new Date().toISOString();
+  const panelEntry = bondsPanelCache.getEntry(PANEL_CACHE_KEY);
+  if (panelEntry) {
+    rows = panelEntry.data.rows;
+    generatedAt = panelEntry.data.generatedAt;
+    if (!bondsPanelCache.isFresh(panelEntry)) refreshPanelInBackground();
+  } else {
+    try {
+      const data = await fetchBondPanel();
+      bondsPanelCache.set(PANEL_CACHE_KEY, data);
+      rows = data.rows;
+      generatedAt = data.generatedAt;
+    } catch (err) {
+      const snap = await trySnapshotPanel();
+      if (snap) {
+        rows = snap.rows;
+        generatedAt = snap.generatedAt;
+      } else {
+        const message = err instanceof Error ? err.message : "Error universe";
+        res.status(502).json({ error: message });
+        return;
+      }
+    }
+  }
+
+  // Alias: type=ON → segment ONS, type=ALL → todo
+  let filtered = rows;
+  if (type === "ON") {
+    filtered = rows.filter((r) => inferSegment(r as unknown as BondAnalytics) === "ONS");
+  }
+
+  res.json({
+    type,
+    data: filtered,
+    rows: filtered,
+    total: filtered.length,
+    count: filtered.length,
+    generatedAt,
+    disclaimer: DISCLAIMER,
+    isMarketClosed: !isMarketHours(new Date()),
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/bonds/:symbol/history?range=30d|90d|1y  (REQ-BAV-004) lectura snapshots
+// ---------------------------------------------------------------------------
+
+router.get("/:symbol/history", async (req: Request, res: Response) => {
+  const symbol = String(req.params.symbol ?? "").toUpperCase().trim();
+  if (!symbol || !/^[A-Z0-9]{2,12}$/.test(symbol)) {
+    res.status(400).json({ error: "Símbolo inválido", code: "SYMBOL_INVALID" });
+    return;
+  }
+  const rangeRaw = String(req.query.range ?? "30d");
+  if (!["30d", "90d", "1y"].includes(rangeRaw)) {
+    res.status(400).json({ error: "Parámetro range inválido (30d|90d|1y)", code: "RANGE_INVALID" });
+    return;
+  }
+  const days = rangeRaw === "1y" ? 365 : rangeRaw === "90d" ? 90 : 30;
+
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("X-Disclaimer", DISCLAIMER);
+  res.setHeader("Disclaimer", DISCLAIMER);
+
+  try {
+    const cutoff = new Date();
+    cutoff.setUTCDate(cutoff.getUTCDate() - days);
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    // Leer snapshots en rango — payload.analytics filtrado por símbolo
+    const result = await pool.query(
+      `SELECT snapshot_date, captured_at, payload FROM bond_analytics_snapshots WHERE snapshot_date >= $1 ORDER BY snapshot_date ASC`,
+      [cutoffStr],
+    );
+    const history: Array<{ date: string; tir: number | null; paridad: number | null; precio: number | null; md: number | null; duration: number | null }> = [];
+    for (const row of result.rows as Array<{ snapshot_date: string | Date; captured_at: string | Date; payload: { analytics?: BondAnalytics[] } }>) {
+      const payload = (row as unknown as { payload: { analytics?: BondAnalytics[] } }).payload;
+      const analytics = payload?.analytics ?? [];
+      const found = analytics.find((a) => String(a.symbol).toUpperCase() === symbol);
+      if (found) {
+        const dateStr = row.snapshot_date instanceof Date ? row.snapshot_date.toISOString().slice(0, 10) : String(row.snapshot_date).slice(0, 10);
+        history.push({
+          date: dateStr,
+          tir: found.tir ?? null,
+          // callable nullea tir — si schedule callable, forzar null
+          paridad: found.paridad ?? null,
+          precio: found.precio ?? (found as unknown as { precioDirty?: number }).precioDirty ?? null,
+          md: found.md ?? null,
+          duration: (found as unknown as { duration?: number | null }).duration ?? null,
+        });
+        // REQ callable: si es callable, history debe reflejar tir null
+        const sched = (found as unknown as { schedule?: { tipo?: string; callable?: boolean } }).schedule;
+        if (sched?.tipo === "callable" || sched?.callable === true) {
+          history[history.length - 1]!.tir = null;
+        }
+      }
+    }
+    res.json({
+      symbol,
+      range: rangeRaw,
+      history,
+      count: history.length,
+      generatedAt: new Date().toISOString(),
+      disclaimer: DISCLAIMER,
+    });
+    return;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Error al consultar history";
+    res.status(502).json({ error: message });
+    return;
   }
 });
 
