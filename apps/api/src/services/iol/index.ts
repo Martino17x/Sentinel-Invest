@@ -1,7 +1,10 @@
 import type { IolProvider } from "./IolProvider.js";
+import type { MarketDataPort } from "./ports.js";
 import { MockIolProvider } from "./MockIolProvider.js";
 import { IolApiProvider } from "./IolApiProvider.js";
-import { BymaDataProvider } from "./BymaDataProvider.js";
+import { BymaClient } from "../../infrastructure/providers/byma/BymaClient.js";
+import { BymaFichaClient } from "../../infrastructure/providers/byma/BymaFichaClient.js";
+import { QuoteService } from "../../application/cotizaciones/QuoteService.js";
 import type {
   FciRedemptionRequest,
   FciSubscriptionRequest,
@@ -44,7 +47,7 @@ export function getIolProvider(): IolProvider {
  * las de COTIZACIONES respetan QUOTE_PROVIDER con fallback automático.
  */
 class QuoteFallbackProvider implements IolProvider {
-  private byma = new BymaDataProvider();
+  private byma: MarketDataPort = new QuoteService(new BymaClient(), new BymaFichaClient());
 
   constructor(private accountProvider: IolProvider) {}
 
