@@ -4,23 +4,24 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { pool } from "./db/index.js";
 import { ensureSchema } from "./db/ensure-schema.js";
-import authRouter from "./routes/auth.js";
-import googleRouter from "./routes/google.js";
-import accountsRouter from "./routes/accounts.js";
-import connectionsRouter from "./routes/connections.js";
-import profileRouter from "./routes/profile.js";
-import portfolioRouter from "./routes/portfolio.js";
-import portfolioMovementsRouter from "./routes/portfolioMovements.js";
-import operationsRouter from "./routes/operations.js";
-import ordersRouter from "./routes/orders.js";
-import quotesRouter from "./routes/quotes.js";
-import analysisRouter from "./routes/analysis.js";
-import ratesRouter from "./routes/rates.js";
-import radarRouter from "./routes/radar.js";
-import bondsRouter from "./routes/bonds.js";
-import agentRouter from "./routes/agent.js";
-import apiKeysRouter from "./routes/api-keys.js";
-import { mountMcpHttp } from "./mcp/http.js";
+import authRouter from "./interfaces/http/routes/auth.js";
+import googleRouter from "./interfaces/http/routes/google.js";
+import accountsRouter from "./interfaces/http/routes/accounts.js";
+import connectionsRouter from "./interfaces/http/routes/connections.js";
+import profileRouter from "./interfaces/http/routes/profile.js";
+import portfolioRouter from "./interfaces/http/routes/portfolio.js";
+import portfolioMovementsRouter from "./interfaces/http/routes/portfolioMovements.js";
+import operationsRouter from "./interfaces/http/routes/operations.js";
+import ordersRouter from "./interfaces/http/routes/orders.js";
+import quotesRouter from "./interfaces/http/routes/quotes.js";
+import analysisRouter from "./interfaces/http/routes/analysis.js";
+import ratesRouter from "./interfaces/http/routes/rates.js";
+import radarRouter from "./interfaces/http/routes/radar.js";
+import bondsRouter from "./interfaces/http/routes/bonds.js";
+import agentRouter from "./interfaces/http/routes/agent.js";
+import apiKeysRouter from "./interfaces/http/routes/api-keys.js";
+import virtualPortfoliosRouter from "./interfaces/http/routes/virtualPortfolios.js";
+import { mountMcpHttp } from "./interfaces/mcp/http.js";
 import { startScheduledJobs } from "./jobs/scheduler.js";
 
 const app = express();
@@ -81,6 +82,7 @@ app.use("/api/analysis", analysisRouter);
 app.use("/api/rates", ratesRouter);
 app.use("/api/radar", radarRouter);
 app.use("/api/bonds", bondsRouter);
+app.use("/api/virtual-portfolios", virtualPortfoliosRouter);
 // API keys — infraestructura de credenciales para agentes externos
 // (el consumo MCP se monta/desmonta con AGENT_ENABLED en fase G).
 // Se monta SIEMPRE: el usuario debe poder gestionar sus keys aunque
@@ -92,6 +94,21 @@ if (agentEnabled) {
   // clientes externos dejan de existir con AGENT_ENABLED=false.
   mountMcpHttp(app);
 }
+
+// 404 para rutas no matcheadas de /api (útil para debug, no rompe 502)
+app.use("/api", (_req, res) => {
+  res.status(404).json({ error: "Ruta no encontrada" });
+});
+
+// Error handler global — evita 502 por excepciones no capturadas (Vite proxy)
+// Debe ir DESPUÉS de todas las rutas (incluido el 404) y ANTES del listen.
+// Express lo reconoce por tener 4 args (err, req, res, next).
+app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error("[errorHandler]", err instanceof Error ? err.message : err, err instanceof Error ? err.stack : "");
+  if (res.headersSent) return;
+  const message = err instanceof Error ? err.message : "Error interno";
+  res.status(500).json({ error: "Error interno del servidor", detail: message });
+});
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 API escuchando en http://localhost:${PORT}`);

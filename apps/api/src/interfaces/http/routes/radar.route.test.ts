@@ -2,10 +2,10 @@ import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import express from "express";
-import { signAccessToken } from "../lib/jwt.js";
+import { signAccessToken } from "../../../lib/jwt.js";
 import radarRouter from "./radar.js";
-import { resetRadarCacheForTests, DISCLAIMER } from "../services/market/radar.js";
-import { resetMarketCache } from "../services/market/yahoo.js";
+import { resetRadarCacheForTests, DISCLAIMER } from "../../../services/market/radar.js";
+import { resetMarketCache } from "../../../services/market/yahoo.js";
 
 // ===================================================================
 // radar.route.test.ts — GET /api/radar/ccl
