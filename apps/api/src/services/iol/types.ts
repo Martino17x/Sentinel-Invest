@@ -209,6 +209,8 @@ export interface IolCredentials {
   password: string;
 }
 
+import type { SettlementType } from "@sentinel/domain";
+
 /** Lado de una orden de compra/venta */
 export type OrderSide = "buy" | "sell";
 
@@ -225,7 +227,7 @@ export interface OrderRequest {
   side: OrderSide;
   symbol: string;
   /** Especie MEP (dólar): "D" usa los endpoints ComprarEspecieD/VenderEspecieD (solo bCBA) */
-  specie?: "D";
+  specie?: SettlementType;
   /** Código de mercado IOL: "bCBA" | "nYSE" | "nASDAQ" | "rOFX" | "bCBA" (bonos) */
   market: string;
   quantity: number;

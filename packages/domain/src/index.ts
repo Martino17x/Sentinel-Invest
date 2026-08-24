@@ -7,8 +7,9 @@ export {
   resolveBaseSymbol,
   resolveSettlementSuffix,
   type BaseSources,
-  type SettlementType,
+  type SettlementType as DomainSettlementType,
 } from "./settlement";
+export { MarketCode, SettlementType, IOL_MARKET_CODE_MAP } from "./tipos";
 export * from "./ccl";
 export { normalizeSymbol } from "./ticker";
 export {

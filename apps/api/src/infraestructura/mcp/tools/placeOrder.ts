@@ -3,6 +3,7 @@ import { getIolProvider } from "../../../services/iol/index.js";
 import type { ToolDefinition } from "../../../aplicacion/agente/types.js";
 import type { OrderRequest } from "../../../services/iol/types.js";
 import { tradingGate, maybePendingChat } from "./tradingGates.js";
+import { MarketCode, SettlementType } from "@sentinel/domain";
 
 // ============================================================
 // place_order â€” compra/venta contra IOL (gateada)
@@ -16,17 +17,17 @@ import { tradingGate, maybePendingChat } from "./tradingGates.js";
 // Si algo falta, devuelve un error claro SIN efectos laterales.
 // ============================================================
 
-const IOL_MARKET_CODES: Record<string, string> = {
-  bcba: "bCBA",
-  nyse: "nYSE",
-  nasdaq: "nASDAQ",
-  bonds: "bCBA",
+const IOL_MARKET_CODES: Record<string, MarketCode> = {
+  bcba: MarketCode.BCBA,
+  nyse: MarketCode.NYSE,
+  nasdaq: MarketCode.NASDAQ,
+  bonds: MarketCode.BONDS,
 };
 
 export const placeOrderTool: ToolDefinition = {
   name: "place_order",
   description:
-    "Ejecuta una orden de compra/venta en la cuenta IOL del usuario (mercado local bCBA, NYSE, NASDAQ, bonos, o MEP con specie=\"D\"). Requiere una API key MCP con scope trade y el server con IOL_TRADING_ENABLED=true. Para Ã³rdenes limit pasÃ¡ price; para market se usa el Ãºltimo precio como referencia.",
+    "Ejecuta una orden de compra/venta en la cuenta IOL del usuario (mercado local BCBA, NYSE, NASDAQ, bonos, o MEP con specie D). Requiere una API key MCP con scope trade y el server con IOL_TRADING_ENABLED=true. Para órdenes limit pasá price; para market se usa el último precio como referencia.",
   inputSchema: z.object({
     symbol: z.string().min(1).max(10).toUpperCase(),
     side: z.enum(["buy", "sell"]),
@@ -35,7 +36,7 @@ export const placeOrderTool: ToolDefinition = {
     price: z.number().positive("El precio debe ser mayor a cero").optional(),
     market: z.enum(["bcba", "nyse", "nasdaq", "bonds"]).default("bcba"),
     term: z.enum(["t0", "t1", "t2"]).optional(),
-    specie: z.enum(["D"]).optional().describe("Especie MEP (dÃ³lar): D opera en el mercado de especie D (solo bCBA)"),
+    specie: z.nativeEnum(SettlementType).optional().describe("Especie MEP (dólar): D opera en el mercado de especie D (solo bCBA)"),
   }),
   permission: "allow",
   proposeOnly: true, // scope read no lo ve; trade lo lista (isTradeTool)
@@ -51,11 +52,11 @@ export const placeOrderTool: ToolDefinition = {
       price?: number;
       market: "bcba" | "nyse" | "nasdaq" | "bonds";
       term?: "t0" | "t1" | "t2";
-      specie?: "D";
+      specie?: SettlementType;
     };
 
-    // MEP (especie D) solo opera en el mercado local bCBA
-    if (args.specie === "D" && args.market !== "bcba") {
+    // MEP (especie D) solo opera en el mercado local BCBA — SettlementType.D + MarketCode
+    if (args.specie === SettlementType.D && args.market !== "bcba") {
       return {
         ok: false,
         message: "Las Ã³rdenes en especie D (MEP) solo operan en el mercado bcba.",

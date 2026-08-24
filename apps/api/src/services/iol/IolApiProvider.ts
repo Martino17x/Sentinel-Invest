@@ -20,6 +20,7 @@ import { computeDayChange, buildDistributionByType, computeGainLossPct } from ".
 import { eq } from "drizzle-orm";
 import { db, schema } from "../../db/index.js";
 import { buildMonthlyCloses, buildMonthlyReport } from "../reports/reportBuilder.js";
+import { MarketCode, SettlementType } from "@sentinel/domain";
 
 /**
  * PROVEEDOR REAL — habla con la API de InvertirOnline.
@@ -181,9 +182,9 @@ export class IolApiProvider implements IolProvider {
       throw new Error("La API de IOL requiere un precio por unidad (limit o referencia de mercado)");
     }
 
-    const isD = order.specie === "D";
-    if (isD && order.market !== "bCBA") {
-      throw new Error("Las órdenes en especie D (MEP) solo operan en el mercado bCBA");
+    const isD = order.specie === SettlementType.D;
+    if (isD && order.market !== MarketCode.BCBA) {
+      throw new Error(`Las órdenes en especie ${SettlementType.D} (MEP) solo operan en el mercado ${MarketCode.BCBA}`);
     }
     const orderPath = isD
       ? order.side === "buy" ? "/api/v2/operar/ComprarEspecieD" : "/api/v2/operar/VenderEspecieD"
@@ -604,10 +605,10 @@ export class IolApiProvider implements IolProvider {
 
 function mapMarketToIol(market: string): string {
   const m = market.toLowerCase();
-  if (m.includes("nyse")) return "nYSE";
-  if (m.includes("nasdaq")) return "nASDAQ";
-  if (m.includes("rofx")) return "rOFX";
-  return "bCBA";
+  if (m.includes("nyse")) return MarketCode.NYSE;
+  if (m.includes("nasdaq")) return MarketCode.NASDAQ;
+  if (m.includes("rofx")) return "rOFX" as MarketCode;
+  return MarketCode.BCBA;
 }
 
 function zeroQuote(symbol: string, market: string): Quote {

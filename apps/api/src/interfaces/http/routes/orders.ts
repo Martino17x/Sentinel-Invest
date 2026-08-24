@@ -5,6 +5,7 @@ import { getIolProvider } from "../../../services/iol/index.js";
 import type { TradingPort, OperationsPort } from "../../../services/iol/ports.js";
 import { getIolCredentials } from "../../../lib/iol-credentials.js";
 import { auditAgentAction } from "../../../services/agent/audit.js";
+import { MarketCode, SettlementType } from "@sentinel/domain";
 
 const router = Router();
 router.use(requireAuth);
@@ -27,11 +28,11 @@ function tradingEnabled(): boolean {
   return v === "true" || v === "1";
 }
 
-const IOL_MARKET_CODES: Record<string, string> = {
-  bcba: "bCBA",
-  nyse: "nYSE",
-  nasdaq: "nASDAQ",
-  bonds: "bCBA",
+const IOL_MARKET_CODES: Record<string, MarketCode> = {
+  bcba: MarketCode.BCBA,
+  nyse: MarketCode.NYSE,
+  nasdaq: MarketCode.NASDAQ,
+  bonds: MarketCode.BONDS,
 };
 
 const createOrderSchema = z.object({
@@ -43,7 +44,7 @@ const createOrderSchema = z.object({
   market: z.enum(["bcba", "nyse", "nasdaq", "bonds"]).default("bcba"),
   term: z.enum(["t0", "t1", "t2"]).optional(),
   validity: z.enum(["1d", "7d"]).optional(),
-  specie: z.enum(["D"]).optional(),
+  specie: z.nativeEnum(SettlementType).optional(),
 });
 
 const fciSubscribeSchema = z.object({
@@ -105,7 +106,7 @@ router.post("/", async (req: Request, res: Response) => {
     if (!credsCheck.ok) { res.status(credsCheck.status).json(credsCheck.json); return; }
 
     const args = parsed.data;
-    if (args.specie === "D" && args.market !== "bcba") {
+    if (args.specie === SettlementType.D && args.market !== "bcba") {
       res.status(400).json({ error: "Las órdenes en especie D (MEP) solo operan en el mercado bcba." });
       return;
     }
