@@ -11,6 +11,7 @@
  */
 import { normalizeSymbol } from "../ticker";
 import {
+  isUsdSettlementVariant as _isUsdSettlementVariant,
   resolveBaseSymbol,
   resolveSettlementSuffix,
   type BaseSources,
@@ -132,4 +133,8 @@ export function getSettlementSuffix(symbol: string): "" | "C" | "D" {
 
 export function getBaseSymbol(symbol: string): string {
   return resolveBaseSymbol(symbol, DEFAULT_DISPLAY_SOURCES as BaseSources);
+}
+
+export function isUsdSettlementVariant(symbol: string, currency?: string): boolean {
+  return _isUsdSettlementVariant(symbol, currency, DEFAULT_DISPLAY_SOURCES as BaseSources);
 }

@@ -98,3 +98,27 @@ export function resolveBaseSymbol(symbol: string, sources?: BaseSources): string
   }
   return norm;
 }
+
+/**
+ * ¿Es variante de liquidación en USD (C/D) con base conocida, o currency USD?
+ * - `currency === "USD"` → true directo (fast-path, p.ej. BYMA `denominationCcy`).
+ * - Sufijo `C`/`D` → true solo si la base existe en `sources` (via `resolveSettlementSuffix`).
+ * Genérico — no hardcodea `RATIO_MAP`, usa `BaseSources` inyectadas.
+ *
+ * @example
+ * isUsdSettlementVariant("AAPL_C", undefined, sourcesWithAAPL) // false (no es sufijo C/D válido sin normalizar)
+ * isUsdSettlementVariant("AAPLC", undefined, sourcesWithAAPL)  // true
+ * isUsdSettlementVariant("GGAL", "USD")                        // true (currency fast-path)
+ * isUsdSettlementVariant("ZZZZC", undefined, sources)          // false (base inexistente)
+ */
+export function isUsdSettlementVariant(
+  symbol: string,
+  currency?: string,
+  sources?: BaseSources,
+): boolean {
+  if (typeof currency === "string" && currency.trim().toUpperCase() === "USD") {
+    return true;
+  }
+  const suffix = resolveSettlementSuffix(symbol, sources);
+  return suffix === "C" || suffix === "D";
+}

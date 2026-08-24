@@ -3,6 +3,7 @@
  * catálogo CEDEAR, brands). Package source-only sin deps runtime.
  */
 export {
+  isUsdSettlementVariant as isUsdSettlementVariantBase,
   resolveBaseSymbol,
   resolveSettlementSuffix,
   type BaseSources,
@@ -20,10 +21,11 @@ export { INSTRUMENT_NAMES } from "./catalog/names.manual";
 export {
   GENERATED_CEDEAR_NAMES,
   DEFAULT_DISPLAY_SOURCES,
-  resolveDisplayName,
+  getBaseSymbol,
   getInstrumentDisplayName,
   getSettlementSuffix,
-  getBaseSymbol,
+  isUsdSettlementVariant,
+  resolveDisplayName,
   type DisplayNameSources,
 } from "./catalog/names";
 export {
