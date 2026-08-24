@@ -7,9 +7,6 @@
  * - La cookie httpOnly del refresh token (la maneja el navegador sola)
  */
 
-import type { PortfolioSnapshotPoint, Operation } from "../features/portafolio/api";
-import type { NewsItem } from "../features/analisis/api";
-
 const BASE_URL = "/api";
 
 interface AuthResponse {
@@ -140,40 +137,8 @@ export * from "../features/cotizaciones/api";
 // Decisión profileApi: permanece en lib/api.ts hasta fase auth (commit 6) — va a features/auth junto a authApi/connectionsApi (design SDD7). No mover ahora.
 export * from "../features/portafolio/api";
 
-export interface MonthClose {
-  month: string;
-  closingValueArs: number;
-  closingValueUsd: number;
-  twrPct: number;
-  grossChangeArs: number;
-  netContributionsArs: number;
-}
-
-export interface MonthlyReport {
-  month: string;
-  closingValueArs: number;
-  closingValueUsd: number;
-  previousClosingValueArs: number;
-  previousClosingValueUsd: number;
-  grossChangeArs: number;
-  grossChangePct: number;
-  twrPct: number;
-  twrArs: number;
-  netContributionsArs: number;
-  realizedGainArs: number;
-  unrealizedGainArs: number;
-  buys: Operation[];
-  sells: Operation[];
-  totalBuysArs: number;
-  totalSellsArs: number;
-  commissionsArs: number;
-  dividendsArs: number;
-  bestDay: { date: string; pct: number } | null;
-  worstDay: { date: string; pct: number } | null;
-  benchmarkPct: number;
-  fxChangePct: number;
-  series: { date: string; valueArs: number; benchmark: number }[];
-}
+// Shim reportes — fuente única en features/reportes/api.ts (SDD dashboard-features-resto C5)
+export * from "../features/reportes/api";
 
 export interface UserProfile {
   id: string;
@@ -258,28 +223,10 @@ export const ratesApi = {
 // Shim analisis — fuente única en features/analisis/api.ts (SDD dashboard-features-resto C4)
 export * from "../features/analisis/api";
 
-export const newsApi = {
-  async getFeed(limit = 5): Promise<{ items: NewsItem[]; news: NewsItem[]; count: number }> {
-    return apiFetch(`/analysis/news/feed?limit=${limit}`);
-  },
-  async getDetail(id: string): Promise<{ news: NewsItem; item: NewsItem }> {
-    return apiFetch(`/analysis/news/${encodeURIComponent(id)}`);
-  },
-};
+// Shim noticias — fuente única en features/noticias/api.ts (SDD dashboard-features-resto C5)
+export * from "../features/noticias/api";
 
-export const reportsApi = {
-  async history(days = 90): Promise<{ history: PortfolioSnapshotPoint[] }> {
-    return apiFetch(`/portfolio/history?days=${days}`);
-  },
-
-  async getMonthlyCloses(): Promise<{ closes: MonthClose[] }> {
-    return apiFetch("/portfolio/reports");
-  },
-
-  async getMonthlyReport(month: string): Promise<{ report: MonthlyReport }> {
-    return apiFetch(`/portfolio/reports/${month}`);
-  },
-};
+// Shim reportes shim ya declarado arriba (export *); history/getMonthlyCloses/getMonthlyReport viven en features/reportes/api.ts
 
 
 

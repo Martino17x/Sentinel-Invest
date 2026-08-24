@@ -2,11 +2,11 @@
  * Feature `analisis` — fuente única para analysisApi + screenerApi.
  * Extraído de lib/api.ts (SDD dashboard-features-resto C4).
  * Mover, no duplicar. Importa apiFetch desde lib/api-client para evitar ciclo con shim.
- * Nota: NewsItem/NewsData/NewsProvider e InsightsData viven aquí en C4 para mantener tsc verde;
- *       en C5 se moverán a features/noticias como fuente única y este archivo importará tipos (evitar duplicate export *).
+ * C5: NewsItem/NewsData/NewsProvider movidos a features/noticias como fuente única (evitar duplicate export *).
  */
 
 import { apiFetch } from "@/lib/api-client";
+import type { NewsData } from "../noticias/api";
 
 // ============================================================
 // Análisis profundo — GET /api/analysis/:symbol?market=
@@ -117,38 +117,6 @@ export interface ConsensusData {
   rating: { buys: number | null; holds: number | null; sells: number | null } | null;
   nextEarningsDate: string | null;
   currency: string | null;
-}
-
-export type NewsProvider = "gnews" | "finnhub" | "tradingview" | "yahoo";
-
-export interface NewsItem {
-  id: string;
-  title: string;
-  source: string;
-  url: string;
-  publishedAt: string | null;
-  symbol: string | null;
-  summary: string | null;
-  /** Canonical image field (primary). Null when provider has no image. */
-  image?: string | null;
-  /** Alias for image — legacy consumers reading imageUrl */
-  imageUrl?: string | null;
-  /** Canonical long description (GNews description / Finnhub summary) */
-  description?: string | null;
-  /** Full body when available (GNews content) */
-  content?: string | null;
-  /** Alias for url (legacy consumers using link) */
-  link?: string;
-  /** Origin provider of this item */
-  provider?: NewsProvider;
-  /** True when fallback degraded (TV title-only, quota hit) */
-  degraded?: boolean;
-}
-
-export interface NewsData {
-  source: NewsProvider;
-  items: NewsItem[];
-  degraded?: boolean;
 }
 
 export interface InsightsData {
