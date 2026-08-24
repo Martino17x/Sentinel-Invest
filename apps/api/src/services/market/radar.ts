@@ -21,7 +21,9 @@
 
 import pLimit from "p-limit";
 import { SwrCache } from "./cache.js";
-import { BymaDataProvider } from "../iol/BymaDataProvider.js";
+import { BymaClient } from "../../infrastructure/providers/byma/BymaClient.js";
+import { BymaFichaClient } from "../../infrastructure/providers/byma/BymaFichaClient.js";
+import { QuoteService } from "../../application/cotizaciones/QuoteService.js";
 import { fetchChart } from "./yahoo.js";
 import { CEDEAR_RATIOS, RATIO_MAP } from "./cedear-ratios.js";
 import { calcCcl, calcCclFromBymaUsd, calcPromedio, calcSpread } from "./ccl.js";
@@ -163,7 +165,7 @@ function applyFilterSortPaginate(
 // ---------------------------------------------------------------------------
 
 async function fetchRadarBase(signal?: AbortSignal): Promise<RadarBase> {
-  const provider = new BymaDataProvider();
+  const provider = new QuoteService(new BymaClient(), new BymaFichaClient());
 
   // BYMA panel cedears — postPanel es privado; usamos getPanel con pageSize grande
   // getPanel ya filtra lastPrice>0 y pagina localmente; tomamos todo

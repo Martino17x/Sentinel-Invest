@@ -4,7 +4,9 @@ import { requireAuth } from "../middleware/auth.js";
 import { BONDS_ANALYTICS_ENABLED, BONDS_PANEL_ENABLED, BONDS_COMPARE_ENABLED, BONDS_ONS_ENABLED } from "../config.js";
 import { isMarketHours } from "../services/market/isMarketHours.js";
 import { pool } from "../db/index.js";
-import { BymaDataProvider } from "../services/iol/BymaDataProvider.js";
+import { BymaClient } from "../infrastructure/providers/byma/BymaClient.js";
+import { BymaFichaClient } from "../infrastructure/providers/byma/BymaFichaClient.js";
+import { QuoteService } from "../application/cotizaciones/QuoteService.js";
 import { parseInteresToCouponRate } from "../domain/bonos/ficha.js";
 import { getMaeAnalyticsForSymbol } from "../services/market/bonds/maeFlujo.js";
 import { VALID_SEGMENTS, inferSegment } from "../services/market/bonds/curve.js";
@@ -839,7 +841,7 @@ router.get("/:symbol/ficha", async (req: Request, res: Response) => {
   res.setHeader("X-Disclaimer", DISCLAIMER);
   res.setHeader("Disclaimer", DISCLAIMER);
 
-  const provider = new BymaDataProvider();
+  const provider = new QuoteService(new BymaClient(), new BymaFichaClient());
 
   let fichaRaw: any = null;
   let quote: any = null;

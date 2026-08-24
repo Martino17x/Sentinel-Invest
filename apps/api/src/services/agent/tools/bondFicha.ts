@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { BONDS_PANEL_ENABLED } from "../../../config.js";
 import { DISCLAIMER } from "../../market/bonds/bondsQueries.js";
-import { BymaDataProvider, parseInteresToCouponRate } from "../../iol/BymaDataProvider.js";
+import { BymaClient } from "../../../infrastructure/providers/byma/BymaClient.js";
+import { BymaFichaClient } from "../../../infrastructure/providers/byma/BymaFichaClient.js";
+import { QuoteService } from "../../../application/cotizaciones/QuoteService.js";
+import { parseInteresToCouponRate } from "../../../domain/bonos/ficha.js";
 import { getMaeAnalyticsForSymbol } from "../../market/bonds/maeFlujo.js";
 import { getCER } from "../../market/bonds/cer.js";
 import { calcTIR } from "../../market/bonds/tir.js";
@@ -40,10 +43,10 @@ export const getBondFichaTool: ToolDefinition = {
     const args = rawArgs as { symbol: string };
     const symbol = args.symbol.toUpperCase().trim();
 
-    const provider = new BymaDataProvider();
+    const provider = new QuoteService(new BymaClient(), new BymaFichaClient());
 
-    let fichaRaw: Awaited<ReturnType<BymaDataProvider["getBondFichaRaw"]>> | null = null;
-    let quote: Awaited<ReturnType<BymaDataProvider["getQuote"]>> | null = null;
+    let fichaRaw: Awaited<ReturnType<QuoteService["getBondFichaRaw"]>> | null = null;
+    let quote: Awaited<ReturnType<QuoteService["getQuote"]>> | null = null;
     let maeAnalytic: BondAnalytics | null = null;
     let schedule: BondSchedule | null = null;
 

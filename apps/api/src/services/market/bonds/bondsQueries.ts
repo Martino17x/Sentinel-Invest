@@ -10,7 +10,10 @@ import { z } from "zod";
 import { SwrCache } from "../cache.js";
 import { DISCLAIMER } from "../radar.js";
 import { pool } from "../../../db/index.js";
-import { BymaDataProvider, parseInteresToCouponRate } from "../../iol/BymaDataProvider.js";
+import { BymaClient } from "../../../infrastructure/providers/byma/BymaClient.js";
+import { BymaFichaClient } from "../../../infrastructure/providers/byma/BymaFichaClient.js";
+import { QuoteService } from "../../../application/cotizaciones/QuoteService.js";
+import { parseInteresToCouponRate } from "../../../domain/bonos/ficha.js";
 import { getAllMaeAnalytics, getMaeAnalyticsForSymbol } from "./maeFlujo.js";
 import { buildCurve, VALID_SEGMENTS, inferSegment } from "./curve.js";
 import { projectCashflow } from "./cashflow.js";
@@ -38,6 +41,10 @@ export const bondsCurveCache = new SwrCache<{ points: CurvePoint[]; generatedAt:
 export const bondsCashflowCache = new SwrCache<{ months: CashflowMonth[] }>(CASHFLOW_TTL_MS);
 export const bondsPanelCache = new SwrCache<{ rows: BondPanelRow[]; generatedAt: string }>(PANEL_TTL_MS);
 
+// TODO(wip-bonds): stub temporal para permitir arranque del server — completar implementación pendiente del usuario
+const COMPARE_TTL_MS = 5 * 60 * 1000;
+export const bondsCompareCache = new SwrCache<{ analytics: BondAnalytics[]; diff: Record<string, unknown>; generatedAt: string }>(COMPARE_TTL_MS);
+
 const inFlightAnalytics = new Map<string, Promise<BondAnalytics>>();
 const inFlightCurve = new Map<string, Promise<CurvePoint[]>>();
 const bgInFlight = new Map<string, Promise<void>>();
@@ -63,7 +70,7 @@ export async function fetchBondAnalytics(symbol: string, signal?: AbortSignal): 
   }
 
   // 2) Local fallback: ficha BYMA + price + calcTIR/duration/paridad
-  const provider = new BymaDataProvider();
+  const provider = new QuoteService(new BymaClient(), new BymaFichaClient());
   const schedule = await provider.getBondSchedule(sym);
 
   // Price: try panel public-bonds first, fallback to provider.getQuote placeholder
@@ -245,7 +252,7 @@ export function sortRowsNullsLast(rows: BondPanelRow[], sort: string, order: "as
 
 export async function fetchBondPanel(signal?: AbortSignal): Promise<{ rows: BondPanelRow[]; generatedAt: string }> {
   const generatedAt = new Date().toISOString();
-  const provider = new BymaDataProvider();
+  const provider = new QuoteService(new BymaClient(), new BymaFichaClient());
 
   const [panelResult, maeAnalytics] = await Promise.all([
     provider.getPanel({ id: "", email: "" } as unknown as import("../../iol/types.js").IolCredentials, "bcba", "bono", 1, 5000).catch(() => ({ quotes: [] as import("../../iol/types.js").PanelQuote[], total: 0, summary: null as unknown as import("../../iol/types.js").PanelSummary })),
@@ -418,7 +425,7 @@ export async function fetchCashflow(accountId: string, signal?: AbortSignal): Pr
     return [];
   }
 
-  const provider = new BymaDataProvider();
+  const provider = new QuoteService(new BymaClient(), new BymaFichaClient());
   const positionsForCalc = await Promise.all(
     rows.map(async (r) => {
       const qty = Number(r.quantity);

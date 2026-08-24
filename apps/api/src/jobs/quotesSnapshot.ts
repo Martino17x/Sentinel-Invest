@@ -12,7 +12,9 @@
 //   (market, assetType, snapshotDate).
 // ============================================================
 
-import { BymaDataProvider } from "../services/iol/BymaDataProvider.js";
+import { BymaClient } from "../infrastructure/providers/byma/BymaClient.js";
+import { BymaFichaClient } from "../infrastructure/providers/byma/BymaFichaClient.js";
+import { QuoteService } from "../application/cotizaciones/QuoteService.js";
 import { saveQuotesSnapshot } from "../services/market/quotesSnapshotStore.js";
 
 /** Combinaciones reales que la UI expone (ver QuotesPage.tsx:ASSET_TYPES) */
@@ -46,8 +48,8 @@ export interface QuotesSnapshotOutcome {
 export function makeQuotesSnapshotDeps(
   overrides: Partial<QuotesSnapshotDeps> = {}
 ): QuotesSnapshotDeps {
-  const provider = new BymaDataProvider();
-  // BymaDataProvider no necesita creds reales: pasar dummy
+  const provider = new QuoteService(new BymaClient(), new BymaFichaClient());
+  // QuoteService no necesita creds reales: pasar dummy
   const dummyCreds = { username: "", password: "" };
   return {
     fetchPanel: async (market: string, assetType: string) => {
