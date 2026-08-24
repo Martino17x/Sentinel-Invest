@@ -36,8 +36,6 @@ import type {
  * El frontend debe mostrar el estado honesto (badge "Mercado cerrado").
  */
 
-const API_BASE = "https://open.bymadata.com.ar/vanoms-be-core/rest/api/bymadata/free";
-
 import { getInstrumentDisplayName } from "@sentinel/domain";
 import type { BondSchedule, BondCashflow } from "../market/bonds/types.js";
 import { buildSchedule } from "../market/bonds/cashflow.js";
@@ -50,40 +48,15 @@ import {
   isCallableTexto,
 } from "../market/bonds/bymaFichaParser.js";
 import type { BymaFicha as BymaFichaParserType } from "../market/bonds/bymaFichaParser.js";
+import {
+  type BymaInstrument,
+  type BymaResponse,
+  mapInstrument as mapInstrumentPure,
+  mapMarket,
+  mapAssetType,
+} from "../../infrastructure/providers/byma/BymaMapper.js";
 
-interface BymaResponse {
-  content?: {
-    page_number: number;
-    page_count: number;
-    page_size: number;
-    total_elements_count: number;
-  };
-  data: BymaInstrument[];
-  empty: boolean;
-}
-
-interface BymaInstrument {
-  symbol?: string;
-  name?: string;
-  description?: string;
-  // Estructura REAL de BYMADATA (verificado 13/08/2026 con mercado abierto):
-  trade?: number; // último precio operado
-  previousClosingPrice?: number; // cierre anterior (para calcular variación)
-  previousSettlementPrice?: number;
-  openingPrice?: number; // apertura
-  tradingHighPrice?: number; // máximo
-  tradingLowPrice?: number; // mínimo
-  bidPrice?: number; // precio compra
-  offerPrice?: number; // precio venta
-  tradeVolume?: number; // volumen operado
-  volumeAmount?: number; // monto operado
-  denominationCcy?: string; // moneda (ARS/USD)
-  securityType?: string; // tipo de instrumento
-  securitySubType?: string;
-  tradeHour?: string;
-  ticker?: string;
-  [key: string]: unknown;
-}
+const API_BASE = "https://open.bymadata.com.ar/vanoms-be-core/rest/api/bymadata/free";
 
 const REQUEST_BODY = {
   excludeZeroPxAndQty: false,
@@ -178,37 +151,7 @@ export class BymaDataProvider implements IolProvider {
   }
 
   private mapInstrument(i: BymaInstrument, market: string, assetType: string): PanelQuote {
-    const symbol = (i.symbol ?? i.ticker ?? "").toUpperCase();
-    const tradePx = Number(i.trade ?? 0);
-    const prevClose = Number(i.previousClosingPrice ?? i.previousSettlementPrice ?? 0);
-    // Fin de semana / sin volumen: BYMA devuelve trade 0 pero previousClosingPrice tiene el cierre.
-    // Mostrar el último cierre como lastPrice para que el instrumento no desaparezca fuera de horario.
-    const lastPrice = tradePx > 0 ? tradePx : prevClose > 0 ? prevClose : 0;
-    const variationPct =
-      prevClose > 0 && lastPrice > 0
-        ? ((lastPrice - prevClose) / prevClose) * 100
-        : 0;
-    const volNom = i.tradeVolume != null ? Number(i.tradeVolume) : null;
-    const volEfe = i.volumeAmount != null ? Number(i.volumeAmount) : null;
-
-    return {
-      symbol,
-      name: (i.description || i.name || getInstrumentDisplayName(symbol)).trim(),
-      assetType: mapAssetType(assetType, symbol),
-      market: mapMarket(market),
-      lastPrice,
-      variationPct,
-      bid: i.bidPrice != null ? Number(i.bidPrice) : null,
-      ask: i.offerPrice != null ? Number(i.offerPrice) : null,
-      open: i.openingPrice != null ? Number(i.openingPrice) : null,
-      low: i.tradingLowPrice != null ? Number(i.tradingLowPrice) : null,
-      high: i.tradingHighPrice != null ? Number(i.tradingHighPrice) : null,
-      close: prevClose > 0 ? prevClose : null,
-      volume: Number.isFinite(volNom as number) ? (volNom as number) : null,
-      volumeNominal: Number.isFinite(volNom as number) ? (volNom as number) : null,
-      volumeEfectivo: Number.isFinite(volEfe as number) ? (volEfe as number) : null,
-      currency: i.denominationCcy === "USD" ? "USD" : "ARS",
-    };
+    return mapInstrumentPure(i, market, assetType);
   }
 
   /** Público — raw BYMA ficha para consumidores avanzados (panel/ficha). */
@@ -616,27 +559,4 @@ function parseCashflowsFromFicha(ficha: BymaFicha, vencimiento: string): BondCas
   return parsed.cashflows.length ? parsed.cashflows : [{ fechaPago: vencimiento, renta: 0, amortizacion: 100, cashFlow: 100, vr: 0 }];
 }
 
-// ============================================================
-// Mapeadores
-// ============================================================
-
-function mapMarket(market: string): PanelQuote["market"] {
-  const m = market.toLowerCase();
-  if (m.includes("nyse")) return "nyse";
-  if (m.includes("nasdaq")) return "nasdaq";
-  if (m.includes("bono") || m.includes("mae") || m.includes("bonds")) return "bonds";
-  if (m.includes("fci") || m.includes("fondo")) return "fci";
-  if (m.includes("crypto")) return "crypto";
-  return "bcba";
-}
-
-function mapAssetType(assetType: string, symbol: string): PanelQuote["assetType"] {
-  if (assetType === "cedear") return "cedear";
-  if (assetType === "bono") return "bono";
-  if (assetType === "accion") return "accion";
-  if (assetType === "on") return "bono"; // ONs se muestran como bonos
-  if (assetType === "caucion") return "caucion";
-  // fallback por símbolo
-  if (symbol.startsWith("CEDEAR")) return "cedear";
-  return assetType as PanelQuote["assetType"];
-}
+// Mapeadores delegados a BymaMapper (SRP) — ver infrastructure/providers/byma/BymaMapper.ts
