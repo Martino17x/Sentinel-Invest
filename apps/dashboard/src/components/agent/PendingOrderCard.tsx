@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { CheckCircle2, Loader2, ShieldQuestion, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { agentApi } from "@/lib/api";
+import { agentApi } from "@/features/agente/api";
 import { cn } from "@/lib/utils";
 
 export interface PendingApproval {

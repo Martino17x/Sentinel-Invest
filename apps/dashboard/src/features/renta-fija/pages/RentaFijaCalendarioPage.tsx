@@ -5,7 +5,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
-import { bondsApi, connectionsApi } from "@/lib/api";
+import { bondsApi } from "@/features/renta-fija/api";
+import { connectionsApi } from "@/features/auth/api";
 import { useApiData } from "@/hooks/useApiData";
 
 export function RentaFijaCalendarioPage() {

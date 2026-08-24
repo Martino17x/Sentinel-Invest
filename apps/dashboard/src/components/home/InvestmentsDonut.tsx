@@ -3,7 +3,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatArs, formatCompact, formatUsd, maskAmount } from "@/lib/format";
-import type { DistributionByTypeItem } from "@/lib/api";
+import type { DistributionByTypeItem } from "@/features/portafolio/api";
 
 // Paleta vibrante por categoría (estilo IOL: cada tipo con su color)
 const TYPE_COLORS: Record<string, string> = {

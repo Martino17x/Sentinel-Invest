@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { DolarQuote } from "@/lib/api";
+import type { DolarQuote } from "@/features/dolar/api";
 
 /**
  * Card "Dólar hoy" (fuente dolarapi.com):

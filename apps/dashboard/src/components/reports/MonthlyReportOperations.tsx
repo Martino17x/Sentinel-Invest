@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatArs } from "@/lib/format";
 import { monthLabel } from "@/lib/art-time";
-import type { MonthlyReport, Operation } from "@/lib/api";
+import type { MonthlyReport } from "@/features/reportes/api";
+import type { Operation } from "@/features/portafolio/api";
 
 interface MonthlyReportOperationsProps {
   report: MonthlyReport;

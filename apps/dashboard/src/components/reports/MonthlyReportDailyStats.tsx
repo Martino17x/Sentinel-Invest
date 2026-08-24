@@ -2,7 +2,7 @@ import { TrendingUp, TrendingDown, Coins } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MetricTooltip } from "./MetricTooltip";
 import { dayLabel } from "@/lib/art-time";
-import type { MonthlyReport } from "@/lib/api";
+import type { MonthlyReport } from "@/features/reportes/api";
 
 interface MonthlyReportDailyStatsProps {
   report: MonthlyReport;

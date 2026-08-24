@@ -11,7 +11,7 @@ import { ChatComposer } from "@/components/agent/ChatComposer";
 import { cn } from "@/lib/utils";
 import { formatSessionDate } from "@/components/agent/chat-shared";
 import type { ChatView } from "@/lib/chat-view";
-import type { AgentSession } from "@/lib/api";
+import type { AgentSession } from "@/features/agente/api";
 import type { ChatItem } from "@/components/agent/AgentChatDrawer";
 import { PendingOrderCard, type PendingOutcome } from "@/components/agent/PendingOrderCard";
 

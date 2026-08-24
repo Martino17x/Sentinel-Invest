@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
-import type { FundamentalsData, InsightBlock } from "@/lib/api";
+import type { FundamentalsData, InsightBlock } from "@/features/analisis/api";
 
 interface Props {
   block: InsightBlock<FundamentalsData> | null | undefined;

@@ -11,7 +11,7 @@ import {
 } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatArs, formatCompact } from "@/lib/format";
-import type { MonthlyReport } from "@/lib/api";
+import type { MonthlyReport } from "@/features/reportes/api";
 
 interface MonthlyReportChartProps {
   report: MonthlyReport;

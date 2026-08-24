@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { portfolioApi, ratesApi } from "@/lib/api";
+import { portfolioApi } from "@/features/portafolio/api";
+import { ratesApi } from "@/features/dolar/api";
 import { useApiData } from "@/hooks/useApiData";
 import { HomeHero } from "@/components/home/HomeHero";
 import { AvailableCard } from "@/components/home/AvailableCard";

@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
-import { bondsApi } from "@/lib/api";
+import { bondsApi } from "@/features/renta-fija/api";
 import { useApiData } from "@/hooks/useApiData";
 import { useSmartBack } from "@/lib/use-smart-back";
 import { bondPanelToCsvRows, toCsv, downloadCsv } from "@/lib/csv";

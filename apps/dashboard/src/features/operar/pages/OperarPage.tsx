@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { TradeForm } from "@/components/trade/TradeDialog";
 import { FciForm, type FciMode } from "@/components/trade/FciDialog";
-import type { OrderResult } from "@/lib/api";
+import type { OrderResult } from "@/features/operar/api";
 
 type OperationType = "trade" | "mep" | "fci";
 

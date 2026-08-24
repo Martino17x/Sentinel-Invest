@@ -1,6 +1,7 @@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { InsightBlock, NewsData } from "@/lib/api";
+import type { InsightBlock } from "@/features/analisis/api";
+import type { NewsData } from "@/features/noticias/api";
 
 interface Props {
   block: InsightBlock<NewsData> | null | undefined;

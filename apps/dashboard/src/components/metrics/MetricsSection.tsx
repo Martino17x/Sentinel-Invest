@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { metricsApi } from "@/lib/api";
+import { metricsApi, virtualReportsApi } from "@/features/portafolio/api";
 import { useApiData } from "@/hooks/useApiData";
 
 // Tasas libres de riesgo ANUAL preestablecidas. BADLAR/LECAP son
@@ -88,14 +88,20 @@ function MetricCard({
   );
 }
 
-export function MetricsSection() {
+export function MetricsSection({ virtualPortfolioId }: { virtualPortfolioId?: string }) {
   const [rf, setRf] = useState<number>(0);
+
+  const fetcher = virtualPortfolioId
+    ? () => virtualReportsApi.getMetrics(virtualPortfolioId, { days: 90, rf })
+    : () => metricsApi.get({ days: 90, rf });
+
+  const cacheKey = virtualPortfolioId ? `virtual-metrics:${virtualPortfolioId}:90:${rf}` : `metrics:90:${rf}`;
 
   const {
     data: metrics,
     isLoading: loading,
     error,
-  } = useApiData(`metrics:90:${rf}`, () => metricsApi.get({ days: 90, rf }));
+  } = useApiData(cacheKey, fetcher as () => Promise<never>);
 
   return (
     <TooltipProvider>

@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { calendarApi, type CalendarDay } from "@/lib/api";
+import { calendarApi, virtualReportsApi, type CalendarDay } from "@/features/portafolio/api";
 import { useApiData } from "@/hooks/useApiData";
 import { artTodayMonthKey, dayLabel, monthLabel, shiftMonthKey } from "@/lib/art-time";
 import { DayDetailDialog } from "./DayDetailDialog";
@@ -170,16 +170,22 @@ function DayCell({ day, index, onSelect }: DayCellProps) {
   );
 }
 
-export function CalendarView() {
+export function CalendarView({ virtualPortfolioId }: { virtualPortfolioId?: string }) {
   const [month, setMonth] = useState(() => artTodayMonthKey());
   const [selectedDay, setSelectedDay] = useState<CalendarDay | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  const fetcher = virtualPortfolioId
+    ? () => virtualReportsApi.getCalendar(virtualPortfolioId, month)
+    : () => calendarApi.getMonth(month);
+
+  const cacheKey = virtualPortfolioId ? `virtual-calendar:${virtualPortfolioId}:${month}` : `calendar:${month}`;
 
   const {
     data,
     isLoading: loading,
     error,
-  } = useApiData(`calendar:${month}`, () => calendarApi.getMonth(month));
+  } = useApiData(cacheKey, fetcher as () => Promise<never>);
 
   // Celdas en blanco iniciales: semanas L→D (convención es-AR)
   const leadingBlanks = useMemo(() => {

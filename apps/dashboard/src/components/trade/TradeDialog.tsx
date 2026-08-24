@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { SegmentedToggle } from "@/components/trade/SegmentedToggle";
 import { tradeFormSchema, parseDecimal } from "@/components/trade/tradeSchema";
-import { ordersApi, type CreateOrderInput, type OrderMarket, type OrderSide, type OrderTerm, type PriceType, type OrderResult } from "@/lib/api";
+import { ordersApi, type CreateOrderInput, type OrderMarket, type OrderSide, type OrderTerm, type PriceType, type OrderResult } from "@/features/operar/api";
 import { invalidateApiCache } from "@/hooks/useApiData";
 
 const formatterARS = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 2 });

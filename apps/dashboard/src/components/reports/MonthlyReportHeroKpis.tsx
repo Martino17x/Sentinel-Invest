@@ -2,7 +2,7 @@ import { Wallet, Percent, HandCoins, Scale } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MetricTooltip } from "./MetricTooltip";
 import { formatArs, formatUsd } from "@/lib/format";
-import type { MonthlyReport } from "@/lib/api";
+import type { MonthlyReport } from "@/features/reportes/api";
 
 interface MonthlyReportHeroKpisProps {
   report: MonthlyReport;

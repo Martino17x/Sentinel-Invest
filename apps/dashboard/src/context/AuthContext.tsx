@@ -7,7 +7,8 @@ import {
   type ReactNode,
 } from "react";
 import { flushSync } from "react-dom";
-import { authApi, setAccessToken, type User } from "@/lib/api";
+import { authApi } from "@/features/auth/api";
+import { setAccessToken, type User } from "@/lib/api-client";
 
 interface AuthContextValue {
   user: User | null;

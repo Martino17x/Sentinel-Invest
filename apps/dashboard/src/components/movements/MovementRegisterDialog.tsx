@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { movementsApi, type MovementType } from "@/lib/api";
+import { movementsApi, type MovementType } from "@/features/portafolio/api";
 
 const TYPE_LABELS: Record<MovementType, string> = {
   deposit: "Depósito",

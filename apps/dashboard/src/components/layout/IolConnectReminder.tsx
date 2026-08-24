@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Link2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { connectionsApi, type IolConnectionState } from "@/lib/api";
+import { connectionsApi, type IolConnectionState } from "@/features/auth/api";
 
 /**
  * Banner de recordatorio de conexión IOL.

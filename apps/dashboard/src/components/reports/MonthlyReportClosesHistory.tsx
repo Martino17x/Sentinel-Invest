@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatArs, formatUsd } from "@/lib/format";
 import { monthLabel } from "@/lib/art-time";
-import type { MonthClose } from "@/lib/api";
+import type { MonthClose } from "@/features/reportes/api";
 
 interface MonthlyReportClosesHistoryProps {
   closes: MonthClose[];

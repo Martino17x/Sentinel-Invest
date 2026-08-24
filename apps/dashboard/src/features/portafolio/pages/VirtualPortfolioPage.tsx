@@ -22,7 +22,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { virtualPortfoliosApi, type VirtualPosition } from "@/lib/api";
+import { virtualPortfoliosApi, type VirtualPosition } from "@/features/portafolio/api";
 import { useApiData, invalidateApiCache } from "@/hooks/useApiData";
 import { InstrumentPicker, type PickedInstrument } from "@/components/InstrumentPicker";
 import CompanyLogo from "@/components/ui/company-logo";

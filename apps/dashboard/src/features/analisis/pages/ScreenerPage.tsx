@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { screenerApi, type ScreenerRow } from "@/lib/api";
+import { screenerApi, type ScreenerRow } from "@/features/analisis/api";
 import { useApiData } from "@/hooks/useApiData";
 
 const formatterARS = new Intl.NumberFormat("es-AR", {

@@ -287,3 +287,115 @@ export const metricsApi = {
     return apiFetch(`/portfolio/metrics${q ? `?${q}` : ""}`);
   },
 };
+
+// ============================================================
+// Portafolios virtuales — tracking sin IOL (virtual-portfolios)
+// Fuente única para virtualPortfoliosApi + virtualReportsApi
+// ============================================================
+
+export interface VirtualPortfolio {
+  id: string;
+  name: string;
+  description: string | null;
+  createdAt: string;
+  updatedAt: string;
+  userId: string;
+}
+
+export interface VirtualPosition {
+  id: string;
+  portfolioId: string;
+  symbol: string;
+  quantity: number;
+  avgPrice: number;
+  currency: "ARS" | "USD";
+  market: "bcba" | "bonds";
+  createdAt: string;
+  lastPrice: number | null;
+  variationPct: number | null;
+  quoteCurrency: string | null;
+  totalValue: number;
+  costBasis: number;
+  gainLossAmount: number;
+  gainLossPct: number;
+}
+
+export interface VirtualPortfolioDetail extends VirtualPortfolio {
+  positions: VirtualPosition[];
+  totals: {
+    totalArs: number;
+    totalUsd: number;
+    costArs: number;
+    costUsd: number;
+    gainArs: number;
+    gainUsd: number;
+    gainPctArs: number;
+    gainPctUsd: number;
+  };
+}
+
+// Alias locales para reportes virtuales (evita ciclo con features/reportes/api)
+export interface VirtualMonthClose {
+  month: string;
+  closingValueArs: number;
+  closingValueUsd: number;
+  twrPct: number;
+  grossChangeArs: number;
+  netContributionsArs: number;
+}
+
+export const virtualPortfoliosApi = {
+  async list(): Promise<{ portfolios: VirtualPortfolio[] }> {
+    return apiFetch("/virtual-portfolios");
+  },
+  async get(id: string): Promise<{ portfolio: VirtualPortfolioDetail }> {
+    return apiFetch(`/virtual-portfolios/${encodeURIComponent(id)}`);
+  },
+  async create(input: { name: string; description: string | null }): Promise<{ portfolio: VirtualPortfolio }> {
+    return apiFetch("/virtual-portfolios", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  async addPosition(
+    portfolioId: string,
+    input: { symbol: string; quantity: number; avg_price: number; currency: "ARS" | "USD"; market: "bcba" | "bonds" }
+  ): Promise<{ position: VirtualPosition }> {
+    return apiFetch(`/virtual-portfolios/${encodeURIComponent(portfolioId)}/positions`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  },
+  async removePosition(portfolioId: string, positionId: string): Promise<void> {
+    return apiFetch(`/virtual-portfolios/${encodeURIComponent(portfolioId)}/positions/${encodeURIComponent(positionId)}`, {
+      method: "DELETE",
+    });
+  },
+  async remove(portfolioId: string): Promise<void> {
+    return apiFetch(`/virtual-portfolios/${encodeURIComponent(portfolioId)}`, { method: "DELETE" });
+  },
+};
+
+export const virtualReportsApi = {
+  async getMetrics(
+    portfolioId: string,
+    params: { from?: string; to?: string; days?: number; rf?: number } = {}
+  ): Promise<PortfolioMetrics> {
+    const qs = new URLSearchParams();
+    if (params.from) qs.set("from", params.from);
+    if (params.to) qs.set("to", params.to);
+    if (params.days) qs.set("days", String(params.days));
+    if (params.rf !== undefined) qs.set("rf", String(params.rf));
+    const q = qs.toString();
+    return apiFetch(`/virtual-portfolios/${encodeURIComponent(portfolioId)}/metrics${q ? `?${q}` : ""}`);
+  },
+  async getCalendar(portfolioId: string, month: string): Promise<MonthCalendar> {
+    return apiFetch(`/virtual-portfolios/${encodeURIComponent(portfolioId)}/calendar/${encodeURIComponent(month)}`);
+  },
+  async getMonthlyCloses(portfolioId: string): Promise<{ closes: VirtualMonthClose[] }> {
+    return apiFetch(`/virtual-portfolios/${encodeURIComponent(portfolioId)}/reports`);
+  },
+  async getMonthlyReport(portfolioId: string, month: string): Promise<{ report: import("../reportes/api").MonthlyReport }> {
+    return apiFetch(`/virtual-portfolios/${encodeURIComponent(portfolioId)}/reports/${encodeURIComponent(month)}`);
+  },
+};

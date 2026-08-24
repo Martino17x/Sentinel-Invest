@@ -2,7 +2,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { ConsensusData, InsightBlock } from "@/lib/api";
+import type { ConsensusData, InsightBlock } from "@/features/analisis/api";
 
 interface Props {
   block: InsightBlock<ConsensusData> | null | undefined;

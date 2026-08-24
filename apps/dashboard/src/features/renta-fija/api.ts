@@ -164,8 +164,39 @@ export const bondsApi = {
   async getAnalytics(symbol: string): Promise<BondAnalytics> {
     return apiFetch<BondAnalytics>(`/bonds/${encodeURIComponent(symbol)}/analytics`);
   },
-  async getCurve(segment: string): Promise<CurveResponse> {
-    return apiFetch<CurveResponse>(`/bonds/curve?segment=${encodeURIComponent(segment)}`);
+  async getCurve(segment: string, fit?: boolean | string): Promise<CurveResponse & { fitted?: boolean; fit?: boolean; fittedPoints?: Array<{ md: number; tirFitted: number }>; fitRmse?: number | null }> {
+    const fitParam = fit ? (typeof fit === "string" ? fit : fit ? "true" : undefined) : undefined;
+    const qs = fitParam ? `?segment=${encodeURIComponent(segment)}&fit=${fitParam}` : `?segment=${encodeURIComponent(segment)}`;
+    return apiFetch(`/bonds/curve${qs}`);
+  },
+  async getSensitivity(
+    symbol: string,
+    bps: number[] = [25, 50, 100]
+  ): Promise<{
+    symbol: string;
+    precio: number;
+    md: number | null;
+    duration: number | null;
+    tir: number | null;
+    dv01: number;
+    dv01PerBp: number;
+    bps: number[];
+    scenarios: Array<{ bps: number; direction: "up" | "down"; deltaYield: number; deltaPrice: number; newPrice: number; pctChange: number; dv01: number; dv01PerBp: number }>;
+    scenariosSimple: Array<{ bps: number; deltaYield: number; deltaPrice: number; newPrice: number; pctChange: number; dv01: number; dv01PerBp: number }>;
+    disclaimer: string;
+    generatedAt: string;
+  }> {
+    const qs = bps.length ? `?bps=${bps.join(",")}` : "";
+    return apiFetch(`/bonds/${encodeURIComponent(symbol)}/sensitivity${qs}`);
+  },
+  async getCompare(symbols: string[]): Promise<{
+    analytics: BondAnalytics[];
+    diff?: unknown;
+    disclaimer: string;
+    generatedAt?: string;
+  }> {
+    const qs = symbols.length ? `?symbols=${encodeURIComponent(symbols.join(","))}` : "";
+    return apiFetch(`/bonds/compare${qs}`);
   },
   async getCashflow(accountId: string): Promise<CashflowResponse> {
     return apiFetch<CashflowResponse>(`/bonds/cashflow?accountId=${encodeURIComponent(accountId)}`);

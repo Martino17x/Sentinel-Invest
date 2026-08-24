@@ -59,6 +59,10 @@ export const agentApi = {
 
 export type ApiKeyScope = "read" | "trade";
 
+export const VALID_CATEGORIES = ["cartera", "mercado", "bonos", "conocimiento", "trading"] as const;
+export type ApiKeyCategory = (typeof VALID_CATEGORIES)[number];
+export const API_KEY_CATEGORIES: readonly ApiKeyCategory[] = VALID_CATEGORIES;
+
 export interface ApiKeySummary {
   id: string;
   name: string;
@@ -67,6 +71,7 @@ export interface ApiKeySummary {
   enabled: boolean;
   lastUsedAt: string | null;
   createdAt: string;
+  enabledCategories?: ApiKeyCategory[] | null;
 }
 
 export const apiKeysApi = {
@@ -77,6 +82,7 @@ export const apiKeysApi = {
   async create(input: {
     name: string;
     scope: ApiKeyScope;
+    enabledCategories?: ApiKeyCategory[] | null;
   }): Promise<{ key: ApiKeySummary & { secret: string } }> {
     return apiFetch("/apikeys", {
       method: "POST",
@@ -90,5 +96,29 @@ export const apiKeysApi = {
 
   async enable(id: string): Promise<{ key: ApiKeySummary }> {
     return apiFetch(`/apikeys/${id}/enable`, { method: "POST" });
+  },
+
+  async updateCapabilities(
+    id: string,
+    enabledCategories: ApiKeyCategory[] | null
+  ): Promise<{ key: ApiKeySummary }> {
+    return apiFetch(`/apikeys/${id}/capabilities`, {
+      method: "PATCH",
+      body: JSON.stringify({ enabledCategories }),
+    });
+  },
+
+  async updateName(id: string, name: string): Promise<{ key: ApiKeySummary }> {
+    return apiFetch(`/apikeys/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name }),
+    });
+  },
+
+  async updateScope(id: string, scope: ApiKeyScope): Promise<{ key: ApiKeySummary }> {
+    return apiFetch(`/apikeys/${id}/scope`, {
+      method: "PATCH",
+      body: JSON.stringify({ scope }),
+    });
   },
 };

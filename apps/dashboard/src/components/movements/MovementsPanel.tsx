@@ -11,7 +11,7 @@ import {
   type Movement,
   type MovementStatus,
   type MovementType,
-} from "@/lib/api";
+} from "@/features/portafolio/api";
 import { useApiData, invalidateApiCache } from "@/hooks/useApiData";
 import { MovementRegisterDialog } from "./MovementRegisterDialog";
 import { MovementsImportDialog } from "./MovementsImportDialog";

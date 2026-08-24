@@ -1,12 +1,13 @@
 import { Link } from "react-router-dom";
-import { TrendingUp, TrendingDown, Wallet, PiggyBank, Landmark } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, PiggyBank, Landmark, Briefcase } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { AssetTypeBadge } from "@/components/ui/asset-type-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { portfolioApi } from "@/lib/api";
+import { portfolioApi } from "@/features/portafolio/api";
 import { useApiData } from "@/hooks/useApiData";
 
 // Formateadores de moneda — ARS con separador de miles
@@ -104,12 +105,20 @@ export function DashboardPage() {
       : 0);
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Panel</h1>
-        <p className="text-sm text-muted-foreground">
-          Cuenta {portfolio.accountNumber} — resumen de tu cartera
-        </p>
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8 animate-in fade-in-0 duration-200 motion-reduce:animate-none">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Panel</h1>
+          <p className="text-sm text-muted-foreground">
+            Cuenta {portfolio.accountNumber} — resumen de tu cartera
+          </p>
+        </div>
+        <Link to="/portfolio/seguimiento" className="shrink-0">
+          <Button variant="outline" className="w-full shrink-0 sm:w-auto">
+            <Briefcase className="h-4 w-4" />
+            Portafolios de seguimiento
+          </Button>
+        </Link>
       </div>
 
       {/* Cards de estadísticas */}

@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { movementsApi, type ImportRowPreview } from "@/lib/api";
+import { movementsApi, type ImportRowPreview } from "@/features/portafolio/api";
 import { FileDropzone, type SelectedFileInfo } from "./FileDropzone";
 import { cn } from "@/lib/utils";
 

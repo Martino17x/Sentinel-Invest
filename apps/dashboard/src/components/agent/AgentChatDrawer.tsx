@@ -27,7 +27,7 @@ import { WelcomePrompts } from "@/components/agent/WelcomePrompts";
 import { ChatComposer } from "@/components/agent/ChatComposer";
 import { AgentChatError, streamAgentChat, type AgentToolStatus } from "@/lib/agent-chat";
 import { WELCOME_MESSAGE, isGreeting } from "@/lib/agent-greetings";
-import { agentApi, type AgentChatMessage, type AgentSession } from "@/lib/api";
+import { agentApi, type AgentChatMessage, type AgentSession } from "@/features/agente/api";
 import { cn } from "@/lib/utils";
 import { formatSessionDate } from "@/components/agent/chat-shared";
 

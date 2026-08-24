@@ -32,7 +32,7 @@ import {
   type Operation,
   type SeriesDay,
   type SeriesPositionPoint,
-} from "@/lib/api";
+} from "@/features/portafolio/api";
 import { artDateKeyFromUtc, dayLabel } from "@/lib/art-time";
 
 // ============================================================

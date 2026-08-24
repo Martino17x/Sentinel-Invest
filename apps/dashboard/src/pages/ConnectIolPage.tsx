@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { connectionsApi } from "@/lib/api";
+import { connectionsApi } from "@/features/auth/api";
 import { useApiData, invalidateApiCache } from "@/hooks/useApiData";
 
 export function ConnectIolPage() {

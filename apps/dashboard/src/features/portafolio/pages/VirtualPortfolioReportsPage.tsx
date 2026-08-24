@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { virtualPortfoliosApi } from "@/lib/api";
+import { virtualPortfoliosApi } from "@/features/portafolio/api";
 import { useApiData } from "@/hooks/useApiData";
 import { CalendarView } from "@/components/reports/CalendarView";
 import { MetricsSection } from "@/components/metrics/MetricsSection";

@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { analysisApi, type Analysis, type AnalysisSignalFactor } from "@/lib/api";
+import { analysisApi, type Analysis, type AnalysisSignalFactor } from "@/features/analisis/api";
 import { useApiData } from "@/hooks/useApiData";
 import { formatPct } from "@/lib/format";
 

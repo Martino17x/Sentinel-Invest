@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Clock, RefreshCw } from "lucide-react";
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { ScatterChart, Scatter, Line, ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
-import { bondsApi } from "@/lib/api";
+import { bondsApi } from "@/features/renta-fija/api";
 import { useApiData } from "@/hooks/useApiData";
 
 const SEGMENTS = [
@@ -22,13 +23,17 @@ function formatTir(v: number): string {
 
 export function RentaFijaCurvaPage() {
   const [segment, setSegment] = useState<string>("USD-hard-dollar");
-  const cacheKey = `bonds:curve:${segment}`;
+  const [fit, setFit] = useState(false);
+  const cacheKey = `bonds:curve:${segment}:${fit ? "fit" : "raw"}`;
 
-  const { data, isLoading, error, refetch, isRefreshing } = useApiData(cacheKey, () => bondsApi.getCurve(segment));
+  const { data, isLoading, error, refetch, isRefreshing } = useApiData(cacheKey, () => bondsApi.getCurve(segment, fit));
 
   const points = data?.points ?? [];
   const isMarketClosed = data?.isMarketClosed ?? false;
   const isStale = data?.stale === true;
+  const fitted = (data as unknown as { fitted?: boolean; fit?: boolean })?.fitted ?? (data as unknown as { fit?: boolean })?.fit ?? false;
+  const fittedPoints = (data as unknown as { fittedPoints?: Array<{ md: number; tirFitted: number }> })?.fittedPoints ?? [];
+  const fitRmse = (data as unknown as { fitRmse?: number | null })?.fitRmse ?? null;
 
   const chartData = points.map((p) => ({
     ticker: p.ticker,
@@ -67,6 +72,22 @@ export function RentaFijaCurvaPage() {
               </button>
             );
           })}
+        </div>
+
+        {/* Fit toggle T-013 */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={fit}
+            onClick={() => setFit((v) => !v)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-colors motion-reduce:transition-none ${fit ? "bg-foreground border-foreground" : "bg-muted border-border"}`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform motion-reduce:transition-none ${fit ? "translate-x-6" : "translate-x-1"}`} />
+          </button>
+          <span className="text-sm font-medium">Curva ajustada (Nelson-Siegel-Svensson)</span>
+          {fit && fitted && <Badge variant="outline" className="font-mono text-xs">RMSE {(fitRmse! * 100).toFixed(3)}%</Badge>}
+          {fit && !fitted && points.length > 0 && points.length < 8 && <Badge variant="outline" className="border-amber-600 text-amber-600 text-xs">Requiere ≥8 puntos · fallback raw</Badge>}
         </div>
 
         {/* Stale banner */}
@@ -132,45 +153,55 @@ export function RentaFijaCurvaPage() {
             ) : (
               <div className="h-[420px] w-full animate-in fade-in-0 duration-200 motion-reduce:animate-none">
                 <ResponsiveContainer width="100%" height="100%">
-                  <ScatterChart margin={{ top: 12, right: 16, left: 12, bottom: 12 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis
-                      type="number"
-                      dataKey="md"
-                      name="MD"
-                      tick={{ fontSize: 11 }}
-                      tickLine={false}
-                      axisLine={false}
-                      label={{ value: "Duration modificada (años)", position: "insideBottom", offset: -4, fontSize: 11 }}
-                    />
-                    <YAxis
-                      type="number"
-                      dataKey="tir"
-                      name="TIR"
-                      tick={{ fontSize: 11 }}
-                      tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`}
-                      tickLine={false}
-                      axisLine={false}
-                      label={{ value: "TIR", angle: -90, position: "insideLeft", fontSize: 11 }}
-                    />
-                    <Tooltip
-                      cursor={{ strokeDasharray: "3 3" }}
-                      content={({ active, payload }) => {
-                        if (!active || !payload || payload.length === 0) return null;
-                        const d = payload[0]?.payload as { ticker: string; tir: number; md: number; vencimiento: string } | undefined;
-                        if (!d) return null;
-                        return (
-                          <div className="rounded-lg border bg-popover px-3 py-2 shadow-md text-xs">
-                            <p className="font-semibold">{d.ticker}</p>
-                            <p className="tabular-nums">TIR: {formatTir(d.tir)}</p>
-                            <p className="tabular-nums">MD: {d.md.toFixed(2)} años</p>
-                            {d.vencimiento && <p className="text-muted-foreground">Vto: {d.vencimiento}</p>}
-                          </div>
-                        );
-                      }}
-                    />
-                    <Scatter name={segment} data={chartData} fill="var(--chart-1)" />
-                  </ScatterChart>
+                  {fit && fitted && fittedPoints.length > 0 ? (
+                    <ComposedChart margin={{ top: 12, right: 16, left: 12, bottom: 12 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis type="number" dataKey="md" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} label={{ value: "Duration modificada (años)", position: "insideBottom", offset: -4, fontSize: 11 }} />
+                      <YAxis type="number" dataKey="tir" tick={{ fontSize: 11 }} tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`} tickLine={false} axisLine={false} label={{ value: "TIR", angle: -90, position: "insideLeft", fontSize: 11 }} />
+                      <Tooltip
+                        cursor={{ strokeDasharray: "3 3" }}
+                        content={({ active, payload }) => {
+                          if (!active || !payload?.length) return null;
+                          const d = payload[0]?.payload as { ticker?: string; tir?: number; tirFitted?: number; md: number; vencimiento?: string } | undefined;
+                          if (!d) return null;
+                          return (
+                            <div className="rounded-lg border bg-popover px-3 py-2 shadow-md text-xs">
+                              {d.ticker && <p className="font-semibold">{d.ticker}</p>}
+                              {d.tir != null && <p className="tabular-nums">TIR: {formatTir(d.tir)}</p>}
+                              {d.tirFitted != null && <p className="tabular-nums">Fit: {formatTir(d.tirFitted)}</p>}
+                              <p className="tabular-nums">MD: {d.md.toFixed(2)} años</p>
+                              {d.vencimiento && <p className="text-muted-foreground">Vto: {d.vencimiento}</p>}
+                            </div>
+                          );
+                        }}
+                      />
+                      <Scatter name={segment} data={chartData} fill="var(--chart-1)" />
+                      <Line type="monotone" dataKey="tirFitted" data={fittedPoints.map((fp) => ({ md: fp.md, tirFitted: fp.tirFitted }))} stroke="hsl(var(--primary))" dot={false} strokeWidth={2} strokeDasharray="6 3" name="NSS fit" />
+                    </ComposedChart>
+                  ) : (
+                    <ScatterChart margin={{ top: 12, right: 16, left: 12, bottom: 12 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis type="number" dataKey="md" name="MD" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} label={{ value: "Duration modificada (años)", position: "insideBottom", offset: -4, fontSize: 11 }} />
+                      <YAxis type="number" dataKey="tir" name="TIR" tick={{ fontSize: 11 }} tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`} tickLine={false} axisLine={false} label={{ value: "TIR", angle: -90, position: "insideLeft", fontSize: 11 }} />
+                      <Tooltip
+                        cursor={{ strokeDasharray: "3 3" }}
+                        content={({ active, payload }) => {
+                          if (!active || !payload || payload.length === 0) return null;
+                          const d = payload[0]?.payload as { ticker: string; tir: number; md: number; vencimiento: string } | undefined;
+                          if (!d) return null;
+                          return (
+                            <div className="rounded-lg border bg-popover px-3 py-2 shadow-md text-xs">
+                              <p className="font-semibold">{d.ticker}</p>
+                              <p className="tabular-nums">TIR: {formatTir(d.tir)}</p>
+                              <p className="tabular-nums">MD: {d.md.toFixed(2)} años</p>
+                              {d.vencimiento && <p className="text-muted-foreground">Vto: {d.vencimiento}</p>}
+                            </div>
+                          );
+                        }}
+                      />
+                      <Scatter name={segment} data={chartData} fill="var(--chart-1)" />
+                    </ScatterChart>
+                  )}
                 </ResponsiveContainer>
               </div>
             )}

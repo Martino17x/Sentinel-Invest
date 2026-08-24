@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { apiKeysApi, type ApiKeyScope, type ApiKeySummary } from "@/lib/api";
+import { apiKeysApi, type ApiKeyScope, type ApiKeySummary } from "@/features/agente/api";
 
 const SCOPE_DESCRIPTIONS: Record<ApiKeyScope, string> = {
   read: "solo lectura: cartera, cotizaciones, reportes",

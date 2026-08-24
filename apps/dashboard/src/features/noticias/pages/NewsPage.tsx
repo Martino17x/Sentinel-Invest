@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { newsApi, type NewsItem } from "@/lib/api";
+import { newsApi, type NewsItem } from "@/features/noticias/api";
 import { useApiData } from "@/hooks/useApiData";
 import CompanyLogo from "@/components/ui/company-logo";
 

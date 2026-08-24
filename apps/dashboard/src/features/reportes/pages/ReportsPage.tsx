@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { reportsApi } from "@/lib/api";
+import { reportsApi } from "@/features/reportes/api";
 import { useApiData } from "@/hooks/useApiData";
 import { CalendarView } from "@/components/reports/CalendarView";
 import { MetricsSection } from "@/components/metrics/MetricsSection";

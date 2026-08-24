@@ -2,7 +2,7 @@ import { TrendingUp, Activity, Tag, BarChart3 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MetricTooltip } from "./MetricTooltip";
 import { formatArs } from "@/lib/format";
-import type { MonthlyReport } from "@/lib/api";
+import type { MonthlyReport } from "@/features/reportes/api";
 
 interface MonthlyReportSecondaryKpisProps {
   report: MonthlyReport;

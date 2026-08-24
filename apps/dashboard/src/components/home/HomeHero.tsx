@@ -3,7 +3,7 @@ import { Eye, EyeOff, TrendingUp, TrendingDown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatArsNoDecimals, formatUsd, formatChangeAmount, maskAmount } from "@/lib/format";
-import type { DolarQuote } from "@/lib/api";
+import type { DolarQuote } from "@/features/dolar/api";
 
 interface HomeHeroProps {
   totalArs: number;

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { profileApi } from "@/lib/api";
+import { profileApi } from "@/features/auth/api";
 import { useApiData } from "@/hooks/useApiData";
 import { AgentApiKeysCard } from "@/components/agent/AgentApiKeysCard";
 import { useAuth } from "@/context/AuthContext";

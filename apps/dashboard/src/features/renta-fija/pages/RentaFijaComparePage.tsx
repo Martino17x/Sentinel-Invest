@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
-import { bondsApi } from "@/lib/api";
+import { bondsApi, type BondAnalytics } from "@/features/renta-fija/api";
 import { useApiData } from "@/hooks/useApiData";
 import { useSmartBack } from "@/lib/use-smart-back";
 import { compareToCsvRows, toCsv, downloadCsv } from "@/lib/csv";
@@ -38,8 +38,8 @@ export function RentaFijaComparePage() {
     { enabled: symbols.length >= 2 && symbols.length <= 4 }
   );
 
-  const analytics = data?.analytics ?? [];
-  const diff = data?.diff ?? null;
+  const analytics: BondAnalytics[] = (data as { analytics: BondAnalytics[] } | null)?.analytics ?? [];
+  const diff = (data as { diff?: Record<string, any> } | null)?.diff ?? null;
 
   const validationError = useMemo(() => {
     const parts = input

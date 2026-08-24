@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { fciSchema, parseDecimal } from "@/components/trade/tradeSchema";
-import { ordersApi, type OrderResult } from "@/lib/api";
+import { ordersApi, type OrderResult } from "@/features/operar/api";
 
 export type FciMode = "subscribe" | "rescue";
 

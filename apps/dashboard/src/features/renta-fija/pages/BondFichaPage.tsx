@@ -10,12 +10,12 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
-import { bondsApi } from "@/lib/api";
-import type { BondSchedule } from "@/lib/api";
+import { bondsApi } from "@/features/renta-fija/api";
+import type { BondSchedule } from "@/features/renta-fija/api";
 import { useApiData } from "@/hooks/useApiData";
 import { useSmartBack } from "@/lib/use-smart-back";
 
-type FichaTab = "overview" | "cashflow" | "tecnica" | "curva";
+type FichaTab = "overview" | "cashflow" | "tecnica" | "curva" | "sensibilidad";
 
 function fmt(v: number | null | undefined, digits = 2): string {
   if (v == null || !Number.isFinite(v)) return "—";
@@ -65,6 +65,14 @@ export function BondFichaPage() {
     cacheKey,
     () => bondsApi.getFicha(symbol),
     { enabled: Boolean(symbol) }
+  );
+
+  // T-011 sensibilidad
+  const sensKey = tab === "sensibilidad" && symbol ? `bonds:sensitivity:${symbol}` : null;
+  const { data: sensData, isLoading: sensLoading, error: sensError } = useApiData(
+    sensKey,
+    () => bondsApi.getSensitivity(symbol, [25, 50, 100]),
+    { enabled: tab === "sensibilidad" && Boolean(symbol) }
   );
 
   const cuadro = ficha?.cuadroTecnico ?? ficha?.cuadro ?? null;
@@ -179,6 +187,7 @@ export function BondFichaPage() {
                 <TabsTrigger value="cashflow" className="gap-1.5"><Wallet className="h-4 w-4" /> Cashflow</TabsTrigger>
                 <TabsTrigger value="tecnica" className="gap-1.5"><TrendingUp className="h-4 w-4" /> Técnica</TabsTrigger>
                 <TabsTrigger value="curva" className="gap-1.5"><Calendar className="h-4 w-4" /> Curva</TabsTrigger>
+                <TabsTrigger value="sensibilidad" className="gap-1.5"><TrendingUp className="h-4 w-4" /> Sensibilidad</TabsTrigger>
               </TabsList>
 
               {/* Overview */}
@@ -354,6 +363,84 @@ export function BondFichaPage() {
                           </ScatterChart>
                         </ResponsiveContainer>
                       </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Sensibilidad DV01 T-011 */}
+              <TabsContent value="sensibilidad" className="mt-4 data-[state=active]:animate-in data-[state=active]:fade-in-0 data-[state=active]:duration-150 motion-reduce:data-[state=active]:animate-none">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Sensibilidad — ΔP = -MD × Δy × P · DV01</CardTitle>
+                    <CardDescription>
+                      {symbol} · MD {fmt(md)} · P {fmtPrice(ficha?.precio ?? ficha?.precioDirty)} · DV01 {sensData ? fmtPrice(sensData.dv01) : "—"} por 1bp
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {sensLoading ? (
+                      <div className="space-y-2"><Skeleton className="h-32 w-full" /><Skeleton className="h-20 w-full" /></div>
+                    ) : sensError ? (
+                      <Alert variant="destructive"><AlertDescription>{sensError}</AlertDescription></Alert>
+                    ) : sensData ? (
+                      <div className="space-y-4">
+                        <div className="grid gap-2 sm:grid-cols-3">
+                          {(sensData.scenariosSimple ?? sensData.scenarios?.filter((s) => s.direction === "up") ?? []).map((sc) => {
+                            const loss = sc.deltaPrice < 0;
+                            const intensity = Math.min(1, Math.abs(sc.deltaPrice) / (sensData.dv01 * 100 * 0.6 || 1));
+                            const bg = loss ? `rgba(239,68,68,${0.12 + intensity * 0.45})` : `rgba(34,197,94,${0.12 + intensity * 0.35})`;
+                            return (
+                              <div key={sc.bps} className="rounded-xl border p-3 text-center" style={{ background: bg }}>
+                                <p className="text-xs uppercase tracking-wide text-muted-foreground">+{sc.bps} bps</p>
+                                <p className={`mt-1 text-lg font-bold tabular-nums ${loss ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>{sc.deltaPrice > 0 ? "+" : ""}{fmtPrice(sc.deltaPrice)}</p>
+                                <p className="text-xs tabular-nums text-muted-foreground">{sc.pctChange.toFixed(3)}% · nuevo {fmtPrice(sc.newPrice)}</p>
+                                <p className="mt-1 text-xs tabular-nums font-medium">DV01×{sc.bps} {fmtPrice(sc.dv01)}</p>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Heatmap table up/down */}
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b text-left">
+                                <th className="px-2 py-2 text-xs uppercase tracking-wide text-muted-foreground">Escenario</th>
+                                <th className="px-2 py-2 text-right text-xs uppercase tracking-wide text-muted-foreground">Δy</th>
+                                <th className="px-2 py-2 text-right text-xs uppercase tracking-wide text-muted-foreground">ΔP</th>
+                                <th className="px-2 py-2 text-right text-xs uppercase tracking-wide text-muted-foreground">Nuevo P</th>
+                                <th className="px-2 py-2 text-right text-xs uppercase tracking-wide text-muted-foreground">Δ%</th>
+                                <th className="px-2 py-2 text-right text-xs uppercase tracking-wide text-muted-foreground">DV01</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(sensData.scenarios ?? []).map((sc, idx) => {
+                                const neg = sc.deltaPrice < 0;
+                                const heat = Math.min(1, Math.abs(sc.deltaPrice) / (sensData.dv01 * 100 || 1));
+                                const bg = neg ? `rgba(239,68,68,${heat * 0.16})` : `rgba(34,197,94,${heat * 0.12})`;
+                                return (
+                                  <tr key={`${sc.bps}-${sc.direction}-${idx}`} className="border-b last:border-0" style={{ background: bg }}>
+                                    <td className="px-2 py-2 font-mono text-xs font-medium">{sc.direction === "up" ? "+" : "-"}{sc.bps} bps</td>
+                                    <td className="px-2 py-2 text-right tabular-nums text-xs">{(sc.deltaYield * 100).toFixed(2)}%</td>
+                                    <td className={`px-2 py-2 text-right tabular-nums font-medium ${neg ? "text-red-600" : "text-green-600"}`}>{fmtPrice(sc.deltaPrice)}</td>
+                                    <td className="px-2 py-2 text-right tabular-nums">{fmtPrice(sc.newPrice)}</td>
+                                    <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">{sc.pctChange.toFixed(3)}%</td>
+                                    <td className="px-2 py-2 text-right tabular-nums text-xs">{fmtPrice(sc.dv01)}</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
+                          <p className="font-medium text-foreground">Fórmula</p>
+                          <p className="mt-1 font-mono">ΔP = -MD × Δy × P · DV01 = MD × 0.0001 × P</p>
+                          <p className="mt-1">MD {fmt(md)} · P {fmtPrice(sensData.precio)} · DV01 {fmtPrice(sensData.dv01)}</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="py-8 text-center text-sm text-muted-foreground">Sin datos de sensibilidad.</p>
                     )}
                   </CardContent>
                 </Card>

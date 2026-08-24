@@ -1,6 +1,6 @@
 import { useNavigate, Link } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
-import { newsApi, type NewsItem } from "@/lib/api";
+import { newsApi, type NewsItem } from "@/features/noticias/api";
 import { useApiData } from "@/hooks/useApiData";
 import CompanyLogo from "@/components/ui/company-logo";
 

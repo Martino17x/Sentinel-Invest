@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Clock, RefreshCw, ChevronLeft, ChevronRight, ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowLeft, Clock, RefreshCw, ChevronLeft, ChevronRight, ArrowUp, ArrowDown, Download, BookmarkPlus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -8,10 +8,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { bondsApi } from "@/lib/api";
-import type { BondPanelRow } from "@/lib/api";
+import { bondsApi } from "@/features/renta-fija/api";
+import type { BondPanelRow } from "@/features/renta-fija/api";
+import { AddToTrackingModal } from "@/components/AddToTrackingModal";
 import { useApiData } from "@/hooks/useApiData";
 import { useSmartBack } from "@/lib/use-smart-back";
+import { bondPanelToCsvRows, toCsv, downloadCsv } from "@/lib/csv";
 
 const VALID_SEGMENTS = ["USD-hard-dollar", "BOPREAL", "LECAP/BONCAP", "CER"] as const;
 type SegmentOpt = (typeof VALID_SEGMENTS)[number] | "all";
@@ -50,6 +52,12 @@ export function RentaFijaTablaPage() {
   const [sort, setSort] = useState<SortOpt>("tir");
   const [order, setOrder] = useState<OrderOpt>("desc");
   const [page, setPage] = useState(1);
+  const [trackingBond, setTrackingBond] = useState<{ symbol: string; price: number | null } | null>(null);
+  const [trackingOpen, setTrackingOpen] = useState(false);
+  function openTracking(row: BondPanelRow) {
+    setTrackingBond({ symbol: row.symbol, price: row.precio });
+    setTrackingOpen(true);
+  }
 
   const cacheKey = `bonds:panel:${segment}:${sort}:${order}:${page}:${PAGE_SIZE}`;
   const { data, isLoading, error, refetch, isRefreshing } = useApiData(cacheKey, () =>
@@ -134,9 +142,36 @@ export function RentaFijaTablaPage() {
               <h1 className="text-2xl font-semibold tracking-tight">Renta Fija — Tabla Soberana</h1>
               <p className="text-sm text-muted-foreground">1018 soberanos sorteables por TIR — USD/ARS, CER, LECAP · server-sorted</p>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => refetch()} title="Actualizar" aria-label="Actualizar tabla">
-              <RefreshCw className={`h-4 w-4 ${isRefreshing || isLoading ? "animate-spin motion-reduce:animate-none" : ""}`} />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 cursor-pointer"
+                onClick={() => {
+                  const rowsCsv = bondPanelToCsvRows(rows);
+                  const cols = [
+                    { key: "symbol", header: "Symbol" },
+                    { key: "precio", header: "Precio" },
+                    { key: "tir", header: "TIR" },
+                    { key: "md", header: "MD" },
+                    { key: "duration", header: "Duration" },
+                    { key: "paridad", header: "Paridad" },
+                    { key: "vencimiento", header: "Vencimiento" },
+                    { key: "ley", header: "Ley" },
+                    { key: "moneda", header: "Moneda" },
+                  ];
+                  const csv = toCsv(rowsCsv, cols);
+                  downloadCsv(`panel-${segment}-${sort}.csv`, csv);
+                }}
+                disabled={rows.length === 0}
+                aria-label="Exportar CSV"
+              >
+                <Download className="h-4 w-4" /> CSV
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => refetch()} title="Actualizar" aria-label="Actualizar tabla">
+                <RefreshCw className={`h-4 w-4 ${isRefreshing || isLoading ? "animate-spin motion-reduce:animate-none" : ""}`} />
+              </Button>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -227,6 +262,21 @@ export function RentaFijaTablaPage() {
                             </div>
                             <div><dt className="text-muted-foreground">VT / Accrued</dt><dd className="tabular-nums">{fmtNum(r.cuadroTecnico?.vt)} / {r.cuadroTecnico?.accrued != null ? fmtNum(r.cuadroTecnico.accrued) : "—"}</dd></div>
                           </dl>
+                          <div className="mt-3 flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1 gap-1.5 cursor-pointer"
+                              onClick={(e) => { e.stopPropagation(); openTracking(r); }}
+                              aria-label={`Agregar ${r.symbol} a seguimiento`}
+                            >
+                              <BookmarkPlus className="h-4 w-4" />
+                              Seguimiento
+                            </Button>
+                            <Button size="sm" className="flex-1 cursor-pointer" onClick={(e) => { e.stopPropagation(); navigate(`/renta-fija/${r.symbol}`); }}>
+                              Ver ficha
+                            </Button>
+                          </div>
                         </div>
                       );
                     })}
@@ -252,6 +302,7 @@ export function RentaFijaTablaPage() {
                           <th className="px-2 py-2 text-right"><span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Accrued</span></th>
                           <th className="px-2 py-2 text-right"><SortHeader label="Vcto" field="vencimiento" /></th>
                           <th className="px-2 py-2 text-right"><span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Ley</span></th>
+                          <th className="px-2 py-2 text-center"><span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Seg.</span></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -281,6 +332,18 @@ export function RentaFijaTablaPage() {
                               <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">{r.cuadroTecnico?.accrued != null ? fmtNum(r.cuadroTecnico.accrued, 2) : "—"}</td>
                               <td className="px-2 py-2 text-right tabular-nums text-muted-foreground">{r.vencimiento ? new Date(r.vencimiento).toLocaleDateString("es-AR") : "—"}</td>
                               <td className="px-2 py-2 text-right text-muted-foreground">{r.ley ?? r.cuadroTecnico?.ley ?? "—"}</td>
+                              <td className="px-2 py-2 text-center">
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  className="cursor-pointer"
+                                  onClick={(e) => { e.stopPropagation(); openTracking(r); }}
+                                  aria-label={`Agregar ${r.symbol} a seguimiento`}
+                                  title="Agregar a seguimiento"
+                                >
+                                  <BookmarkPlus className="h-3.5 w-3.5" />
+                                </Button>
+                              </td>
                             </tr>
                           );
                         })}
@@ -301,6 +364,19 @@ export function RentaFijaTablaPage() {
           {!isStale && generatedAt && <p className="text-center text-xs tabular-nums text-muted-foreground">Actualizado: {new Date(generatedAt).toLocaleString("es-AR")}</p>}
         </div>
       </div>
+      {trackingBond && (
+        <AddToTrackingModal
+          open={trackingOpen}
+          onOpenChange={(v) => {
+            setTrackingOpen(v);
+            if (!v) setTrackingBond(null);
+          }}
+          symbol={trackingBond.symbol}
+          market="bonds"
+          lastPrice={trackingBond.price}
+          currency={trackingBond.symbol.startsWith("GD") || trackingBond.symbol.startsWith("AL") ? "USD" : "ARS"}
+        />
+      )}
     </TooltipProvider>
   );
 }
