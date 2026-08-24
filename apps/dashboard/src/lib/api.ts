@@ -134,186 +134,26 @@ export interface User {
 export * from "../features/cotizaciones/api";
 
 // Shim portafolio — fuente única en features/portafolio/api.ts (SDD dashboard-features-resto C2)
-// Decisión profileApi: permanece en lib/api.ts hasta fase auth (commit 6) — va a features/auth junto a authApi/connectionsApi (design SDD7). No mover ahora.
 export * from "../features/portafolio/api";
 
 // Shim reportes — fuente única en features/reportes/api.ts (SDD dashboard-features-resto C5)
 export * from "../features/reportes/api";
 
-export interface UserProfile {
-  id: string;
-  email: string;
-  fullName: string | null;
-  avatarUrl: string | null;
-  loginMethod: "google" | "password";
-  createdAt: string;
-}
-
-export const profileApi = {
-  async get(): Promise<{ profile: UserProfile }> {
-    return apiFetch("/profile");
-  },
-
-  async update(fullName: string): Promise<{ profile: UserProfile }> {
-    return apiFetch("/profile", {
-      method: "PATCH",
-      body: JSON.stringify({ fullName }),
-    });
-  },
-
-  async changePassword(currentPassword: string, newPassword: string): Promise<{ ok: boolean }> {
-    return apiFetch("/profile/change-password", {
-      method: "POST",
-      body: JSON.stringify({ currentPassword, newPassword }),
-    });
-  },
-};
-
-export const authApi = {
-  async register(email: string, password: string, fullName?: string): Promise<AuthResponse> {
-    const data = await apiFetch<AuthResponse>("/auth/register", {
-      method: "POST",
-      body: JSON.stringify({ email, password, fullName }),
-    });
-    accessToken = data.accessToken;
-    return data;
-  },
-
-  async login(email: string, password: string): Promise<AuthResponse> {
-    const data = await apiFetch<AuthResponse>("/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    });
-    accessToken = data.accessToken;
-    return data;
-  },
-
-  async logout(): Promise<void> {
-    try {
-      await apiFetch("/auth/logout", { method: "POST" });
-    } finally {
-      accessToken = null;
-    }
-  },
-
-  async me(): Promise<{ user: User | null; accessToken?: string }> {
-    return apiFetch("/auth/me");
-  },
-};
-
+// Shim auth — fuente única en features/auth/api.ts (SDD dashboard-features-resto C6)
+// Contiene: authApi, profileApi, connectionsApi + tipos UserProfile, IolConnectionState
+export * from "../features/auth/api";
 
 // Shim operar — fuente única en features/operar/api.ts (SDD dashboard-features-resto C3)
 export * from "../features/operar/api";
 
-export interface DolarQuote {
-  moneda: string;
-  casa: string;
-  nombre: string;
-  compra: number;
-  venta: number;
-  fechaActualizacion: string;
-}
-
-export const ratesApi = {
-  async getDolares(): Promise<{ dolares: DolarQuote[] }> {
-    return apiFetch("/rates/dolares");
-  },
-};
+// Shim dolar — fuente única en features/dolar/api.ts (SDD dashboard-features-resto C6)
+export * from "../features/dolar/api";
 
 // Shim analisis — fuente única en features/analisis/api.ts (SDD dashboard-features-resto C4)
 export * from "../features/analisis/api";
 
 // Shim noticias — fuente única en features/noticias/api.ts (SDD dashboard-features-resto C5)
 export * from "../features/noticias/api";
-
-// Shim reportes shim ya declarado arriba (export *); history/getMonthlyCloses/getMonthlyReport viven en features/reportes/api.ts
-
-
-
-export interface IolConnectionState {
-  connected: boolean;
-  connection: {
-    id: string;
-    iolUsername: string;
-    isActive: boolean;
-    createdAt: string;
-  } | null;
-  accounts: {
-    id: string;
-    iolAccountNumber: string;
-    name: string;
-    currency: string;
-  }[];
-}
-
-export const connectionsApi = {
-  async getState(): Promise<IolConnectionState> {
-    return apiFetch("/connections");
-  },
-
-  async connect(input: {
-    iolUsername: string;
-    iolPassword: string;
-    iolAccountNumber: string;
-  }): Promise<{
-    connection: { id: string; iolUsername: string };
-    accounts: { id: string; iolAccountNumber: string; name: string }[];
-  }> {
-    return apiFetch("/connections", {
-      method: "POST",
-      body: JSON.stringify(input),
-    });
-  },
-
-  async disconnect(): Promise<{ ok: boolean }> {
-    return apiFetch("/connections", { method: "DELETE" });
-  },
-};
-
-// ============================================================
-// Agente — sesiones de chat persistidas (el streaming SSE vive
-// en lib/agent-chat.ts; acá solo la gestión REST de sesiones)
-// ============================================================
-
-export interface AgentSession {
-  id: string;
-  title: string | null;
-  createdAt: string;
-  updatedAt: string;
-  messageCount: number;
-}
-
-export interface AgentChatMessage {
-  id: string;
-  role: "user" | "assistant" | "tool";
-  content: string | null;
-  toolCalls: unknown;
-  createdAt: string;
-}
-
-export const agentApi = {
-  async listSessions(): Promise<{ sessions: AgentSession[] }> {
-    return apiFetch("/agent/sessions");
-  },
-
-  async getSession(
-    id: string
-  ): Promise<{ session: AgentSession; messages: AgentChatMessage[] }> {
-    return apiFetch(`/agent/sessions/${id}`);
-  },
-
-  async deleteSession(id: string): Promise<void> {
-    return apiFetch(`/agent/sessions/${id}`, { method: "DELETE" });
-  },
-
-  async approveOrder(id: string): Promise<{ ok: boolean; message: string }> {
-    return apiFetch(`/agent/orders/${id}/approve`, { method: "POST" });
-  },
-
-  async rejectOrder(id: string): Promise<{ ok: boolean; message: string }> {
-    return apiFetch(`/agent/orders/${id}/reject`, { method: "POST" });
-  },
-};
 
 // ============================================================
 // Radar CCL — GET /api/radar/ccl (S3.2, radar-ccl)
@@ -383,44 +223,6 @@ export const radarApi = {
 // Shim renta-fija — fuente única en features/renta-fija/api.ts (SDD dashboard-features-resto C1)
 export * from "../features/renta-fija/api";
 
-// ============================================================
-// API Keys — claves personales para agentes externos (MCP).
-// El secreto se devuelve UNA vez al crearla; el listado NUNCA
-// incluye el hash ni el secreto (verifica server).
-// ============================================================
-
-export type ApiKeyScope = "read" | "trade";
-
-export interface ApiKeySummary {
-  id: string;
-  name: string;
-  prefix: string;
-  scope: ApiKeyScope;
-  enabled: boolean;
-  lastUsedAt: string | null;
-  createdAt: string;
-}
-
-export const apiKeysApi = {
-  async list(): Promise<{ keys: ApiKeySummary[] }> {
-    return apiFetch("/apikeys");
-  },
-
-  async create(input: {
-    name: string;
-    scope: ApiKeyScope;
-  }): Promise<{ key: ApiKeySummary & { secret: string } }> {
-    return apiFetch("/apikeys", {
-      method: "POST",
-      body: JSON.stringify(input),
-    });
-  },
-
-  async revoke(id: string): Promise<{ key: ApiKeySummary }> {
-    return apiFetch(`/apikeys/${id}/revoke`, { method: "POST" });
-  },
-
-  async enable(id: string): Promise<{ key: ApiKeySummary }> {
-    return apiFetch(`/apikeys/${id}/enable`, { method: "POST" });
-  },
-};
+// Shim agente — fuente única en features/agente/api.ts (SDD dashboard-features-resto C6)
+// Contiene: agentApi, apiKeysApi + tipos AgentSession, AgentChatMessage, ApiKeySummary
+export * from "../features/agente/api";
