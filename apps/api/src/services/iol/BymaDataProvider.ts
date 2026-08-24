@@ -39,15 +39,10 @@ import type {
 import { getInstrumentDisplayName } from "@sentinel/domain";
 import type { BondSchedule, BondCashflow } from "../market/bonds/types.js";
 import { buildSchedule } from "../market/bonds/cashflow.js";
-// T-006: parser dedicado BYMA ficha
 import {
-  parseBymaFichaToSchedule,
-  inferMaeTipo as inferMaeTipoFromParser,
-  parseInteresToCouponRate as parseInteresImpl,
-  parseFormaAmortizacion as parseFormaImpl,
-  isCallableTexto,
-} from "../market/bonds/bymaFichaParser.js";
-import type { BymaFicha as BymaFichaParserType } from "../market/bonds/bymaFichaParser.js";
+  normalizeFichaToSchedule as normalizeFichaToScheduleFromDomain,
+  inferMaeTipo as inferMaeTipoFromDomain,
+} from "../../domain/bonos/ficha.js";
 import {
   type BymaInstrument,
   type BymaResponse,
@@ -237,7 +232,7 @@ export class BymaDataProvider implements IolProvider {
         return buildSchedule({
           symbol: sym,
           moneda: schedule.moneda,
-          tipo: schedule.tipo === "bullet" ? inferMaeTipo(fallback) : schedule.tipo,
+          tipo: schedule.tipo === "bullet" ? inferMaeTipoFromDomain(fallback) : schedule.tipo,
           vencimiento: schedule.vencimiento,
           cashflows: fallback,
           cerAjustado: schedule.cerAjustado,
@@ -254,9 +249,7 @@ export class BymaDataProvider implements IolProvider {
   }
 
   private normalizeFichaToSchedule(symbol: string, ficha: BymaFicha | null): BondSchedule {
-    // Delegar al parser dedicado T-006 (soporta callable + step-up range)
-    // Mantener compat con BymaFicha local type → castear a parser type
-    return parseBymaFichaToSchedule(symbol, ficha as unknown as BymaFichaParserType | null);
+    return normalizeFichaToScheduleFromDomain(symbol, ficha as unknown as import("../../domain/bonos/ficha.js").BymaFicha | null);
   }
 
   private async fetchMaeDetalleFallback(symbol: string, signal?: AbortSignal): Promise<BondCashflow[] | null> {
@@ -348,59 +341,15 @@ export interface BymaFicha {
   default?: string;
 }
 
-// Re-export thin wrappers delegando al parser dedicado (T-006 compat)
-// Mantiene import path estable para tests legacy (import from BymaDataProvider)
+// Compat — tipos seguirán desde bymaFichaParser, pero re-exportamos parsers puros desde dominio
 export type { ParsedCoupon, ParsedAmortizacion } from "../market/bonds/bymaFichaParser.js";
-export function parseInteresToCouponRate(raw: string | null | undefined): import("../market/bonds/bymaFichaParser.js").ParsedCoupon | null {
-  return parseInteresImpl(raw);
-}
-export function parseFormaAmortizacion(raw: string | null | undefined): import("../market/bonds/bymaFichaParser.js").ParsedAmortizacion {
-  return parseFormaImpl(raw) as import("../market/bonds/bymaFichaParser.js").ParsedAmortizacion;
-}
-// Helpers internos ahora delegados — wrappers para compat
-function parseFecha(raw?: string): string | null {
-  if (!raw) return null;
-  const iso = raw.slice(0, 10);
-  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
-  const d = new Date(raw);
-  if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
-  return null;
-}
-function inferVencimientoFallback(symbol: string): string {
-  const d = new Date();
-  d.setFullYear(d.getFullYear() + 1);
-  return d.toISOString().slice(0, 10);
-}
-function inferMoneda(ficha: BymaFicha | null): "ARS" | "USD" {
-  const m = (ficha?.moneda ?? "").toLowerCase();
-  if (m.includes("dolar")) return "USD";
-  if (m.includes("usd") || m.includes("dólar")) return "USD";
-  if (m.includes("dolar linked")) return "USD";
-  return "ARS";
-}
-function isCerFicha(ficha: BymaFicha | null): boolean {
-  if (!ficha) return false;
-  const hay = `${ficha.moneda ?? ""} ${ficha.interes ?? ""} ${ficha.formaAmortizacion ?? ""}`.toLowerCase();
-  return hay.includes("cer") || hay.includes("uv") || hay.includes("ajustable");
-}
-function inferTipo(ficha: BymaFicha | null): BondSchedule["tipo"] {
-  if (!ficha) return "bullet";
-  const texto = `${ficha.formaAmortizacion ?? ""} ${ficha.interes ?? ""}`.toLowerCase();
-  if (texto.includes("rescat") || texto.includes("callable")) return "callable" as BondSchedule["tipo"];
-  if (isCerFicha(ficha)) return "cer";
-  if (texto.includes("step") || texto.includes("escalon")) return "step-up";
-  if (texto.includes("al vencimiento") || texto.includes("bullet") || texto.includes("integra al vencimiento")) return "bullet";
-  if (texto.includes("cuota") || texto.includes("amortiz")) return "amortizable";
-  if ((ficha.tipoEspecie ?? "").toLowerCase().includes("letra")) return "bullet";
-  return "amortizable";
-}
-function inferMaeTipo(detalle: BondCashflow[]): BondSchedule["tipo"] {
-  return inferMaeTipoFromParser(detalle);
-}
-function parseCashflowsFromFicha(ficha: BymaFicha, vencimiento: string): BondCashflow[] {
-  // Delegar al parser dedicado si disponible, fallback simple bullet
-  const parsed = parseBymaFichaToSchedule("TMP", ficha as unknown as import("../market/bonds/bymaFichaParser.js").BymaFicha | null, { vencimientoOverride: vencimiento });
-  return parsed.cashflows.length ? parsed.cashflows : [{ fechaPago: vencimiento, renta: 0, amortizacion: 100, cashFlow: 100, vr: 0 }];
-}
+// Shim re-export desde dominio puro (commit 4) — mantiene import legacy estable
+export { parseInteresToCouponRate } from "../../domain/bonos/ficha.js";
+export { parseFormaAmortizacion } from "../../domain/bonos/ficha.js";
+export { isCallableTexto } from "../../domain/bonos/ficha.js";
+export { inferMaeTipo } from "../../domain/bonos/ficha.js";
+export { parseBymaFichaToSchedule } from "../../domain/bonos/ficha.js";
+export { parseBymaFichaToSchedule as bymaFichaParser } from "../../domain/bonos/ficha.js";
+export { parseFecha, inferVencimientoFallback, inferMoneda, isCerFicha, inferTipo, parseCashflowsFromFicha, normalizeFichaToSchedule } from "../../domain/bonos/ficha.js";
 
 // Mapeadores delegados a BymaMapper (SRP) — ver infrastructure/providers/byma/BymaMapper.ts
