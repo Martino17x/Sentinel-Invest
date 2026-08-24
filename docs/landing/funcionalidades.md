@@ -1,6 +1,6 @@
 # Inventario de funcionalidades — Sentinel
 
-> Fuente: análisis de capturas (`docs/landing/analisis/`) + código (`apps/dashboard/src/`). La app es de **solo lectura**: no ejecuta operaciones (footer real: *"Sentinel es solo lectura — no ejecuta operaciones. Los datos provienen de IOL/BYMA y dolarapi.com."*).
+> Fuente: análisis de capturas (`docs/landing/analisis/`) + código (`apps/dashboard/src/`). **Sentinel App: consulta y opera (POST /api/orders tras opt-in IOL_TRADING_ENABLED + confirmación explícita y auditoría)** — **Sentinel MCP: solo lectura (scope read) + trading opcional (scope trade)**.
 
 ## 1. Portafolio
 - **Panel con KPIs:** Ganancia/Pérdida ($119.114,78, +15,53%), Activos valorizados ($871.678,20), Disponible ARS ($14.352,26) y USD ($14.12), con variación del día.

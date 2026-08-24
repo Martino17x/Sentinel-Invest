@@ -15,12 +15,12 @@
 - **Qué vender:** análisis técnico compuesto, transparente y explicado en español.
 
 ### 3. `connect.png` — Conectar cuenta IOL
-- **Muestra:** "Conectar cuenta IOL" / *"Vinculá tu cuenta de InvertirOnline para ver tus datos reales"*. Card "Cuenta conectada" con badge `Activa` (verde): *"Sentinel consulta tu cartera en modo lectura — nunca ejecuta órdenes"*. Datos: Usuario IOL `demo_user`; Cuentas: `123456`. Alerta de seguridad: *"Tus credenciales están cifradas con AES-256. Podés desconectar cuando quieras y se eliminan de inmediato."*. Botón "Desconectar cuenta".
+- **Muestra:** "Conectar cuenta IOL" / *"Vinculá tu cuenta de InvertirOnline para ver tus datos reales"*. Card "Cuenta conectada" con badge `Activa` (verde): *Sentinel App: consulta y opera (POST /api/orders tras opt-in IOL_TRADING_ENABLED + confirmación explícita y auditoría) — Sentinel MCP: solo lectura (scope read) + trading opcional (scope trade)*. Datos: Usuario IOL `demo_user`; Cuentas: `123456`. Alerta de seguridad: *"Tus credenciales están cifradas con AES-256. Podés desconectar cuando quieras y se eliminan de inmediato."*. Botón "Desconectar cuenta".
 - **Qué vender:** seguridad y confianza (modo lectura, AES-256, desconexión total).
 
 ### 4. `inicio.png` — Inicio (total valorizado)
-- **Muestra:** "Tu total valorizado" `$ 907.346` (ARS, selector de moneda, ojo para ocultar), `↗ +$2.360,32 (+0.27% hoy)`, nota de conversión al dólar bolsa; "Disponible para invertir" Pesos `$14.352,26` / Dólares `$14.12`; acciones "Actividad"/"Sincronizar"; "Dólar hoy" (Oficial 1.460/1.510, Blue 1.525/1.545, Bolsa 1.509/1.521, CCL 1.571/1.573); donut "Mis inversiones" (Bonos 91%, CEDEARs 5%, Acciones 2,4%, Efectivo 1,6%). Footer: *"Sentinel es solo lectura — no ejecuta operaciones. Los datos provienen de IOL/BYMA y dolarapi.com."*
-- **Qué vender:** la home "estilo app IOL": cartera + dólar + distribución en una vista.
+- **Muestra:** "Tu total valorizado" `$ 907.346` (ARS, selector de moneda, ojo para ocultar), `↗ +$2.360,32 (+0.27% hoy)`, nota de conversión al dólar bolsa; "Disponible para invertir" Pesos `$14.352,26` / Dólares `$14.12`; acciones "Actividad"/"Sincronizar"; "Dólar hoy" (Oficial 1.460/1.510, Blue 1.525/1.545, Bolsa 1.509/1.521, CCL 1.571/1.573); donut "Mis inversiones" (Bonos 91%, CEDEARs 5%, Acciones 2,4%, Efectivo 1,6%). Footer: *Sentinel App: consulta y opera (POST /api/orders tras opt-in IOL_TRADING_ENABLED + confirmación explícita y auditoría) — Sentinel MCP: solo lectura (scope read) + trading opcional (scope trade). Datos: IOL/BYMA y dolarapi.com.*
+- **Qué vender:** "consulta y opera, todo en una vista (App); MCP read/trade por scopes" — la home como cartera + dólar + distribución en una vista, con verdad OPERA.
 
 ### 5. `login.png` — Ingreso
 - **Muestra:** "Ingresá a Sentinel" / *"Tu cartera de inversiones, controlada"*. Email (`vos@ejemplo.com`), Contraseña, botón negro "Ingresar", "o continuá con" + "Continuar con Google", "Registrate", aviso legal Términos/Privacidad. Logo = cuadrado negro con ícono trending up blanco.

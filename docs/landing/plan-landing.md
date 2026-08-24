@@ -24,11 +24,11 @@ Landing pública que venda **Sentinel**: control de inversiones en IOL con **con
 ## 5. Estructura multipágina (rutas concretas)
 Layout base `src/layouts/Base.astro` (ya con `<ClientRouter />`): Header sticky (`transition:persist`) + Footer; transiciones `transition:animate="fade"` entre páginas.
 
-1. **`/` (index)** — Hero: tagline *"Tu cartera de inversiones, controlada."* + subtítulo (control total, solo lectura, todo en una vista) + CTAs "Crear cuenta"/"Ingresar" + mockup `desktop/inicio.png` con reveal. Secciones: "Por qué Sentinel" (badges: solo lectura, AES-256, TWR, Merval) → preview de funcionalidades (3-4 cards con screenshots) → "Cómo funciona" (3 pasos: Creá tu cuenta → Conectá tu IOL → Controlá todo) → CTA final.
+1. **`/` (index)** — Hero: tagline *"Tu cartera de inversiones, controlada."* + subtítulo (Sentinel App: consulta y opera — Sentinel MCP: solo lectura scope read + trading opcional scope trade, todo en una vista) + CTAs "Crear cuenta"/"Ingresar" + mockup `desktop/inicio.png` con reveal. Secciones: "Por qué Sentinel" (badges: App opera (IOL_TRADING_ENABLED + confirmación), MCP read/trade, AES-256, TWR, Merval) → preview de funcionalidades (3-4 cards con screenshots) → "Cómo funciona" (3 pasos: Creá tu cuenta → Conectá tu IOL → Controlá todo) → CTA final.
 2. **`/funcionalidades`** — Grid completo de features con screenshots: Portafolio (`desktop/portfolio`), Operaciones (`desktop/operations`), Cotizaciones AR/US (`desktop/quotes` + `desktop/quote-detail`), Análisis con señal técnica (`desktop/analysis`), Reportes TWR/Merval (`desktop/reports`), Dólar (`desktop/inicio` sección dólar). Detalle breve de cada una (usar `funcionalidades.md`).
 3. **`/pantallas`** — Galería showcase de capturas: desktop + mobile (tabs o grid), con las 20 capturas sanitizadas (hero: `desktop/inicio`, `mobile/inicio`, etc.).
 4. **`/agente`** — Sección IA/MCP (diferencial): "tu agente lee tu cartera en tiempo real" — agentes soportados (Claude Code, Cursor, Codex, opencode, gemini-cli), tools de lectura (`get_portfolio`, `get_quote`, `search_instruments`, `get_dollar_rates`), API Keys, screenshot `desktop/agent-connect.png`.
-5. **`/seguridad`** — Confianza: solo lectura garantizado, cifrado AES-256, desconexión total, múltiples cuentas; screenshot `desktop/connect.png`.
+5. **`/seguridad`** — Confianza: App opera con gates (IOL_TRADING_ENABLED + confirmación + auditoría) — MCP solo lectura (scope read) + trading opcional (scope trade), cifrado AES-256, desconexión total, múltiples cuentas; screenshot `desktop/connect.png`.
 6. **Footer (todas)**: enlaces a Términos y Privacidad → `/terms` y `/privacy` del dashboard (`http://localhost:5173/terms`, `/privacy`).
 
 ## 6. Implementación técnica (solo `apps/landing`)
