@@ -4,6 +4,7 @@
  * Mover, no duplicar. Importa apiFetch desde lib/api-client para evitar ciclo con shim.
  */
 
+import { SettlementType } from "@sentinel/domain";
 import { apiFetch } from "@/lib/api-client";
 
 // ============================================================
@@ -24,7 +25,7 @@ export interface CreateOrderInput {
   market?: OrderMarket;
   term?: OrderTerm;
   validity?: "1d" | "7d" | string;
-  specie?: "D";
+  specie?: SettlementType;
 }
 
 export interface FciSubscriptionInput {

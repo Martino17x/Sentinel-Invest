@@ -5,12 +5,13 @@
  * Re-exportado vía apps/api/src/dominio/tipos.ts para consumers api.
  */
 
-export enum MarketCode {
-  BCBA = "bCBA",
-  NYSE = "nYSE",
-  NASDAQ = "nASDAQ",
-  BONDS = "bCBA",
-}
+export const MarketCode = {
+  BCBA: "bCBA",
+  NYSE: "nYSE",
+  NASDAQ: "nASDAQ",
+  BONDS: "bCBA",
+} as const;
+export type MarketCode = (typeof MarketCode)[keyof typeof MarketCode];
 
 /**
  * MarketCode para input API (lowercase) — usado en schema Zod de /api/orders
@@ -24,13 +25,14 @@ export const IOL_MARKET_CODE_MAP: Record<string, MarketCode> = {
   bonds: MarketCode.BONDS,
 };
 
-export enum SettlementType {
-  D = "D",
-  C = "C",
-  T24 = "24hs",
-  CCL = "CCL",
-  MEP = "MEP",
-}
+export const SettlementType = {
+  D: "D",
+  C: "C",
+  T24: "24hs",
+  CCL: "CCL",
+  MEP: "MEP",
+} as const;
+export type SettlementType = (typeof SettlementType)[keyof typeof SettlementType];
 
 // Alias para compatibilidad con settlement.ts domain (24hs/CCL/MEP)
-export type SettlementVariant = SettlementType.T24 | SettlementType.CCL | SettlementType.MEP;
+export type SettlementVariant = typeof SettlementType.T24 | typeof SettlementType.CCL | typeof SettlementType.MEP;
