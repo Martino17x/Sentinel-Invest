@@ -256,7 +256,7 @@ describe("5.1 bondTools unit — DISCLAIMER + stale + empty", () => {
       return new Response("not stubbed: " + url, { status: 500 });
     });
     // Patch BymaDataProvider.getPanel directly to avoid fetch URL mismatch: monkey-patch prototype
-    const { QuoteService } = await import("../../src/application/cotizaciones/QuoteService.js");
+    const { QuoteService } = await import("../../src/aplicacion/cotizaciones/QuoteService.js");
     const origGetPanel = (QuoteService as any).prototype.getPanel;
     (QuoteService as any).prototype.getPanel = async function () {
       return { quotes: [
@@ -283,7 +283,7 @@ describe("5.1 bondTools unit — DISCLAIMER + stale + empty", () => {
       if (url.includes("flujofondoscotiz")) return Response.json([]);
       return new Response("not stubbed", { status: 500 });
     });
-    const { QuoteService } = await import("../../src/application/cotizaciones/QuoteService.js");
+    const { QuoteService } = await import("../../src/aplicacion/cotizaciones/QuoteService.js");
     const orig = (QuoteService as any).prototype.getPanel;
     (QuoteService as any).prototype.getPanel = async () => ({ quotes: [], total: 0, summary: null });
     const restoreDb = patchDbExecute(async () => ({ rows: [] } as any));
@@ -330,7 +330,7 @@ describe("5.1 bondTools unit — DISCLAIMER + stale + empty", () => {
       if (url.includes("bcra.gob.ar")) return Response.json({ results: [{ detalle: [{ fecha: "2026-05-13T00:00:00", valor: 100 }] }] });
       return new Response("not stubbed: " + url, { status: 500 });
     });
-    const { QuoteService } = await import("../../src/application/cotizaciones/QuoteService.js");
+    const { QuoteService } = await import("../../src/aplicacion/cotizaciones/QuoteService.js");
     const origFicha = (QuoteService as any).prototype.getBondFichaRaw;
     const origQuote = (QuoteService as any).prototype.getQuote;
     const origSchedule = (QuoteService as any).prototype.getBondSchedule;
@@ -355,7 +355,7 @@ describe("5.1 bondTools unit — DISCLAIMER + stale + empty", () => {
   });
 
   test("get_bond_ficha not found throws NOT_FOUND verbatim", async () => {
-    const { QuoteService } = await import("../../src/application/cotizaciones/QuoteService.js");
+    const { QuoteService } = await import("../../src/aplicacion/cotizaciones/QuoteService.js");
     const origFicha = (QuoteService as any).prototype.getBondFichaRaw;
     const origQuote = (QuoteService as any).prototype.getQuote;
     const origSchedule = (QuoteService as any).prototype.getBondSchedule;
@@ -445,7 +445,7 @@ describe("5.2 parity — tool message vs REST textified envelope", () => {
     };
     // Pre-populate MAE cache? Instead stub fetch to 502 and ensure tool falls back to local price calc or throws?
     // Analytics without MAE will try local QuoteService.getBondSchedule + getQuote — stub those to succeed
-    const { QuoteService } = await import("../../src/application/cotizaciones/QuoteService.js");
+    const { QuoteService } = await import("../../src/aplicacion/cotizaciones/QuoteService.js");
     const origSched = (QuoteService as any).prototype.getBondSchedule;
     const origQuote = (QuoteService as any).prototype.getQuote;
     (QuoteService as any).prototype.getBondSchedule = async () => ({ symbol: "AL30", moneda: "USD", tipo: "amortizable", vencimiento: "2030-01-09", cashflows: [{ fechaPago: "2027-01-09", renta: 2, amortizacion: 20, cashFlow: 22, vr: 80 }], cerAjustado: false } as any);
@@ -535,7 +535,7 @@ describe("5.3 multitenant — ctx.account.id isolation", () => {
       if (url.includes("flujofondoscotiz")) return Response.json([maeItem("GD35", 15, 4)]);
       return new Response("not stubbed", { status: 500 });
     });
-    const { QuoteService } = await import("../../src/application/cotizaciones/QuoteService.js");
+    const { QuoteService } = await import("../../src/aplicacion/cotizaciones/QuoteService.js");
     const origSched = (QuoteService as any).prototype.getBondSchedule;
     // Ensure schedule lookup works for GD35 if mae misses
     (QuoteService as any).prototype.getBondSchedule = async () => ({ symbol: "GD35", moneda: "USD", tipo: "amortizable", vencimiento: "2035-12-09", cashflows: [{ fechaPago: "2026-12-09", renta: 5, amortizacion: 0, cashFlow: 5, vr: 100 }], cerAjustado: false } as any);
@@ -668,7 +668,7 @@ describe("5.4 timeout/error — abort, 502 stale, flag off, Zod reject", () => {
       if (url.includes("flujofondoscotiz")) throw new DOMException("Aborted", "AbortError");
       return new Response("not stubbed", { status: 500 });
     });
-    const { QuoteService } = await import("../../src/application/cotizaciones/QuoteService.js");
+    const { QuoteService } = await import("../../src/aplicacion/cotizaciones/QuoteService.js");
     const origSched = (QuoteService as any).prototype.getBondSchedule;
     (QuoteService as any).prototype.getBondSchedule = async (_sym: string, signal?: AbortSignal) => {
       if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
@@ -726,7 +726,7 @@ describe("5.4 timeout/error — abort, 502 stale, flag off, Zod reject", () => {
     // We inspect file content as structural parity test (since waiting 15s is slow)
     const fs = await import("node:fs");
     const path = await import("node:path");
-    const candidates = [path.join(process.cwd(), "src/services/agent/executor.ts"), path.join(process.cwd(), "apps/api/src/services/agent/executor.ts")];
+    const candidates = [path.join(process.cwd(), "src/aplicacion/agente/executor.ts"), path.join(process.cwd(), "apps/api/src/aplicacion/agente/executor.ts"), path.join(process.cwd(), "apps/api/src/services/agent/executor.ts")];
     let content = "";
     for (const p of candidates) { try { content = fs.readFileSync(p, "utf8"); if (content) break; } catch {} }
     assert.ok(content.length > 0, "executor.ts must be readable");
@@ -762,7 +762,7 @@ describe("5.4 timeout/error — abort, 502 stale, flag off, Zod reject", () => {
       return new Response("mae down", { status: 502 });
     });
     const restoreDb2 = patchDbExecute(async () => ({ rows: [] } as any));
-    const { QuoteService } = await import("../../src/application/cotizaciones/QuoteService.js");
+    const { QuoteService } = await import("../../src/aplicacion/cotizaciones/QuoteService.js");
     const origSched = (QuoteService as any).prototype.getBondSchedule;
     (QuoteService as any).prototype.getBondSchedule = async () => { throw new Error("BYMA 502"); };
     const origQuote = (QuoteService as any).prototype.getQuote;

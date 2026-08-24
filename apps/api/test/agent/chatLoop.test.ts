@@ -13,7 +13,7 @@ import { resolve } from "node:path";
 // - SIEMPRE condicional "podrías evaluar/considerar/una alternativa sería"
 // ===================================================================
 
-const CHATLOOP_PATH = resolve(import.meta.dirname, "../../src/services/agent/chatLoop.ts");
+const CHATLOOP_PATH = resolve(import.meta.dirname, "../../src/aplicacion/agente/chatLoop.ts");
 const source = readFileSync(CHATLOOP_PATH, "utf8");
 
 // Extrae el literal SYSTEM_PROMPT para asserts de snapshot

@@ -122,8 +122,10 @@ function patchDbExecute(mockFn: any): () => void {
 describe("bonds routes — E2E", () => {
   test("flag off 404 — structural guard exists (BONDS_ANALYTICS_ENABLED -> 404)", async () => {
     const candidates = [
+      path.join(process.cwd(), "apps/api/src/interfaces/http/routes/bonds.ts"),
       path.join(process.cwd(), "apps/api/src/routes/bonds.ts"),
       path.join(process.cwd(), "src/routes/bonds.ts"),
+      "C:/Users/Martino/Documents/PROGRAMACION III/Invertir/apps/api/src/interfaces/http/routes/bonds.ts",
       "C:/Users/Martino/Documents/PROGRAMACION III/Invertir/apps/api/src/routes/bonds.ts",
     ];
     let bondsSrc = "";
@@ -410,9 +412,9 @@ describe("bonds routes — E2E", () => {
   test("QuotesPage TIR col no regression + reduced-motion (smoke structural)", async () => {
     const base = "C:/Users/Martino/Documents/PROGRAMACION III/Invertir/apps/dashboard/src";
     const pages = [
-      path.join(base, "pages/RentaFijaPage.tsx"),
-      path.join(base, "pages/RentaFijaCurvaPage.tsx"),
-      path.join(base, "pages/RentaFijaCalendarioPage.tsx"),
+      path.join(base, "features/renta-fija/pages/RentaFijaPage.tsx"),
+      path.join(base, "features/renta-fija/pages/RentaFijaCurvaPage.tsx"),
+      path.join(base, "features/renta-fija/pages/RentaFijaCalendarioPage.tsx"),
       path.join(base, "pages/QuotesPage.tsx"),
       path.join(base, "pages/QuoteDetailPage.tsx"),
     ];
@@ -420,11 +422,11 @@ describe("bonds routes — E2E", () => {
       const exists = fs.existsSync(p);
       assert.ok(exists, `page exists ${p}`);
     }
-    const curva = fs.readFileSync(path.join(base, "pages/RentaFijaCurvaPage.tsx"), "utf8");
+    const curva = fs.readFileSync(path.join(base, "features/renta-fija/pages/RentaFijaCurvaPage.tsx"), "utf8");
     assert.ok(curva.includes("motion-reduce"), "RentaFijaCurvaPage must have motion-reduce:animate-none");
-    const calendario = fs.readFileSync(path.join(base, "pages/RentaFijaCalendarioPage.tsx"), "utf8");
+    const calendario = fs.readFileSync(path.join(base, "features/renta-fija/pages/RentaFijaCalendarioPage.tsx"), "utf8");
     assert.ok(calendario.includes("motion-reduce"), "RentaFijaCalendarioPage must have motion-reduce");
-    const fija = fs.readFileSync(path.join(base, "pages/RentaFijaPage.tsx"), "utf8");
+    const fija = fs.readFileSync(path.join(base, "features/renta-fija/pages/RentaFijaPage.tsx"), "utf8");
     assert.ok(fija.includes("motion-reduce"), "RentaFijaPage must have motion-reduce");
     const quotes = fs.readFileSync(path.join(base, "pages/QuotesPage.tsx"), "utf8");
     assert.ok(quotes.includes("TIR") && quotes.includes("MD"), "QuotesPage must show TIR/MD cols");

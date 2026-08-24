@@ -105,8 +105,11 @@ describe("GET /panel — 5.5 integration", () => {
     const path = await import("node:path");
     const cwd = process.cwd();
     const candidates = [
+      path.join(cwd, "apps/api/src/interfaces/http/routes/bonds.ts"),
+      path.join(cwd, "src/interfaces/http/routes/bonds.ts"),
       path.join(cwd, "apps/api/src/routes/bonds.ts"),
       path.join(cwd, "src/routes/bonds.ts"),
+      "C:/Users/Martino/Documents/PROGRAMACION III/Invertir/apps/api/src/interfaces/http/routes/bonds.ts",
       "C:/Users/Martino/Documents/PROGRAMACION III/Invertir/apps/api/src/routes/bonds.ts",
     ];
     let src = "";
