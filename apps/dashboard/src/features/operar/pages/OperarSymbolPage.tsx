@@ -5,7 +5,9 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { quotesApi, portfolioApi, type OrderMarket, type OrderSide } from "@/lib/api";
+import { quotesApi } from "@/features/cotizaciones/api";
+import { portfolioApi } from "@/features/portafolio/api";
+import type { OrderMarket, OrderSide } from "@/features/operar/api";
 import { isUsdSettlementVariant } from "@sentinel/domain";
 import { useApiData } from "@/hooks/useApiData";
 

@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ResponsiveTable, type Column } from "@/components/ui/responsive-table";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import CompanyLogo from "@/components/ui/company-logo";
-import { radarApi, type RadarRow } from "@/lib/api";
+import { radarApi, type RadarRow } from "@/features/radar/api";
 import { useApiData } from "@/hooks/useApiData";
 
 // ============================================================

@@ -4,13 +4,10 @@
  * Gate C8: 57 consumers bloquean delete, TODO SDD7 documenta deuda, wc -l target ≤120.
  */
 export * from "./api-client";
-import { apiFetch } from "./api-client";
 
-// TODO SDD7: migrate cotizaciones 3 consumers (InstrumentPicker, OperarSymbolPage, QuoteDetailPage) + radarApi before delete; wc -l target ≤120
-// Gate C8 2026-08-24: grep -r "from.*lib/api" apps/dashboard/src --exclude-dir=features | grep -v "api-client" → 39 hits (outside features)
-// + grep inside features | grep -v api-client → 18 hits (ScreenerPage, StockAnalysisPage, NewsPage/Detail, OperarSymbolPage, OperationsPage, VirtualPortfolio*, BondFicha*, RentaFija* 6, ReportsPage)
-// quotesApi subset: 3 consumers via lib/api (InstrumentPicker, OperarSymbolPage, QuoteDetailPage) + radarApi 1 (RadarPage) — shim retained, delete blocked
-// Fuente única cotizaciones vive en features/cotizaciones/api.ts (import now api-client, api.ts 77L). lib/api.ts 228L → target ≤120 tras dedup + migrate resto. NO borrar a la fuerza.
+// SDD7 debt 2026-08-24: cotizaciones 3 consumers (InstrumentPicker, OperarSymbolPage, QuoteDetailPage) + radarApi migrados a features/*
+// Gate C8: outside features 39→35, inside features 18→17 (OperarSymbolPage migrado). lib/api.ts 108L→46L (solo re-exports). shim retained hasta 0 consumers
+// Fuente única cotizaciones: features/cotizaciones/api.ts (77L); radar: features/radar/api.ts. NO borrar shim hasta 0 hits fuera de features
 export * from "../features/cotizaciones/api";
 
 // Shim portafolio — fuente única en features/portafolio/api.ts (SDD dashboard-features-resto C2)
@@ -35,70 +32,8 @@ export * from "../features/analisis/api";
 // Shim noticias — fuente única en features/noticias/api.ts (SDD dashboard-features-resto C5)
 export * from "../features/noticias/api";
 
-// ============================================================
-// Radar CCL — GET /api/radar/ccl (S3.2, radar-ccl)
-// Envelope: CclResponse { status, generatedAt, cclPromedio,
-//   disclaimer, isMarketClosed, items: RadarRow[], total, page, limit }
-// ============================================================
-
-export interface RadarRow {
-  symbol: string;
-  name: string;
-  yahooSymbol: string;
-  cedearPrice: number;
-  underlyingPrice: number | null;
-  ratio: number;
-  currency: "ARS" | "USD";
-  ccl: number | null;
-  spreadVsAvg: number | null;
-  status: "ok" | "symbol_not_found" | "rate_limited" | "down";
-  lastCloseDate: string | null;
-  stale: boolean;
-  cclSource?: "byma_usd" | "yahoo" | null;
-}
-
-export interface CclResponse {
-  status: "ok" | "partial";
-  generatedAt: string;
-  cclPromedio: number | null;
-  disclaimer: string;
-  isMarketClosed: boolean;
-  items: RadarRow[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-export type RadarSource = "all" | "byma_usd" | "yahoo";
-
-export interface RadarCclParams {
-  q?: string;
-  page?: number;
-  limit?: number;
-  sort?: "spread" | "symbol";
-  source?: RadarSource;
-}
-
-function buildRadarCclQuery(params: RadarCclParams = {}): string {
-  const qs = new URLSearchParams();
-  if (params.q?.trim()) qs.set("q", params.q.trim());
-  if (params.page != null) qs.set("page", String(params.page));
-  if (params.limit != null) qs.set("limit", String(params.limit));
-  if (params.sort) qs.set("sort", params.sort);
-  if (params.source && params.source !== "all") qs.set("source", params.source);
-  const s = qs.toString();
-  return s ? `?${s}` : "";
-}
-
-export const radarApi = {
-  async getCcl(params: RadarCclParams = {}): Promise<CclResponse> {
-    return apiFetch<CclResponse>(`/radar/ccl${buildRadarCclQuery(params)}`);
-  },
-  /** Alias de getCcl — compatibilidad con design spec (radarApi.getRadar) */
-  async getRadar(params: RadarCclParams = {}): Promise<CclResponse> {
-    return apiFetch<CclResponse>(`/radar/ccl${buildRadarCclQuery(params)}`);
-  },
-};
+// Shim radar — fuente única en features/radar/api.ts (SDD7 debt — RadarRow/CclResponse aislados)
+export * from "../features/radar/api";
 
 // Shim renta-fija — fuente única en features/renta-fija/api.ts (SDD dashboard-features-resto C1)
 export * from "../features/renta-fija/api";

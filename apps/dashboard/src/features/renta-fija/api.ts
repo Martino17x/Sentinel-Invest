@@ -138,6 +138,29 @@ export interface BondPanelResponse {
 }
 
 export const bondsApi = {
+  async getScreener(params: {
+    q?: string;
+    minTir?: number;
+    maxTir?: number;
+    minMd?: number;
+    maxMd?: number;
+    segment?: string;
+    ley?: string;
+    moneda?: string;
+  } = {}): Promise<{ data: BondPanelRow[]; rows: BondPanelRow[]; total: number; count: number; generatedAt: string; disclaimer: string; elapsedMs?: number }> {
+    const qs = new URLSearchParams();
+    if (params.q?.trim()) qs.set("q", params.q.trim());
+    if (params.minTir != null) qs.set("minTir", String(params.minTir));
+    if (params.maxTir != null) qs.set("maxTir", String(params.maxTir));
+    if (params.minMd != null) qs.set("minMd", String(params.minMd));
+    if (params.maxMd != null) qs.set("maxMd", String(params.maxMd));
+    if (params.segment) qs.set("segment", params.segment);
+    if (params.ley) qs.set("ley", params.ley);
+    if (params.moneda) qs.set("moneda", params.moneda);
+    const q = qs.toString();
+    return apiFetch(`/bonds/screener${q ? `?${q}` : ""}`);
+  },
+
   async getAnalytics(symbol: string): Promise<BondAnalytics> {
     return apiFetch<BondAnalytics>(`/bonds/${encodeURIComponent(symbol)}/analytics`);
   },

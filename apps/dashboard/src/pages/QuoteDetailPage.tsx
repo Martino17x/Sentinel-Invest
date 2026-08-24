@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Star } from "lucide-react";
+import { ArrowLeft, Star, BookmarkPlus } from "lucide-react";
 import { useSmartBack } from "@/lib/use-smart-back";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,12 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TradingViewWidget, tradingViewSymbol } from "@/components/ui/tradingview-widget";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { analysisApi, bondsApi, quotesApi, type AnalysisMarket } from "@/lib/api";
+import { quotesApi } from "@/features/cotizaciones/api";
+import { bondsApi } from "@/features/renta-fija/api";
+import { analysisApi, type AnalysisMarket } from "@/features/analisis/api";
 import { useApiData } from "@/hooks/useApiData";
 import { ConsensusTab } from "@/components/analysis/ConsensusTab";
 import { FundamentalsTab } from "@/components/analysis/FundamentalsTab";
 import { NewsTab } from "@/components/analysis/NewsTab";
 import CompanyLogo from "@/components/ui/company-logo";
+import { AddToTrackingModal } from "@/components/AddToTrackingModal";
 
 const formatterARS = new Intl.NumberFormat("es-AR", {
   style: "currency",
@@ -39,6 +42,7 @@ export function QuoteDetailPage() {
   const { goBack } = useSmartBack("/quotes");
   const [isFavorite, setIsFavorite] = useState(false);
   const [chartMode, setChartMode] = useState<"simple" | "tradingview">("simple");
+  const [trackingOpen, setTrackingOpen] = useState(false);
   const navigate = useNavigate();
 
   const cacheKey = symbol ? `quote:${symbol}` : null;
@@ -180,7 +184,11 @@ export function QuoteDetailPage() {
             <p className="mt-0.5 text-sm text-muted-foreground">{quote.name}</p>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" className="cursor-pointer gap-1.5" onClick={() => setTrackingOpen(true)} aria-label={`Agregar ${quote.symbol} a seguimiento`}>
+            <BookmarkPlus className="h-4 w-4" />
+            Seguimiento
+          </Button>
           <Button variant="outline" size="sm" className="cursor-pointer text-red-600" onClick={() => navigate(`/operar/${quote.symbol}?side=sell&market=${tradeMarket}`)}>
             Vender
           </Button>
@@ -509,6 +517,14 @@ export function QuoteDetailPage() {
           <AlertDescription>Análisis no disponible para este mercado.</AlertDescription>
         </Alert>
       )}
+      <AddToTrackingModal
+        open={trackingOpen}
+        onOpenChange={setTrackingOpen}
+        symbol={quote.symbol}
+        market={quote.market}
+        lastPrice={quote.lastPrice}
+        currency={quote.currency}
+      />
     </div>
   );
 }
