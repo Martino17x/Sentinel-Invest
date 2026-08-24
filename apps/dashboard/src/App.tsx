@@ -12,30 +12,35 @@ import { LoginPage } from "@/pages/LoginPage";
 import { RegisterPage } from "@/pages/RegisterPage";
 import { HomePage } from "@/pages/HomePage";
 import { DashboardPage } from "@/pages/DashboardPage";
-import { OperationsPage } from "@/pages/OperationsPage";
+import { OperationsPage } from "@/features/portafolio/pages/OperationsPage";
 import { QuotesPage } from "@/pages/QuotesPage";
 import { QuoteDetailPage } from "@/pages/QuoteDetailPage";
-import { ScreenerPage } from "@/pages/ScreenerPage";
-import { NewsPage } from "@/pages/NewsPage";
-import { NewsDetailPage } from "@/pages/NewsDetailPage";
-import { StockAnalysisPage } from "@/pages/StockAnalysisPage";
-import { ReportsPage } from "@/pages/ReportsPage";
+import { ScreenerPage } from "@/features/analisis/pages/ScreenerPage";
+import { NewsPage } from "@/features/noticias/pages/NewsPage";
+import { NewsDetailPage } from "@/features/noticias/pages/NewsDetailPage";
+import { StockAnalysisPage } from "@/features/analisis/pages/StockAnalysisPage";
+import { ReportsPage } from "@/features/reportes/pages/ReportsPage";
 import { PrivacyPage } from "@/pages/PrivacyPage";
 import { TermsPage } from "@/pages/TermsPage";
 import { ConnectIolPage } from "@/pages/ConnectIolPage";
 import { ProfilePage } from "@/pages/ProfilePage";
-import { AgentConnectPage } from "@/pages/AgentConnectPage";
-import { OperarPage } from "@/pages/OperarPage";
-import { OperarSymbolPage } from "@/pages/OperarSymbolPage";
-import { OperarFciPage } from "@/pages/OperarFciPage";
+import { AgentConnectPage } from "@/features/agente/pages/AgentConnectPage";
+import { OperarPage } from "@/features/operar/pages/OperarPage";
+import { OperarSymbolPage } from "@/features/operar/pages/OperarSymbolPage";
+import { OperarFciPage } from "@/features/operar/pages/OperarFciPage";
 import { cn } from "@/lib/utils";
 
+const PortfolioHubPage = lazy(() => import("@/pages/PortfolioHubPage"));
+const VirtualPortfolioPage = lazy(() => import("@/features/portafolio/pages/VirtualPortfolioPage"));
+const VirtualPortfolioReportsPage = lazy(() => import("@/features/portafolio/pages/VirtualPortfolioReportsPage"));
 const RadarPage = lazy(() => import("@/pages/RadarPage"));
-const RentaFijaPage = lazy(() => import("@/pages/RentaFijaPage"));
-const RentaFijaTablaPage = lazy(() => import("@/pages/RentaFijaTablaPage"));
-const BondFichaPage = lazy(() => import("@/pages/BondFichaPage"));
-const RentaFijaCurvaPage = lazy(() => import("@/pages/RentaFijaCurvaPage"));
-const RentaFijaCalendarioPage = lazy(() => import("@/pages/RentaFijaCalendarioPage"));
+const RentaFijaPage = lazy(() => import("@/features/renta-fija/pages/RentaFijaPage"));
+const RentaFijaTablaPage = lazy(() => import("@/features/renta-fija/pages/RentaFijaTablaPage"));
+const BondFichaPage = lazy(() => import("@/features/renta-fija/pages/BondFichaPage"));
+const RentaFijaCurvaPage = lazy(() => import("@/features/renta-fija/pages/RentaFijaCurvaPage"));
+const RentaFijaCalendarioPage = lazy(() => import("@/features/renta-fija/pages/RentaFijaCalendarioPage"));
+const RentaFijaComparePage = lazy(() => import("@/features/renta-fija/pages/RentaFijaComparePage"));
+const RentaFijaScreenerPage = lazy(() => import("@/features/renta-fija/pages/RentaFijaScreenerPage"));
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -149,6 +154,49 @@ function App() {
             <Route path="/inicio" element={<HomePage />} />
             {/* Portafolio: el panel anterior (renombrado, sin cambios de contenido) */}
             <Route path="/portfolio" element={<DashboardPage />} />
+            {/* Portafolios de seguimiento — hub y detalle virtual (Opción A) */}
+            <Route
+              path="/portfolio/seguimiento"
+              element={
+                <Suspense
+                  fallback={
+                    <div className="flex min-h-48 items-center justify-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  }
+                >
+                  <PortfolioHubPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/portfolio/seguimiento/:id"
+              element={
+                <Suspense
+                  fallback={
+                    <div className="flex min-h-48 items-center justify-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  }
+                >
+                  <VirtualPortfolioPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/portfolio/seguimiento/:id/reportes"
+              element={
+                <Suspense
+                  fallback={
+                    <div className="flex min-h-48 items-center justify-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  }
+                >
+                  <VirtualPortfolioReportsPage />
+                </Suspense>
+              }
+            />
             {/* Redirect legacy: /dashboard ya no existe como ruta principal */}
             <Route path="/dashboard" element={<Navigate to="/portfolio" replace />} />
             <Route path="/operations" element={<OperationsPage />} />
@@ -230,6 +278,34 @@ function App() {
                   }
                 >
                   <RentaFijaCalendarioPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/renta-fija/comparar"
+              element={
+                <Suspense
+                  fallback={
+                    <div className="flex min-h-48 items-center justify-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  }
+                >
+                  <RentaFijaComparePage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/renta-fija/screener"
+              element={
+                <Suspense
+                  fallback={
+                    <div className="flex min-h-48 items-center justify-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  }
+                >
+                  <RentaFijaScreenerPage />
                 </Suspense>
               }
             />
