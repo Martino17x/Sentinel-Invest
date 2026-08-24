@@ -256,9 +256,9 @@ describe("5.1 bondTools unit — DISCLAIMER + stale + empty", () => {
       return new Response("not stubbed: " + url, { status: 500 });
     });
     // Patch BymaDataProvider.getPanel directly to avoid fetch URL mismatch: monkey-patch prototype
-    const { BymaDataProvider } = await import("../../src/services/iol/BymaDataProvider.js");
-    const origGetPanel = (BymaDataProvider as any).prototype.getPanel;
-    (BymaDataProvider as any).prototype.getPanel = async function () {
+    const { QuoteService } = await import("../../src/application/cotizaciones/QuoteService.js");
+    const origGetPanel = (QuoteService as any).prototype.getPanel;
+    (QuoteService as any).prototype.getPanel = async function () {
       return { quotes: [
         { symbol: "AL30", lastPrice: 58, bid: 57, ask: 59, volume: 1000, currency: "USD", name: "AL30", low: 57, high: 59, open: 58, close: 57 } as any,
         { symbol: "GD30", lastPrice: 60, bid: 59, ask: 61, volume: 2000, currency: "USD", name: "GD30", low: 59, high: 61, open: 60, close: 59 } as any,
@@ -272,7 +272,7 @@ describe("5.1 bondTools unit — DISCLAIMER + stale + empty", () => {
       assert.ok(res.message.includes(BONDS_DISCLAIMER) || res.message.includes(DISCLAIMER));
       assert.ok(res.message.includes("Panel bonos"));
     } finally {
-      (BymaDataProvider as any).prototype.getPanel = origGetPanel;
+      (QuoteService as any).prototype.getPanel = origGetPanel;
       restoreFetch();
       restoreDb();
     }
@@ -283,9 +283,9 @@ describe("5.1 bondTools unit — DISCLAIMER + stale + empty", () => {
       if (url.includes("flujofondoscotiz")) return Response.json([]);
       return new Response("not stubbed", { status: 500 });
     });
-    const { BymaDataProvider } = await import("../../src/services/iol/BymaDataProvider.js");
-    const orig = (BymaDataProvider as any).prototype.getPanel;
-    (BymaDataProvider as any).prototype.getPanel = async () => ({ quotes: [], total: 0, summary: null });
+    const { QuoteService } = await import("../../src/application/cotizaciones/QuoteService.js");
+    const orig = (QuoteService as any).prototype.getPanel;
+    (QuoteService as any).prototype.getPanel = async () => ({ quotes: [], total: 0, summary: null });
     const restoreDb = patchDbExecute(async () => ({ rows: [] } as any));
     try {
       const ctx = makeCtx();
@@ -293,7 +293,7 @@ describe("5.1 bondTools unit — DISCLAIMER + stale + empty", () => {
       assert.equal(res.ok, true);
       assert.ok(res.message.toLowerCase().includes("vacío") || res.message.toLowerCase().includes("vacio") || res.message.includes("total 0"));
     } finally {
-      (BymaDataProvider as any).prototype.getPanel = orig;
+      (QuoteService as any).prototype.getPanel = orig;
       restoreFetch();
       restoreDb();
     }
@@ -330,13 +330,13 @@ describe("5.1 bondTools unit — DISCLAIMER + stale + empty", () => {
       if (url.includes("bcra.gob.ar")) return Response.json({ results: [{ detalle: [{ fecha: "2026-05-13T00:00:00", valor: 100 }] }] });
       return new Response("not stubbed: " + url, { status: 500 });
     });
-    const { BymaDataProvider } = await import("../../src/services/iol/BymaDataProvider.js");
-    const origFicha = (BymaDataProvider as any).prototype.getBondFichaRaw;
-    const origQuote = (BymaDataProvider as any).prototype.getQuote;
-    const origSchedule = (BymaDataProvider as any).prototype.getBondSchedule;
-    (BymaDataProvider as any).prototype.getBondFichaRaw = async () => ({ interes: "3.5% semestral", fechaEmision: "2020-01-01", codigoIsin: "AR123", ley: "Argentina", emisor: "Gobierno", denominacionMinima: 1, montoResidual: 1000 } as any);
-    (BymaDataProvider as any).prototype.getQuote = async () => ({ lastPrice: 58.2, bid: 57, ask: 59, low: 56, high: 60, open: 57, prevClose: 57, currency: "USD" } as any);
-    (BymaDataProvider as any).prototype.getBondSchedule = async () => ({ symbol: "AL30", moneda: "USD", tipo: "amortizable", vencimiento: "2030-01-09", cashflows: [{ fechaPago: "2027-01-09", renta: 2, amortizacion: 20, cashFlow: 22, vr: 80 }], cerAjustado: false } as any);
+    const { QuoteService } = await import("../../src/application/cotizaciones/QuoteService.js");
+    const origFicha = (QuoteService as any).prototype.getBondFichaRaw;
+    const origQuote = (QuoteService as any).prototype.getQuote;
+    const origSchedule = (QuoteService as any).prototype.getBondSchedule;
+    (QuoteService as any).prototype.getBondFichaRaw = async () => ({ interes: "3.5% semestral", fechaEmision: "2020-01-01", codigoIsin: "AR123", ley: "Argentina", emisor: "Gobierno", denominacionMinima: 1, montoResidual: 1000 } as any);
+    (QuoteService as any).prototype.getQuote = async () => ({ lastPrice: 58.2, bid: 57, ask: 59, low: 56, high: 60, open: 57, prevClose: 57, currency: "USD" } as any);
+    (QuoteService as any).prototype.getBondSchedule = async () => ({ symbol: "AL30", moneda: "USD", tipo: "amortizable", vencimiento: "2030-01-09", cashflows: [{ fechaPago: "2027-01-09", renta: 2, amortizacion: 20, cashFlow: 22, vr: 80 }], cerAjustado: false } as any);
     const restoreDb = patchDbExecute(async () => ({ rows: [] } as any));
     try {
       const ctx = makeCtx();
@@ -346,22 +346,22 @@ describe("5.1 bondTools unit — DISCLAIMER + stale + empty", () => {
       assert.ok(res.message.includes("AL30"));
       assert.ok(res.message.includes("vencimiento") || res.message.includes("Vencimiento"));
     } finally {
-      (BymaDataProvider as any).prototype.getBondFichaRaw = origFicha;
-      (BymaDataProvider as any).prototype.getQuote = origQuote;
-      (BymaDataProvider as any).prototype.getBondSchedule = origSchedule;
+      (QuoteService as any).prototype.getBondFichaRaw = origFicha;
+      (QuoteService as any).prototype.getQuote = origQuote;
+      (QuoteService as any).prototype.getBondSchedule = origSchedule;
       restoreFetch();
       restoreDb();
     }
   });
 
   test("get_bond_ficha not found throws NOT_FOUND verbatim", async () => {
-    const { BymaDataProvider } = await import("../../src/services/iol/BymaDataProvider.js");
-    const origFicha = (BymaDataProvider as any).prototype.getBondFichaRaw;
-    const origQuote = (BymaDataProvider as any).prototype.getQuote;
-    const origSchedule = (BymaDataProvider as any).prototype.getBondSchedule;
-    (BymaDataProvider as any).prototype.getBondFichaRaw = async () => null as any;
-    (BymaDataProvider as any).prototype.getQuote = async () => null as any;
-    (BymaDataProvider as any).prototype.getBondSchedule = async () => { throw new Error("not found"); };
+    const { QuoteService } = await import("../../src/application/cotizaciones/QuoteService.js");
+    const origFicha = (QuoteService as any).prototype.getBondFichaRaw;
+    const origQuote = (QuoteService as any).prototype.getQuote;
+    const origSchedule = (QuoteService as any).prototype.getBondSchedule;
+    (QuoteService as any).prototype.getBondFichaRaw = async () => null as any;
+    (QuoteService as any).prototype.getQuote = async () => null as any;
+    (QuoteService as any).prototype.getBondSchedule = async () => { throw new Error("not found"); };
     const restoreFetch = stubFetch((url) => {
       if (url.includes("flujofondoscotiz")) return Response.json([]);
       return new Response("not stubbed", { status: 500 });
@@ -374,9 +374,9 @@ describe("5.1 bondTools unit — DISCLAIMER + stale + empty", () => {
         return true;
       });
     } finally {
-      (BymaDataProvider as any).prototype.getBondFichaRaw = origFicha;
-      (BymaDataProvider as any).prototype.getQuote = origQuote;
-      (BymaDataProvider as any).prototype.getBondSchedule = origSchedule;
+      (QuoteService as any).prototype.getBondFichaRaw = origFicha;
+      (QuoteService as any).prototype.getQuote = origQuote;
+      (QuoteService as any).prototype.getBondSchedule = origSchedule;
       restoreFetch();
       restoreDb();
     }
@@ -444,12 +444,12 @@ describe("5.2 parity — tool message vs REST textified envelope", () => {
       curves: { "USD-hard-dollar": [{ ticker: "AL30", tir: 0.18, md: 2.0, vencimiento: "2030-01-09", segmento: "USD-hard-dollar" }] },
     };
     // Pre-populate MAE cache? Instead stub fetch to 502 and ensure tool falls back to local price calc or throws?
-    // Analytics without MAE will try local BymaDataProvider.getBondSchedule + getQuote — stub those to succeed
-    const { BymaDataProvider } = await import("../../src/services/iol/BymaDataProvider.js");
-    const origSched = (BymaDataProvider as any).prototype.getBondSchedule;
-    const origQuote = (BymaDataProvider as any).prototype.getQuote;
-    (BymaDataProvider as any).prototype.getBondSchedule = async () => ({ symbol: "AL30", moneda: "USD", tipo: "amortizable", vencimiento: "2030-01-09", cashflows: [{ fechaPago: "2027-01-09", renta: 2, amortizacion: 20, cashFlow: 22, vr: 80 }], cerAjustado: false } as any);
-    (BymaDataProvider as any).prototype.getQuote = async () => ({ lastPrice: 58.2, currency: "USD" } as any);
+    // Analytics without MAE will try local QuoteService.getBondSchedule + getQuote — stub those to succeed
+    const { QuoteService } = await import("../../src/application/cotizaciones/QuoteService.js");
+    const origSched = (QuoteService as any).prototype.getBondSchedule;
+    const origQuote = (QuoteService as any).prototype.getQuote;
+    (QuoteService as any).prototype.getBondSchedule = async () => ({ symbol: "AL30", moneda: "USD", tipo: "amortizable", vencimiento: "2030-01-09", cashflows: [{ fechaPago: "2027-01-09", renta: 2, amortizacion: 20, cashFlow: 22, vr: 80 }], cerAjustado: false } as any);
+    (QuoteService as any).prototype.getQuote = async () => ({ lastPrice: 58.2, currency: "USD" } as any);
     const restoreFetch = stubFetch((url) => {
       if (url.includes("flujofondoscotiz")) return new Response("mae down", { status: 502 });
       return new Response("not stubbed", { status: 502 });
@@ -463,8 +463,8 @@ describe("5.2 parity — tool message vs REST textified envelope", () => {
       assert.ok(res.message.includes("AL30"));
       assert.ok(res.message.includes(BONDS_DISCLAIMER) || res.message.includes(DISCLAIMER));
     } finally {
-      (BymaDataProvider as any).prototype.getBondSchedule = origSched;
-      (BymaDataProvider as any).prototype.getQuote = origQuote;
+      (QuoteService as any).prototype.getBondSchedule = origSched;
+      (QuoteService as any).prototype.getQuote = origQuote;
       restoreFetch();
       restoreDb();
       void snapshotPayload;
@@ -504,8 +504,8 @@ describe("5.2 parity — tool message vs REST textified envelope", () => {
       // Must not contain fetch("http://localhost" or fetch("/api/"
       assert.ok(!content.includes("fetch(`http://"), `${rel} must not fetch own REST API`);
       assert.ok(!content.includes('fetch("http://'), `${rel} must not fetch own REST API`);
-      // Allow fetchChart / BymaDataProvider internal fetches, but not self-call to /api/bonds or /api/radar
-      assert.ok(!content.includes("/api/bonds") || content.includes("BymaDataProvider") || content.includes("getMae"), `${rel} must not self-call /api/bonds`);
+      // Allow fetchChart / QuoteService/BymaClient internal fetches, but not self-call to /api/bonds or /api/radar
+      assert.ok(!content.includes("/api/bonds") || content.includes("QuoteService") || content.includes("BymaClient") || content.includes("BymaFichaClient") || content.includes("getMae"), `${rel} must not self-call /api/bonds`);
       assert.ok(!content.includes("/api/radar") || content.includes("getRadar"), `${rel} must not self-call /api/radar`);
     }
   });
@@ -535,10 +535,10 @@ describe("5.3 multitenant — ctx.account.id isolation", () => {
       if (url.includes("flujofondoscotiz")) return Response.json([maeItem("GD35", 15, 4)]);
       return new Response("not stubbed", { status: 500 });
     });
-    const { BymaDataProvider } = await import("../../src/services/iol/BymaDataProvider.js");
-    const origSched = (BymaDataProvider as any).prototype.getBondSchedule;
+    const { QuoteService } = await import("../../src/application/cotizaciones/QuoteService.js");
+    const origSched = (QuoteService as any).prototype.getBondSchedule;
     // Ensure schedule lookup works for GD35 if mae misses
-    (BymaDataProvider as any).prototype.getBondSchedule = async () => ({ symbol: "GD35", moneda: "USD", tipo: "amortizable", vencimiento: "2035-12-09", cashflows: [{ fechaPago: "2026-12-09", renta: 5, amortizacion: 0, cashFlow: 5, vr: 100 }], cerAjustado: false } as any);
+    (QuoteService as any).prototype.getBondSchedule = async () => ({ symbol: "GD35", moneda: "USD", tipo: "amortizable", vencimiento: "2035-12-09", cashflows: [{ fechaPago: "2026-12-09", renta: 5, amortizacion: 0, cashFlow: 5, vr: 100 }], cerAjustado: false } as any);
     try {
       const ctxA = makeCtx({ account: { id: accA, iolAccountNumber: "111", currency: "ARS" } });
       const resA = await getBondCashflowTool.execute(ctxA, { monthsAhead: 12 });
@@ -556,7 +556,7 @@ describe("5.3 multitenant — ctx.account.id isolation", () => {
       // If today after 2026-12-09, it would be empty; so we allow either but ensure isolation: acc-A empty is not B's data
       assert.ok(resB.message.includes("Cashflow"), "resB should be cashflow envelope");
     } finally {
-      (BymaDataProvider as any).prototype.getBondSchedule = origSched;
+      (QuoteService as any).prototype.getBondSchedule = origSched;
       restorePool();
       restoreDb();
       restoreFetch();
@@ -668,9 +668,9 @@ describe("5.4 timeout/error — abort, 502 stale, flag off, Zod reject", () => {
       if (url.includes("flujofondoscotiz")) throw new DOMException("Aborted", "AbortError");
       return new Response("not stubbed", { status: 500 });
     });
-    const { BymaDataProvider } = await import("../../src/services/iol/BymaDataProvider.js");
-    const origSched = (BymaDataProvider as any).prototype.getBondSchedule;
-    (BymaDataProvider as any).prototype.getBondSchedule = async (_sym: string, signal?: AbortSignal) => {
+    const { QuoteService } = await import("../../src/application/cotizaciones/QuoteService.js");
+    const origSched = (QuoteService as any).prototype.getBondSchedule;
+    (QuoteService as any).prototype.getBondSchedule = async (_sym: string, signal?: AbortSignal) => {
       if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
       throw new DOMException("Aborted", "AbortError");
     };
@@ -681,7 +681,7 @@ describe("5.4 timeout/error — abort, 502 stale, flag off, Zod reject", () => {
         return true;
       });
     } finally {
-      (BymaDataProvider as any).prototype.getBondSchedule = origSched;
+      (QuoteService as any).prototype.getBondSchedule = origSched;
       restoreFetch();
       restoreDb();
     }
@@ -762,11 +762,11 @@ describe("5.4 timeout/error — abort, 502 stale, flag off, Zod reject", () => {
       return new Response("mae down", { status: 502 });
     });
     const restoreDb2 = patchDbExecute(async () => ({ rows: [] } as any));
-    const { BymaDataProvider } = await import("../../src/services/iol/BymaDataProvider.js");
-    const origSched = (BymaDataProvider as any).prototype.getBondSchedule;
-    (BymaDataProvider as any).prototype.getBondSchedule = async () => { throw new Error("BYMA 502"); };
-    const origQuote = (BymaDataProvider as any).prototype.getQuote;
-    (BymaDataProvider as any).prototype.getQuote = async () => { throw new Error("quote 502"); };
+    const { QuoteService } = await import("../../src/application/cotizaciones/QuoteService.js");
+    const origSched = (QuoteService as any).prototype.getBondSchedule;
+    (QuoteService as any).prototype.getBondSchedule = async () => { throw new Error("BYMA 502"); };
+    const origQuote = (QuoteService as any).prototype.getQuote;
+    (QuoteService as any).prototype.getQuote = async () => { throw new Error("quote 502"); };
     try {
       const ctx = makeCtx();
       // fetchBondAnalytics now will try MAE (502) -> fallback to local (throws) -> overall throws.
@@ -779,8 +779,8 @@ describe("5.4 timeout/error — abort, 502 stale, flag off, Zod reject", () => {
       // Directly verify trySnapshot fallback would serve stale if configured
       // This test passes if cache not cleared
     } finally {
-      (BymaDataProvider as any).prototype.getBondSchedule = origSched;
-      (BymaDataProvider as any).prototype.getQuote = origQuote;
+      (QuoteService as any).prototype.getBondSchedule = origSched;
+      (QuoteService as any).prototype.getQuote = origQuote;
       restoreFetch502();
       restoreDb2();
     }
