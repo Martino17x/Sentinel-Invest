@@ -128,9 +128,11 @@ export interface User {
   avatarUrl: string | null;
 }
 
-// TODO SDD7: remove shim when external quotesApi consumers =0 — Gate 2026-08-24: 3 hits (InstrumentPicker, OperarSymbolPage, QuoteDetailPage via lib/api)
-// `grep quotesApi|PanelQuote outside cotizaciones` → 3 consumers → shim retained. Full lib/api consumers grep =60+ out of scope SDD7.
-// Shim transitorio — fuente única vive en features/cotizaciones/api.ts (mover, no duplicar). wc -l 1140 → SDD7 target ≤120 tras migrar resto de apis.
+// TODO SDD7: migrate cotizaciones 3 consumers (InstrumentPicker, OperarSymbolPage, QuoteDetailPage) + radarApi before delete; wc -l target ≤120
+// Gate C8 2026-08-24: grep -r "from.*lib/api" apps/dashboard/src --exclude-dir=features | grep -v "api-client" → 39 hits (outside features)
+// + grep inside features | grep -v api-client → 18 hits (ScreenerPage, StockAnalysisPage, NewsPage/Detail, OperarSymbolPage, OperationsPage, VirtualPortfolio*, BondFicha*, RentaFija* 6, ReportsPage)
+// quotesApi subset: 3 consumers via lib/api (InstrumentPicker, OperarSymbolPage, QuoteDetailPage) + radarApi 1 (RadarPage) — shim retained, delete blocked
+// Fuente única cotizaciones vive en features/cotizaciones/api.ts (import now api-client, api.ts 77L). lib/api.ts 228L → target ≤120 tras dedup + migrate resto. NO borrar a la fuerza.
 export * from "../features/cotizaciones/api";
 
 // Shim portafolio — fuente única en features/portafolio/api.ts (SDD dashboard-features-resto C2)

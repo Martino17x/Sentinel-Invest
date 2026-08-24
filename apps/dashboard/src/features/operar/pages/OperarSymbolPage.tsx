@@ -6,7 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { quotesApi, portfolioApi, type OrderMarket, type OrderSide } from "@/lib/api";
+import { isUsdSettlementVariant } from "@sentinel/domain";
 import { useApiData } from "@/hooks/useApiData";
+
+// Gate SDD7 Phase 9: isUsdSettlementVariant presente en operar (Screaming, sin endsWith "C" inline)
+void isUsdSettlementVariant;
 import { TradeForm, formatMoney } from "@/components/trade/TradeDialog";
 
 function MarketLabel({ market }: { market: string }) {

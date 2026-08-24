@@ -5,7 +5,7 @@
  * Depende de `apiFetch` central para no duplicar refresh/token coalescing.
  */
 
-import { apiFetch } from "@/lib/api";
+import { apiFetch } from "@/lib/api-client";
 
 export interface PanelQuote {
   symbol: string;
