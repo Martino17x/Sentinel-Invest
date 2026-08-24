@@ -3,9 +3,9 @@ import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth } from "../middleware/auth.js";
 import { db, schema } from "../db/index.js";
-import { BymaClient } from "../infrastructure/providers/byma/BymaClient.js";
-import { BymaFichaClient } from "../infrastructure/providers/byma/BymaFichaClient.js";
-import { QuoteService } from "../application/cotizaciones/QuoteService.js";
+import { BymaClient } from "../infraestructura/providers/byma/BymaClient.js";
+import { BymaFichaClient } from "../infraestructura/providers/byma/BymaFichaClient.js";
+import { QuoteService } from "../aplicacion/cotizaciones/QuoteService.js";
 import {
   buildMonthCalendar,
   fetchYahooDaily,

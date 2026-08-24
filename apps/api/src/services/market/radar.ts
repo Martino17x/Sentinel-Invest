@@ -2,12 +2,12 @@
  * Fachada singleton D6 — delega a RadarOrchestrator (application/radar)
  * Preserva API pública para consumers existentes hasta grep=0.
  */
-import { BymaClient } from "../../infrastructure/providers/byma/BymaClient.js";
-import { BymaFichaClient } from "../../infrastructure/providers/byma/BymaFichaClient.js";
-import { QuoteService } from "../../application/cotizaciones/QuoteService.js";
+import { BymaClient } from "../../infraestructura/providers/byma/BymaClient.js";
+import { BymaFichaClient } from "../../infraestructura/providers/byma/BymaFichaClient.js";
+import { QuoteService } from "../../aplicacion/cotizaciones/QuoteService.js";
 import { fetchChart } from "./yahoo.js";
 import { isMarketHours } from "./isMarketHours.js";
-import { RadarOrchestrator } from "../../application/radar/RadarOrchestrator.js";
+import { RadarOrchestrator } from "../../aplicacion/radar/RadarOrchestrator.js";
 
 const bymaClient = new BymaClient();
 const fichaClient = new BymaFichaClient();
@@ -30,8 +30,8 @@ export function resetRadarCacheForTests(): void {
 // alias para spec D4 compat
 export const resetForTests = resetRadarCacheForTests;
 
-export { DISCLAIMER } from "../../application/radar/RadarOrchestrator.js";
-export type { RadarRow, CclResponse, RadarSource } from "../../application/radar/RadarOrchestrator.js";
+export { DISCLAIMER } from "../../aplicacion/radar/RadarOrchestrator.js";
+export type { RadarRow, CclResponse, RadarSource } from "../../aplicacion/radar/RadarOrchestrator.js";
 
 // Caches vivos — proxy a los SwrCache internos del singleton (mismo objeto que usa getRadar)
 export const radarCache: InstanceType<typeof import("./cache.js").SwrCache<any>> = (orchestrator as unknown as Record<string, unknown>)._radarCache as never ?? (orchestrator as unknown as Record<string, unknown>).radarCachePublic as never;

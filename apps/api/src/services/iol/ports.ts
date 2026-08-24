@@ -15,7 +15,7 @@ import type {
   Quote,
 } from "./types.js";
 import type { BondSchedule } from "../market/bonds/types.js";
-import type { BymaFicha } from "../../domain/bonos/ficha.js";
+import type { BymaFicha } from "../../dominio/bonos/ficha.js";
 
 /**
  * ISP — puertos finos que particionan el IolProvider gordo (13 métodos).

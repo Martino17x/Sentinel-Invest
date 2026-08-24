@@ -2,9 +2,9 @@ import type { IolProvider } from "./IolProvider.js";
 import type { MarketDataPort } from "./ports.js";
 import { MockIolProvider } from "./MockIolProvider.js";
 import { IolApiProvider } from "./IolApiProvider.js";
-import { BymaClient } from "../../infrastructure/providers/byma/BymaClient.js";
-import { BymaFichaClient } from "../../infrastructure/providers/byma/BymaFichaClient.js";
-import { QuoteService } from "../../application/cotizaciones/QuoteService.js";
+import { BymaClient } from "../../infraestructura/providers/byma/BymaClient.js";
+import { BymaFichaClient } from "../../infraestructura/providers/byma/BymaFichaClient.js";
+import { QuoteService } from "../../aplicacion/cotizaciones/QuoteService.js";
 import type {
   FciRedemptionRequest,
   FciSubscriptionRequest,

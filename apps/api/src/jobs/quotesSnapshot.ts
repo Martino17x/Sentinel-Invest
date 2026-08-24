@@ -12,9 +12,9 @@
 //   (market, assetType, snapshotDate).
 // ============================================================
 
-import { BymaClient } from "../infrastructure/providers/byma/BymaClient.js";
-import { BymaFichaClient } from "../infrastructure/providers/byma/BymaFichaClient.js";
-import { QuoteService } from "../application/cotizaciones/QuoteService.js";
+import { BymaClient } from "../infraestructura/providers/byma/BymaClient.js";
+import { BymaFichaClient } from "../infraestructura/providers/byma/BymaFichaClient.js";
+import { QuoteService } from "../aplicacion/cotizaciones/QuoteService.js";
 import { saveQuotesSnapshot } from "../services/market/quotesSnapshotStore.js";
 
 /** Combinaciones reales que la UI expone (ver QuotesPage.tsx:ASSET_TYPES) */

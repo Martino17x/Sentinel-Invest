@@ -7,19 +7,19 @@ import type {
 } from "../../services/iol/types.js";
 import type { BondSchedule, BondCashflow } from "../../services/market/bonds/types.js";
 import { buildSchedule } from "../../services/market/bonds/cashflow.js";
-import type { BymaFicha as DomainBymaFicha } from "../../domain/bonos/ficha.js";
+import type { BymaFicha as DomainBymaFicha } from "../../dominio/bonos/ficha.js";
 import {
   normalizeFichaToSchedule,
   inferMaeTipo,
-} from "../../domain/bonos/ficha.js";
-import { BymaClient } from "../../infrastructure/providers/byma/BymaClient.js";
-import { BymaFichaClient } from "../../infrastructure/providers/byma/BymaFichaClient.js";
+} from "../../dominio/bonos/ficha.js";
+import { BymaClient } from "../../infraestructura/providers/byma/BymaClient.js";
+import { BymaFichaClient } from "../../infraestructura/providers/byma/BymaFichaClient.js";
 import {
   mapInstrument,
   mapMarket,
   mapAssetType,
   type BymaInstrument,
-} from "../../infrastructure/providers/byma/BymaMapper.js";
+} from "../../infraestructura/providers/byma/BymaMapper.js";
 import { getInstrumentDisplayName } from "@sentinel/domain";
 
 /**

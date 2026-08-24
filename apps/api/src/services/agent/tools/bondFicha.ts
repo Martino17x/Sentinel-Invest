@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { BONDS_PANEL_ENABLED } from "../../../config.js";
 import { DISCLAIMER } from "../../market/bonds/bondsQueries.js";
-import { BymaClient } from "../../../infrastructure/providers/byma/BymaClient.js";
-import { BymaFichaClient } from "../../../infrastructure/providers/byma/BymaFichaClient.js";
-import { QuoteService } from "../../../application/cotizaciones/QuoteService.js";
-import { parseInteresToCouponRate } from "../../../domain/bonos/ficha.js";
+import { BymaClient } from "../../../infraestructura/providers/byma/BymaClient.js";
+import { BymaFichaClient } from "../../../infraestructura/providers/byma/BymaFichaClient.js";
+import { QuoteService } from "../../../aplicacion/cotizaciones/QuoteService.js";
+import { parseInteresToCouponRate } from "../../../dominio/bonos/ficha.js";
 import { getMaeAnalyticsForSymbol } from "../../market/bonds/maeFlujo.js";
 import { getCER } from "../../market/bonds/cer.js";
 import { calcTIR } from "../../market/bonds/tir.js";
