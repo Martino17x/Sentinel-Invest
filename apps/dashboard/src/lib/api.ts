@@ -196,8 +196,9 @@ export interface Operation {
   date: string;
 }
 
-// TODO SDD7: remove shim when grep consumers=0 — `grep -r "from.*lib/api" apps/dashboard/src --exclude-dir=cotizaciones | grep -v "auth\|apiFetch"` → 0 hits
-// Shim transitorio — fuente única vive en features/cotizaciones/api.ts (mover, no duplicar)
+// TODO SDD7: remove shim when external quotesApi consumers =0 — Gate 2026-08-24: 3 hits (InstrumentPicker, OperarSymbolPage, QuoteDetailPage via lib/api)
+// `grep quotesApi|PanelQuote outside cotizaciones` → 3 consumers → shim retained. Full lib/api consumers grep =60+ (bondsApi, portfolioApi, etc) out of scope SDD7.
+// Shim transitorio — fuente única vive en features/cotizaciones/api.ts (mover, no duplicar). wc -l 1140 → SDD7 target ≤120 tras migrar resto de apis.
 export * from "../features/cotizaciones/api";
 
 export interface MonthClose {
