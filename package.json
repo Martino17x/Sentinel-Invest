@@ -11,9 +11,11 @@
     "build": "turbo build",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
-    "test": "turbo test"
+    "test": "turbo test",
+    "check:deps": "depcruise --config .dependency-cruiser.cjs apps/api/src packages/domain"
   },
   "devDependencies": {
-    "turbo": "^2.0.0"
+    "turbo": "^2.0.0",
+    "dependency-cruiser": "^16.6.0"
   }
 }
