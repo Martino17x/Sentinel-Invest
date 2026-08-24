@@ -186,8 +186,12 @@ test("radar: USD y sufijo C/D → ccl null, excluido de promedio", async () => {
   const restore = stubFetch(combinedHandler(instruments, prices));
   try {
     const res = await getRadar({ page: 1, limit: 50, sort: "symbol" });
-    // Solo AAPL contribuye al promedio (único ARS válido con Yahoo ok)
-    assert.equal(res.cclPromedio, (32_100 * 10) / 230);
+    // AAPL tiene par BYMA USD (AAPLC 33000) → modo híbrido byma_usd, no Yahoo
+    // ccl = 32100 / 33000 (ratio se cancela)
+    assert.equal(res.cclPromedio, 32_100 / 33_000);
+    const aapl = res.items.find((r) => r.symbol === "AAPL")!;
+    assert.equal(aapl.ccl, 32_100 / 33_000);
+    assert.equal(aapl.cclSource, "byma_usd");
     const aaplC = res.items.find((r) => r.symbol === "AAPLC")!;
     const aaplD = res.items.find((r) => r.symbol === "AAPLD")!;
     const msft = res.items.find((r) => r.symbol === "MSFT")!;
