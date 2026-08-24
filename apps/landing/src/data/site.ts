@@ -3,7 +3,7 @@ export const SITE = {
   fullName: "Sentinel Invest",
   tagline: "Tu cartera de inversiones, controlada.",
   description:
-    "Controlá tus inversiones de InvertirOnline en un solo lugar: portafolio, cotizaciones, análisis, reportes y un agente de IA. Solo lectura, siempre.",
+    "Controlá tus inversiones de InvertirOnline en un solo lugar: portafolio, cotizaciones, análisis, reportes y un agente de IA. Sentinel App: consulta y opera (POST /api/orders tras opt-in IOL_TRADING_ENABLED + confirmación explícita y auditoría). Sentinel MCP: solo lectura (scope read) + trading opcional (scope trade).",
   url: "http://localhost:4321",
   dashboardUrl: "http://localhost:5173",
   registerUrl: "http://localhost:5173/register",

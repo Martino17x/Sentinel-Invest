@@ -10,7 +10,7 @@ export interface Metric {
 }
 
 export const metrics: Metric[] = [
-  { value: "Solo lectura", label: "Nunca ejecutamos órdenes" },
+  { value: "App opera • MCP scopes", label: "Sentinel App: consulta y opera (POST /api/orders tras opt-in IOL_TRADING_ENABLED + confirmación explícita y auditoría) — Sentinel MCP: solo lectura (scope read) + trading opcional (scope trade)" },
   { value: "AES-256", label: "Credenciales cifradas" },
   { value: "TWR real", label: "Excluye aportes" },
   { value: "AR + US", label: "Mercados en tiempo real" },

@@ -64,9 +64,9 @@ export const homeFeatures: Feature[] = [
   {
     title: "Agente IA",
     description:
-      "Tu agente de IA lee tu cartera y cotizaciones en tiempo real vía MCP: Claude Code, Cursor, Codex y más.",
+      "Tu agente de IA con dos modos: Sentinel App: consulta y opera (POST /api/orders tras opt-in IOL_TRADING_ENABLED + confirmación explícita y auditoría). Sentinel MCP: solo lectura (scope read) + trading opcional (scope trade). Guías para Claude Code, Cursor, Codex y más.",
     image: "/screens/desktop/agent-connect.png",
     alt: "Conexión de agentes de IA vía MCP",
-    bullets: ["Server MCP local", "Solo lectura", "Guías por agente"],
+    bullets: ["Server MCP local", "Sentinel MCP: solo lectura (scope read) + trading opcional (scope trade)", "Guías por agente"],
   },
 ];

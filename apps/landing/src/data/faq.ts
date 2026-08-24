@@ -6,11 +6,11 @@ export interface FaqItem {
 export const faq: FaqItem[] = [
   {
     q: "¿Qué es Sentinel?",
-    a: "Sentinel es una app de control de inversiones para cuentas de InvertirOnline (IOL): ves tu portafolio, cotizaciones, análisis y reportes en un solo lugar, en modo solo lectura.",
+    a: "Sentinel es una app de control de inversiones para cuentas de InvertirOnline (IOL): ves tu portafolio, cotizaciones, análisis y reportes en un solo lugar. Sentinel App: consulta y opera (POST /api/orders tras opt-in IOL_TRADING_ENABLED + confirmación explícita y auditoría). Sentinel MCP: solo lectura (scope read) + trading opcional (scope trade).",
   },
   {
     q: "¿Es seguro? ¿Puede operar por mí?",
-    a: "No. Sentinel es solo lectura: nunca ejecuta órdenes de compra o venta. Tus credenciales se guardan cifradas con AES-256 y se eliminan de inmediato si desconectás la cuenta.",
+    a: "Sentinel App: consulta y opera (POST /api/orders tras opt-in IOL_TRADING_ENABLED + confirmación explícita y auditoría). Sentinel MCP: solo lectura (scope read) + trading opcional (scope trade). Tus credenciales se guardan cifradas con AES-256 y se eliminan de inmediato si desconectás la cuenta.",
   },
   {
     q: "¿Necesito una cuenta en InvertirOnline?",
@@ -22,7 +22,7 @@ export const faq: FaqItem[] = [
   },
   {
     q: "¿Cómo funciona el agente de IA?",
-    a: "Sentinel expone un servidor MCP local con herramientas de lectura (get_portfolio, get_quote, search_instruments, get_dollar_rates). Lo conectás a tu agente favorito —Claude Code, Cursor, Codex, opencode o gemini-cli— y te resume la cartera en segundos.",
+    a: "Sentinel expone un servidor MCP local. Sentinel App: consulta y opera (POST /api/orders tras opt-in IOL_TRADING_ENABLED + confirmación explícita y auditoría). Sentinel MCP: solo lectura (scope read) + trading opcional (scope trade) — herramientas get_portfolio, get_quote, search_instruments, get_dollar_rates. Lo conectás a tu agente favorito —Claude Code, Cursor, Codex, opencode o gemini-cli— y te resume la cartera en segundos.",
   },
   {
     q: "¿Cómo me registro?",
