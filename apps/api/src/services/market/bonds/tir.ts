@@ -257,7 +257,12 @@ export async function calcTIRWithDynamicCer(
   if (schedule.cerAjustado) {
     try {
       const { getDynamicCerCoefficient } = await import("./cer.js");
-      const { coefficient } = await getDynamicCerCoefficient(settlement, opts?.signal);
+      const { coefficient } = await getDynamicCerCoefficient(settlement, {
+        fechaEmision: (schedule as { fechaEmision?: string | null }).fechaEmision ?? null,
+        cerBase: (schedule as { cerBase?: number | null }).cerBase ?? null,
+        cerBaseFecha: (schedule as { cerBaseFecha?: string | null }).cerBaseFecha ?? null,
+        signal: opts?.signal,
+      });
       if (Number.isFinite(coefficient) && coefficient > 0) {
         adjustedFlujos = scaleCashflowsForCer(schedule.cashflows, coefficient);
       }

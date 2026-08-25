@@ -20,6 +20,7 @@ import { buildSchedule } from "./cashflow.js";
 import { calcTIR } from "./tir.js";
 import { calcModifiedDuration, calcMacaulayDuration } from "./duration.js";
 import { calcCuadroTecnico } from "./paridad.js";
+import { fetchLiveArgBonds } from "./Data912Provider.js";
 
 const MAE_BASE = "https://api.marketdata.mae.com.ar/api/emisiones/flujofondoscotiz";
 const MAE_TTL_MS = 5 * 60 * 1000;
@@ -147,6 +148,7 @@ function toBondSchedule(item: MaeFlujoItem): BondSchedule {
     moneda,
     tipo,
     vencimiento,
+    fechaEmision: null,
     cashflows,
     cerAjustado: tipo === "cer",
   });

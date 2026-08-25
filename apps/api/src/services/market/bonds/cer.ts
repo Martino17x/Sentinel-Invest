@@ -342,20 +342,108 @@ export async function getCerCoefficient(fechaValor?: string, signal?: AbortSigna
   return q.valor;
 }
 
-// TODO T-007: WIP wrapper dinámico — delega a getCerCoefficient/getCER.
-// Preserva tests (retorna CER valor como coefficient=1.0-neutral si BCRA cae).
-// Callers duration.ts:172 y tir.ts:259 esperan { coefficient }.
+export interface DynamicCerOptions {
+  fechaEmision?: string | null;
+  cerBase?: number | null;
+  cerBaseFecha?: string | null;
+  signal?: AbortSignal;
+}
+
+export interface DynamicCerResult {
+  coefficient: number;
+  valor: number;
+  fecha: string;
+  source: string;
+  stale?: boolean;
+  cached?: boolean;
+  cerBase: number | null;
+  fechaEmision: string | null;
+}
+
+function isAbortSignal(v: unknown): v is AbortSignal {
+  return !!v && typeof v === "object" && "aborted" in (v as Record<string, unknown>) && typeof (v as AbortSignal).addEventListener === "function";
+}
+
+/**
+ * Coeficiente CER dinámico como ratio settlement/emission.
+ * - Si se provee cerBase → coefficient = CER(fechaValor) / cerBase
+ * - Si se provee fechaEmision → fetchea CER(fechaEmision) y divide
+ * - Si no hay base → fallback 1.0 con TODO (bond sin fechaEmision en ficha)
+ * Preserva compat: segundo arg puede ser AbortSignal directo.
+ */
 export async function getDynamicCerCoefficient(
   fechaValor?: string,
-  signal?: AbortSignal,
-): Promise<{ coefficient: number; valor: number; fecha: string; source: string; stale?: boolean; cached?: boolean }> {
+  opts?: DynamicCerOptions | AbortSignal,
+): Promise<DynamicCerResult> {
+  let signal: AbortSignal | undefined;
+  let fechaEmision: string | null = null;
+  let cerBase: number | null = null;
+  let cerBaseFecha: string | null = null;
+
+  if (isAbortSignal(opts)) {
+    signal = opts;
+  } else if (opts && typeof opts === "object") {
+    const o = opts as DynamicCerOptions;
+    fechaEmision = o.fechaEmision ?? null;
+    cerBase = o.cerBase ?? null;
+    cerBaseFecha = o.cerBaseFecha ?? null;
+    signal = o.signal;
+    // Compat: if caller passed { signal } plus also direct AbortSignal shape weird, handled above
+  }
+
+  const key = normalizeFechaValor(fechaValor);
   try {
-    const q = await getCER(fechaValor, signal);
-    return { coefficient: q.valor, valor: q.valor, fecha: q.fecha, source: q.source, stale: q.stale, cached: q.cached };
+    const q = await getCER(key, signal);
+    let baseValor: number | null = null;
+    let baseFecha: string | null = null;
+
+    if (cerBase != null && Number.isFinite(cerBase) && cerBase > 0) {
+      baseValor = cerBase;
+      baseFecha = cerBaseFecha ?? fechaEmision ?? null;
+    } else if (fechaEmision && /^\d{4}-\d{2}-\d{2}$/.test(fechaEmision)) {
+      try {
+        const baseQ = await getCER(fechaEmision, signal);
+        baseValor = baseQ.valor;
+        baseFecha = baseQ.fecha;
+      } catch {
+        baseValor = null;
+        baseFecha = fechaEmision;
+      }
+    }
+
+    let coefficient: number;
+    if (baseValor != null && Number.isFinite(baseValor) && baseValor > 0) {
+      coefficient = q.valor / baseValor;
+      if (!Number.isFinite(coefficient) || coefficient <= 0) coefficient = 1.0;
+    } else {
+      // TODO T-007: sin fechaEmision/cerBase en ficha (MAE/BYMA sin emisión) → ratio no determinístico, usar 1.0 neutro
+      coefficient = 1.0;
+      baseValor = null;
+      baseFecha = fechaEmision ?? null;
+    }
+
+    return {
+      coefficient,
+      valor: q.valor,
+      fecha: q.fecha,
+      source: q.source,
+      stale: q.stale,
+      cached: q.cached,
+      cerBase: baseValor,
+      fechaEmision: baseFecha,
+    };
   } catch {
-    // WIP placeholder: coeficiente neutro 1.0 si BCRA+INDEC caen
-    const key = normalizeFechaValor(fechaValor);
-    return { coefficient: 1.0, valor: 1.0, fecha: key, source: "stub (T-007)", stale: true, cached: false };
+    // BCRA+INDEC caídos → coeficiente neutro 1.0
+    return {
+      coefficient: 1.0,
+      valor: 1.0,
+      fecha: key,
+      source: "stub (T-007 fallback)",
+      stale: true,
+      cached: false,
+      cerBase: null,
+      fechaEmision,
+    };
   }
 }
 

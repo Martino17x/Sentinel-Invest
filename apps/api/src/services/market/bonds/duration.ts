@@ -170,7 +170,12 @@ export async function calcDurationsWithDynamicCer(
   if (schedule.cerAjustado && cerCoef == null) {
     try {
       const { getDynamicCerCoefficient } = await import("./cer.js");
-      const r = await getDynamicCerCoefficient(settlement, opts?.signal);
+      const r = await getDynamicCerCoefficient(settlement, {
+        fechaEmision: (schedule as { fechaEmision?: string | null }).fechaEmision ?? null,
+        cerBase: (schedule as { cerBase?: number | null }).cerBase ?? null,
+        cerBaseFecha: (schedule as { cerBaseFecha?: string | null }).cerBaseFecha ?? null,
+        signal: opts?.signal,
+      });
       if (Number.isFinite(r.coefficient)) cerCoef = r.coefficient;
     } catch {
       // keep null

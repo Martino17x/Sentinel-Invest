@@ -21,6 +21,7 @@ import { getLatestBondAnalyticsSnapshot } from "../../../jobs/bondAnalyticsSnaps
 import { calcTIR } from "./tir.js";
 import { calcDurations } from "./duration.js";
 import { calcParidad, calcCuadroTecnico, calcAccruedFromFicha } from "./paridad.js";
+import { getBondData912 } from "./Data912Provider.js";
 import type { BondAnalytics, CurvePoint, CashflowMonth, BondPanelRow, BondPanelResponse, BondCuadroTecnico, BondMarketData } from "./types.js";
 
 // Re-export canonical disclaimer and segment constants for consumers
@@ -73,19 +74,31 @@ export async function fetchBondAnalytics(symbol: string, signal?: AbortSignal): 
   const provider = new QuoteService(new BymaClient(), new BymaFichaClient());
   const schedule = await provider.getBondSchedule(sym);
 
-  // Price: try panel public-bonds first, fallback to provider.getQuote placeholder
+  // Price: try data912 first (real-time 20s), then BYMA panel
   let dirtyPrice = 0;
   let lastPriceCurrency: string | undefined;
   try {
-    const q = await provider.getQuote({ id: "", email: "" } as never, sym, "bcba");
-    dirtyPrice = q.lastPrice ?? 0;
-    lastPriceCurrency = q.currency;
+    const d912 = await getBondData912(sym, signal).catch(() => null);
+    if (d912?.c != null && d912.c > 0) {
+      dirtyPrice = d912.c;
+      // Heuristic: price > 1000 suggests ARS nominal, else USD
+      lastPriceCurrency = d912.c > 1000 ? "ARS" : undefined;
+    }
   } catch {
-    dirtyPrice = 0;
+    // ignore data912 error → fall through to BYMA
+  }
+  if (!dirtyPrice || dirtyPrice <= 0) {
+    try {
+      const q = await provider.getQuote({ id: "", email: "" } as never, sym, "bcba");
+      dirtyPrice = q.lastPrice ?? 0;
+      lastPriceCurrency = q.currency;
+    } catch {
+      dirtyPrice = 0;
+    }
   }
 
   if (!dirtyPrice || dirtyPrice <= 0) {
-    throw new Error(`BYMA price not available for ${sym}`);
+    throw new Error(`BYMA/data912 price not available for ${sym}`);
   }
 
   const settlement = new Date().toISOString().slice(0, 10);

@@ -23,9 +23,15 @@ export interface BondSchedule {
   tipo: "bullet" | "amortizable" | "cer" | "step-up" | "callable";
   /** Vencimiento ISO (YYYY-MM-DD). */
   vencimiento: string;
+  /** Fecha de emisión ISO (YYYY-MM-DD) — base para CER ratio. */
+  fechaEmision?: string | null;
   cashflows: BondCashflow[];
   /** Si los flujos están ajustados por CER (TX26 etc). */
   cerAjustado?: boolean;
+  /** CER base a fechaEmision (para no fetchear dos veces). */
+  cerBase?: number | null;
+  /** Fecha del cerBase (normalmente fechaEmision) */
+  cerBaseFecha?: string | null;
   /** Si es rescatable / callable (opción emisor). */
   callable?: boolean;
 }

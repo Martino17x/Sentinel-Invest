@@ -41,8 +41,12 @@ export interface BuildScheduleInput {
   moneda: "ARS" | "USD";
   tipo: BondSchedule["tipo"];
   vencimiento: string;
+  /** Fecha emisión ISO para CER base */
+  fechaEmision?: string | null;
   cashflows: BondCashflow[];
   cerAjustado?: boolean;
+  cerBase?: number | null;
+  cerBaseFecha?: string | null;
 }
 
 /**
@@ -66,8 +70,11 @@ export function buildSchedule(input: BuildScheduleInput): BondSchedule {
     moneda: input.moneda,
     tipo: input.tipo,
     vencimiento: input.vencimiento,
+    fechaEmision: input.fechaEmision ?? null,
     cashflows: sorted,
     cerAjustado: input.cerAjustado,
+    cerBase: input.cerBase ?? null,
+    cerBaseFecha: input.cerBaseFecha ?? null,
   };
 }
 

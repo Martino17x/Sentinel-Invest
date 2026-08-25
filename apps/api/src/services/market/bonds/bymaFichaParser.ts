@@ -386,6 +386,7 @@ export function parseBymaFichaToSchedule(
   if (tipo === "step-up" && isCerFicha(ficha)) tipo = "cer" as any;
 
   const vencimiento = parseFecha(ficha.fechaVencimiento) ?? opts?.vencimientoOverride ?? inferVencimientoFallback(sym);
+  const fechaEmision = parseFecha(ficha.fechaEmision) ?? parseFecha(ficha.fechaDevenganIntereses) ?? null;
   const cerAjustado = isCerFicha(ficha);
 
   const cashflows = parseCashflowsFromFicha(ficha, vencimiento);
@@ -395,13 +396,14 @@ export function parseBymaFichaToSchedule(
   const scheduleTipo: BondSchedule["tipo"] = (tipo === "callable" ? "callable" : tipo) as BondSchedule["tipo"];
 
   return buildSchedule({
-    symbol: sym,
-    moneda,
-    tipo: scheduleTipo,
-    vencimiento,
-    cashflows,
-    cerAjustado,
-  });
+      symbol: sym,
+      moneda,
+      tipo: scheduleTipo,
+      vencimiento,
+      fechaEmision,
+      cashflows,
+      cerAjustado,
+    });
 }
 
 // ---------------------------------------------------------------------------
