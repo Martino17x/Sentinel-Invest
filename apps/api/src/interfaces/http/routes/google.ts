@@ -12,7 +12,9 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const GOOGLE_REDIRECT_URI =
   process.env.GOOGLE_REDIRECT_URI ?? "http://localhost:3001/api/auth/google/callback";
-const FRONTEND_URL = process.env.CLIENT_ORIGIN ?? "http://localhost:5173";
+// CLIENT_ORIGIN es lista CORS separada por comas; para redirects usar primera entrada
+// Ideal: variable dedicada FRONTEND_URL en .env para el redirect base (ej: FRONTEND_URL=http://localhost:5173)
+const FRONTEND_URL = (process.env.CLIENT_ORIGIN ?? "http://localhost:5173").split(",")[0].trim();
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
