@@ -1,8 +1,9 @@
 // ============================================================
 // duration.ts — Macaulay y Modified Duration
 // Puras, sin I/O. LECAP bullet: duration = maturity.
+// T-007: soporte CER dinámico + 30/360 vs Actual/365 por schedule.
 // ============================================================
-import type { BondCashflow } from "./types.js";
+import type { BondCashflow, BondSchedule } from "./types.js";
 
 export interface DurationOptions {
   settlement: string;
@@ -100,4 +101,82 @@ export function calcDurations(
   const duration = calcMacaulayDuration(tir, flujos, opts);
   const modifiedDuration = calcModifiedDuration(duration, tir, opts.periodsPerYear ?? 1);
   return { duration, modifiedDuration };
+}
+
+// ---------------------------------------------------------------------------
+// T-007: Soporte CER + inferencia dayCount por schedule
+// ---------------------------------------------------------------------------
+
+function scaleCashflowsForCerDuration(
+  flujos: BondCashflow[],
+  cerCoefficient: number | null | undefined,
+): BondCashflow[] {
+  if (cerCoefficient == null || !Number.isFinite(cerCoefficient) || cerCoefficient <= 0) return flujos;
+  if (Math.abs(cerCoefficient - 1) < 1e-9) return flujos;
+  return flujos.map((f) => ({
+    ...f,
+    renta: f.renta * cerCoefficient,
+    amortizacion: f.amortizacion * cerCoefficient,
+    cashFlow: f.cashFlow * cerCoefficient,
+    vr: f.vr * cerCoefficient,
+  }));
+}
+
+export function inferDayCountForDuration(schedule: BondSchedule | null | undefined): "30/360" | "Actual/365" {
+  if (!schedule) return "Actual/365";
+  if (schedule.moneda === "USD") return "30/360";
+  return "Actual/365";
+}
+
+/**
+ * Calcula durations para un schedule completo, con ajuste CER opcional.
+ * Útil para LECAP/BONCAP/CER: resuelve dayCount correcto y escala flujos si CER.
+ */
+export function calcDurationsForSchedule(
+  tir: number | null,
+  schedule: BondSchedule,
+  settlement: string,
+  opts?: {
+    dayCount?: "30/360" | "Actual/365";
+    cerCoefficient?: number | null;
+    periodsPerYear?: number;
+  },
+): { duration: number | null; modifiedDuration: number | null } {
+  if (!schedule?.cashflows?.length) return { duration: null, modifiedDuration: null };
+  const dayCount = opts?.dayCount ?? inferDayCountForDuration(schedule);
+  const coefficient = schedule.cerAjustado ? (opts?.cerCoefficient ?? null) : null;
+  const adjusted = coefficient ? scaleCashflowsForCerDuration(schedule.cashflows, coefficient) : schedule.cashflows;
+  const periodsPerYear = opts?.periodsPerYear ?? (schedule.moneda === "USD" ? 2 : 1);
+  return calcDurations(tir, adjusted, { settlement, dayCount, periodsPerYear });
+}
+
+/**
+ * Async variant que resuelve CER dinámico si schedule.cerAjustado.
+ */
+export async function calcDurationsWithDynamicCer(
+  tir: number | null,
+  schedule: BondSchedule,
+  settlement: string,
+  opts?: {
+    dayCount?: "30/360" | "Actual/365";
+    periodsPerYear?: number;
+    signal?: AbortSignal;
+    cerCoefficient?: number | null;
+  },
+): Promise<{ duration: number | null; modifiedDuration: number | null }> {
+  if (!schedule?.cashflows?.length) return { duration: null, modifiedDuration: null };
+  const dayCount = opts?.dayCount ?? inferDayCountForDuration(schedule);
+  let cerCoef = opts?.cerCoefficient ?? null;
+  if (schedule.cerAjustado && cerCoef == null) {
+    try {
+      const { getDynamicCerCoefficient } = await import("./cer.js");
+      const r = await getDynamicCerCoefficient(settlement, opts?.signal);
+      if (Number.isFinite(r.coefficient)) cerCoef = r.coefficient;
+    } catch {
+      // keep null
+    }
+  }
+  const periodsPerYear = opts?.periodsPerYear ?? (schedule.moneda === "USD" ? 2 : 1);
+  const adjusted = cerCoef ? scaleCashflowsForCerDuration(schedule.cashflows, cerCoef) : schedule.cashflows;
+  return calcDurations(tir, adjusted, { settlement, dayCount, periodsPerYear });
 }

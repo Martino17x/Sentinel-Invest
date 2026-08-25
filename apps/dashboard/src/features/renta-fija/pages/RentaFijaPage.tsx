@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Landmark, TrendingUp, Calendar } from "lucide-react";
+import { Landmark, TrendingUp, Calendar, Scale, Filter } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
@@ -46,6 +46,36 @@ export function RentaFijaPage() {
             <CardContent>
               <Link to="/renta-fija/calendario">
                 <Button className="w-full cursor-pointer">Ver calendario</Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-md transition-shadow motion-reduce:transition-none">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Scale className="h-5 w-5 text-primary" />
+                Comparador
+              </CardTitle>
+              <CardDescription>2 a 4 bonos — diff TIR, duration y paridad lado a lado</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link to="/renta-fija/comparar">
+                <Button className="w-full cursor-pointer">Comparar</Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-md transition-shadow motion-reduce:transition-none">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Filter className="h-5 w-5 text-primary" />
+                Screener
+              </CardTitle>
+              <CardDescription>Filtros en memoria &lt;100ms — TIR, MD, segmento, ley, moneda</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link to="/renta-fija/screener">
+                <Button className="w-full cursor-pointer">Screener</Button>
               </Link>
             </CardContent>
           </Card>

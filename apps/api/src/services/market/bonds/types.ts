@@ -20,12 +20,14 @@ export interface BondCashflow {
 export interface BondSchedule {
   symbol: string;
   moneda: "ARS" | "USD";
-  tipo: "bullet" | "amortizable" | "cer" | "step-up";
+  tipo: "bullet" | "amortizable" | "cer" | "step-up" | "callable";
   /** Vencimiento ISO (YYYY-MM-DD). */
   vencimiento: string;
   cashflows: BondCashflow[];
   /** Si los flujos están ajustados por CER (TX26 etc). */
   cerAjustado?: boolean;
+  /** Si es rescatable / callable (opción emisor). */
+  callable?: boolean;
 }
 
 export interface BondMarketData {

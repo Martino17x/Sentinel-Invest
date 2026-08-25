@@ -85,6 +85,7 @@ const AGENT_TABLE_MIGRATIONS = [
         key_hash text NOT NULL UNIQUE,
         scope api_key_scope NOT NULL DEFAULT 'read',
         enabled boolean NOT NULL DEFAULT true,
+        enabled_categories jsonb,
         last_used_at timestamptz,
         expires_at timestamptz,
         revoked_at timestamptz,
@@ -186,6 +187,47 @@ const BOND_ANALYTICS_SNAPSHOT_MIGRATIONS = [
   sql`CREATE INDEX IF NOT EXISTS bond_analytics_snapshots_date_idx ON bond_analytics_snapshots (snapshot_date)`,
 ];
 
+/** Tabla de histórico CER diario — ADDITIVE, idempotente. Fallback offline para T-001. */
+const BCRA_CER_HISTORY_MIGRATIONS = [
+  sql`CREATE TABLE IF NOT EXISTS bcra_cer_history (
+        fecha date PRIMARY KEY,
+        valor numeric(20,6) NOT NULL,
+        source text NOT NULL DEFAULT 'bcra.gob.ar',
+        updated_at timestamptz NOT NULL DEFAULT now()
+      )`,
+  sql`CREATE INDEX IF NOT EXISTS bcra_cer_history_fecha_idx ON bcra_cer_history (fecha)`,
+];
+
+/** Columna enabled_categories en api_keys — ADDITIVE, idempotente. F1 agent-connect. */
+const API_KEYS_CAPABILITIES_MIGRATIONS = [
+  sql`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS enabled_categories jsonb`,
+];
+
+/** Portafolios virtuales (Opción A) — ADDITIVE, idempotente. */
+const VIRTUAL_PORTFOLIO_MIGRATIONS = [
+  sql`CREATE TABLE IF NOT EXISTS virtual_portfolios (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name text NOT NULL CHECK (char_length(name) >= 1 AND char_length(name) <= 50),
+        description text,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now()
+      )`,
+  sql`CREATE INDEX IF NOT EXISTS virtual_portfolios_user_idx ON virtual_portfolios (user_id)`,
+  sql`CREATE TABLE IF NOT EXISTS virtual_positions (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        portfolio_id uuid NOT NULL REFERENCES virtual_portfolios(id) ON DELETE CASCADE,
+        symbol text NOT NULL,
+        quantity numeric(20,6) NOT NULL,
+        avg_price numeric(20,6) NOT NULL,
+        currency currency NOT NULL DEFAULT 'ARS',
+        market market NOT NULL DEFAULT 'bcba',
+        created_at timestamptz NOT NULL DEFAULT now(),
+        UNIQUE (portfolio_id, symbol, market)
+      )`,
+  sql`CREATE INDEX IF NOT EXISTS virtual_positions_portfolio_idx ON virtual_positions (portfolio_id)`,
+];
+
 /**
  * Aplica las migraciones idempotentes. Llamar al boot del server.
  * Nunca debe romper el arranque: cualquier fallo queda registrado
@@ -200,6 +242,9 @@ export async function ensureSchema(): Promise<void> {
     ...REPORT_TABLE_MIGRATIONS,
     ...QUOTES_SNAPSHOT_MIGRATIONS,
     ...BOND_ANALYTICS_SNAPSHOT_MIGRATIONS,
+    ...BCRA_CER_HISTORY_MIGRATIONS,
+    ...API_KEYS_CAPABILITIES_MIGRATIONS,
+    ...VIRTUAL_PORTFOLIO_MIGRATIONS,
   ]) {
     await db.execute(statement);
   }

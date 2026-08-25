@@ -390,6 +390,25 @@ export const bondAnalyticsSnapshots = pgTable(
 );
 
 export const bondAnalyticsSnapshotsRelations = relations(bondAnalyticsSnapshots, () => ({}));
+
+// ============================================================
+// BCRA CER HISTORY — histórico diario CER para fallback offline
+// Fuente primaria BCRA v4.0 ID 30. Cache 24h + T+1.
+// ============================================================
+
+export const bcraCerHistory = pgTable(
+  "bcra_cer_history",
+  {
+    fecha: date("fecha").primaryKey(),
+    valor: numeric("valor", { precision: 20, scale: 6 }).notNull(),
+    source: text("source").notNull().default("bcra.gob.ar"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("bcra_cer_history_fecha_idx").on(table.fecha)]
+);
+
+export const bcraCerHistoryRelations = relations(bcraCerHistory, () => ({}));
+
 // ============================================================
 // AI CHAT SESSIONS — sesiones del asistente conversacional
 // (motor de agente, dominio aislado por usuario)
@@ -457,6 +476,7 @@ export const apiKeys = pgTable(
     keyHash: text("key_hash").notNull(),
     scope: apiKeyScopeEnum("scope").default("read").notNull(),
     enabled: boolean("enabled").default(true).notNull(),
+    enabledCategories: jsonb("enabled_categories").$type<string[] | null>(),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
@@ -520,6 +540,65 @@ export const pendingOrders = pgTable(
   },
   (table) => [index("pending_orders_user_idx").on(table.userId, table.status, table.createdAt)]
 );
+
+// ============================================================
+// VIRTUAL PORTFOLIOS — portafolios de seguimiento (Opción A)
+// Solo foto fija: no IOL, no sync, solo posiciones manuales.
+// ============================================================
+
+export const virtualPortfolios = pgTable(
+  "virtual_portfolios",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("virtual_portfolios_user_idx").on(table.userId),
+    check("virtual_portfolios_name_len", sql`char_length(name) >= 1 AND char_length(name) <= 50`),
+  ]
+);
+
+export const virtualPortfoliosRelations = relations(virtualPortfolios, ({ one, many }) => ({
+  user: one(users, { fields: [virtualPortfolios.userId], references: [users.id] }),
+  positions: many(virtualPositions),
+}));
+
+export const virtualPositions = pgTable(
+  "virtual_positions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    portfolioId: uuid("portfolio_id")
+      .notNull()
+      .references(() => virtualPortfolios.id, { onDelete: "cascade" }),
+    symbol: text("symbol").notNull(),
+    quantity: numeric("quantity", { precision: 20, scale: 6 }).notNull(),
+    avgPrice: numeric("avg_price", { precision: 20, scale: 6 }).notNull(),
+    currency: currencyEnum("currency").notNull().default("ARS"),
+    market: marketEnum("market").notNull().default("bcba"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("virtual_positions_portfolio_idx").on(table.portfolioId),
+    uniqueIndex("virtual_positions_portfolio_symbol_market_unique").on(
+      table.portfolioId,
+      table.symbol,
+      table.market
+    ),
+  ]
+);
+
+export const virtualPositionsRelations = relations(virtualPositions, ({ one }) => ({
+  portfolio: one(virtualPortfolios, {
+    fields: [virtualPositions.portfolioId],
+    references: [virtualPortfolios.id],
+  }),
+}));
 
 export const pendingOrdersRelations = relations(pendingOrders, ({ one }) => ({
   user: one(users, { fields: [pendingOrders.userId], references: [users.id] }),

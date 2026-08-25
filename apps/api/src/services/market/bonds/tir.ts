@@ -2,8 +2,10 @@
 // tir.ts — Cálculo de TIR (Tasa Interna de Retorno)
 // Newton-Raphson sobre precio dirty vs flujos.
 // Rama cerrada LECAP: TIR=(V/P)^(365/d)-1 para bullet single-flow.
+// T-007: soporte CER/LECAP/BONCAP via schedule parseado + CER dinámico.
+// Soporta 30/360 vs Actual/365 explícito por tipo de bono.
 // ============================================================
-import type { BondCashflow } from "./types.js";
+import type { BondCashflow, BondSchedule } from "./types.js";
 
 export interface TirOptions {
   /** Convención de conteo de días. */
@@ -164,5 +166,112 @@ export function calcTIR(
  */
 export const calcTir = calcTIR;
 
+// ---------------------------------------------------------------------------
+// T-007: Soporte CER / LECAP / BONCAP via schedule + CER dinámico
+// ---------------------------------------------------------------------------
+
+/**
+ * Escala cashflows por coeficiente CER (ej 1.42 para TX26).
+ * Para bonos cerAjustado, cada flujo se multiplica por coefficient.
+ * Si coefficient null/1, devuelve flujos idénticos (sin escalar).
+ */
+export function scaleCashflowsForCer(
+  flujos: BondCashflow[],
+  cerCoefficient: number | null | undefined,
+): BondCashflow[] {
+  if (cerCoefficient == null || !Number.isFinite(cerCoefficient) || cerCoefficient <= 0) return flujos;
+  if (Math.abs(cerCoefficient - 1) < 1e-9) return flujos;
+  return flujos.map((f) => ({
+    ...f,
+    renta: f.renta * cerCoefficient,
+    amortizacion: f.amortizacion * cerCoefficient,
+    cashFlow: f.cashFlow * cerCoefficient,
+    // vr también escala con CER para paridad correcta
+    vr: f.vr * cerCoefficient,
+  }));
+}
+
+/**
+ * Infiere dayCount óptimo según schedule.
+ * - USD hard-dollar → 30/360
+ * - ARS / CER / LECAP / BONCAP / step-up / callable ARS → Actual/365
+ */
+export function inferDayCountForSchedule(schedule: BondSchedule | null | undefined): "30/360" | "Actual/365" {
+  if (!schedule) return "Actual/365";
+  if (schedule.moneda === "USD") return "30/360";
+  // CER, LECAP/BONCAP, ARS siempre Actual/365
+  return "Actual/365";
+}
+
+/**
+ * Calcula TIR ajustada por CER si el schedule es cerAjustado.
+ * Wrapper puro síncrono: el caller resuelve CER y pasa coefficient.
+ *
+ * @param cerCoefficient — coeficiente CER dinámico (ej de cer.ts getDynamicCerCoefficient). Si null, no escala.
+ */
+export function calcTIRForSchedule(
+  dirtyPrice: number,
+  schedule: BondSchedule,
+  settlement: string,
+  opts?: {
+    dayCount?: "30/360" | "Actual/365";
+    cerCoefficient?: number | null;
+    tolerance?: number;
+    maxIter?: number;
+  },
+): number | null {
+  if (!schedule?.cashflows?.length) return null;
+  // REQ callable: bono rescatable no tiene TIR determinística → null + callable flag
+  if (schedule.tipo === "callable" || (schedule as unknown as { callable?: boolean }).callable === true) return null;
+  const dayCount = opts?.dayCount ?? inferDayCountForSchedule(schedule);
+  const coefficient = schedule.cerAjustado ? (opts?.cerCoefficient ?? null) : null;
+  const adjusted = coefficient ? scaleCashflowsForCer(schedule.cashflows, coefficient) : schedule.cashflows;
+  return calcTIR(dirtyPrice, adjusted, {
+    dayCount,
+    settlement,
+    tolerance: opts?.tolerance,
+    maxIter: opts?.maxIter,
+  });
+}
+
+/**
+ * Variante async que resuelve CER dinámico automáticamente si schedule.cerAjustado.
+ * Usa cer.ts getDynamicCerCoefficient con cache 24h + T+1.
+ * Para LECAP/BONCAP no-CER, no toca CER y usa dayCount apropiado.
+ */
+export async function calcTIRWithDynamicCer(
+  dirtyPrice: number,
+  schedule: BondSchedule,
+  settlement: string,
+  opts?: {
+    dayCount?: "30/360" | "Actual/365";
+    signal?: AbortSignal;
+    tolerance?: number;
+    maxIter?: number;
+  },
+): Promise<number | null> {
+  if (!schedule?.cashflows?.length) return null;
+  if (schedule.tipo === "callable" || (schedule as unknown as { callable?: boolean }).callable === true) return null;
+  const dayCount = opts?.dayCount ?? inferDayCountForSchedule(schedule);
+  let adjustedFlujos = schedule.cashflows;
+  if (schedule.cerAjustado) {
+    try {
+      const { getDynamicCerCoefficient } = await import("./cer.js");
+      const { coefficient } = await getDynamicCerCoefficient(settlement, opts?.signal);
+      if (Number.isFinite(coefficient) && coefficient > 0) {
+        adjustedFlujos = scaleCashflowsForCer(schedule.cashflows, coefficient);
+      }
+    } catch {
+      // fallback: usar flujos sin escalar (coefficient 1.42 hardcode no se aplica aquí, el caller decide)
+    }
+  }
+  return calcTIR(dirtyPrice, adjustedFlujos, {
+    dayCount,
+    settlement,
+    tolerance: opts?.tolerance,
+    maxIter: opts?.maxIter,
+  });
+}
+
 // Helpers exportados para tests
-export const _helpers = { yearFraction, daysBetween, days30_360, daysActual360, priceAtYield, priceDerivative };
+export const _helpers = { yearFraction, daysBetween, days30_360, daysActual360, priceAtYield, priceDerivative, scaleCashflowsForCer, inferDayCountForSchedule };

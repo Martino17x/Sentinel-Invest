@@ -38,15 +38,12 @@ function PopoverContent({
         collisionPadding={collisionPadding}
         avoidCollisions={avoidCollisions}
         className={cn(
-          // Glass M3 expressive + Apple: translúcido, blur, bordes sutiles, sombra suave
-          // max-w evita que toque bordes en viewport angosto; collisionPadding lo despega del viewport
-          "z-50 w-72 max-w-[calc(100vw-2rem)] max-w-[min(18rem,calc(100vw-2rem))] box-border rounded-2xl border border-white/20 bg-white/80 p-2 shadow-xl shadow-black/10 ring-1 ring-black/5 backdrop-blur-xl supports-[backdrop-filter]:bg-white/80 dark:border-white/10 dark:bg-zinc-900/70 dark:shadow-black/30 dark:ring-white/10",
-          // Animaciones shadcn / tw-animate-css — origen según side
+          "z-50 w-72 max-w-[min(18rem,calc(100vw-2rem))] box-border rounded-xl border bg-card p-3 text-sm shadow-md ring-1 ring-foreground/5",
+          // Animaciones — origen según side, sin blur ni glass
           "origin-(--radix-popover-content-transform-origin) duration-200 outline-none",
           "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
           "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
           "data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2",
-          // Compatibilidad con data-open/data-closed (radix-ui 1.x)
           "data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95",
           "motion-reduce:animate-none",
           className
