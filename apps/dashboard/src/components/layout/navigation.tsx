@@ -13,6 +13,7 @@ import {
   LogOut,
   ArrowLeftRight,
   Landmark,
+  Shield,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -48,6 +49,7 @@ const NAV_LINKS = [
   { to: "/radar", label: "Radar", icon: ArrowLeftRight },
   { to: "/renta-fija", label: "Renta Fija", icon: Landmark },
   { to: "/reports", label: "Reportes", icon: BarChart3 },
+  { to: "/investor-profile", label: "Perfil inversor", icon: Shield },
 ];
 
 /**
@@ -131,6 +133,12 @@ export function Navigation() {
                 <Link to="/profile">
                   <User className="mr-2 h-4 w-4" />
                   Perfil
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/investor-profile">
+                  <Shield className="mr-2 h-4 w-4" />
+                  Perfil inversor
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>

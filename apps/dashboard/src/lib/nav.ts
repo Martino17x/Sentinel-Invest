@@ -63,5 +63,14 @@ export function isRouteActive(targetPath: string, currentPathname: string): bool
     );
   }
 
+  if (targetPath === "/investor-profile") {
+    return (
+      currentPathname === "/investor-profile" ||
+      currentPathname.startsWith("/investor-profile/") ||
+      currentPathname === "/perfil-inversor" ||
+      currentPathname.startsWith("/perfil-inversor/")
+    );
+  }
+
   return currentPathname === targetPath || currentPathname.startsWith(`${targetPath}/`);
 }

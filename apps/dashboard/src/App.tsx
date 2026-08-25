@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { Navigation } from "@/components/layout/navigation";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { IolConnectReminder } from "@/components/layout/IolConnectReminder";
+import { InvestorProfileGate } from "@/components/layout/InvestorProfileGate";
 import { BackButton } from "@/components/layout/BackButton";
 import { AgentChatDrawer } from "@/components/agent/AgentChatDrawer";
 
@@ -87,6 +88,7 @@ function ProtectedLayout() {
     <div className="min-h-svh max-w-[100vw] overflow-x-clip bg-background box-border">
       <Navigation />
       <IolConnectReminder />
+      <InvestorProfileGate />
       <main className="relative min-w-0 max-w-[100vw] overflow-x-clip pb-24 md:pb-0 box-border">
         {/* Botón Volver EN EL FLUJO (no overlay): nunca se superpone al contenido.
             Padding propio arriba + separación del contenido con mb */}
