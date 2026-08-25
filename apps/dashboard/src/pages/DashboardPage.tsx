@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { TrendingUp, TrendingDown, Wallet, PiggyBank, Landmark, Briefcase } from "lucide-react";
+import { Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,8 @@ import { AssetTypeBadge } from "@/components/ui/asset-type-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { portfolioApi } from "@/features/portafolio/api";
 import { useApiData } from "@/hooks/useApiData";
-import { formatARS, formatUSD } from "@/lib/formatters";
+import { formatARS, formatUSD, toNormalizedTotalsReal } from "@/lib/formatters";
+import { PortfolioStats } from "@/components/portfolio/PortfolioStats";
 
 const PIE_COLORS = [
   "var(--chart-1)",
@@ -72,17 +73,6 @@ export function DashboardPage() {
     );
   }
 
-  const isUp = portfolio.dayChangePct >= 0;
-  const ChangeIcon = isUp ? TrendingUp : TrendingDown;
-
-  // % total de ganancia/pérdida sobre el capital invertido. El server lo
-  // manda como gainLossPct; si falta (server viejo), se calcula acá.
-  const gainLossPct =
-    portfolio.gainLossPct ??
-    (portfolio.totalArs - portfolio.gainLossArs > 0
-      ? (portfolio.gainLossArs / (portfolio.totalArs - portfolio.gainLossArs)) * 100
-      : 0);
-
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8 animate-in fade-in-0 duration-200 motion-reduce:animate-none">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -100,83 +90,7 @@ export function DashboardPage() {
         </Link>
       </div>
 
-      {/* Cards de estadísticas */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ganancia / Pérdida</CardTitle>
-            <ChangeIcon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {/* El monto grande es la ganancia ACUMULADA, con su % TOTAL al lado
-                (estilo IOL: el % sin "+" en positivos, coloreado según signo).
-                No es el balance del día — solo el % total lleva color. */}
-            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <div className="text-xl font-bold">{formatARS(portfolio.gainLossArs)}</div>
-              {gainLossPct !== 0 && (
-                <span
-                  className={`text-lg font-bold tabular-nums ${
-                    gainLossPct >= 0 ? "text-emerald-600" : "text-red-600"
-                  }`}
-                >
-                  {gainLossPct.toFixed(2)}%
-                </span>
-              )}
-            </div>
-            {/* Solo la variación del DÍA va en verde/rojo, con su monto en $ */}
-            <p className="text-xs">
-              <span className={isUp ? "text-emerald-600" : "text-red-600"}>
-                {isUp ? "+" : ""}
-                {portfolio.dayChangePct.toFixed(2)}% hoy
-                {portfolio.dayChangeAmountArs !== 0 && (
-                  <>
-                    {" "}
-                    ({isUp ? "+" : "-"}
-                    {formatARS(Math.abs(portfolio.dayChangeAmountArs))})
-                  </>
-                )}
-              </span>
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Activos valorizados</CardTitle>
-            <Landmark className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl font-bold">{formatARS(portfolio.positionsValueArs)}</div>
-            <p className="text-xs text-muted-foreground">
-              {portfolio.positionsValueUsd > 0
-                ? `${formatUSD(portfolio.positionsValueUsd)} en USD`
-                : "Solo posiciones en ARS"}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Disponible ARS</CardTitle>
-            <Wallet className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl font-bold">{formatARS(portfolio.cashArs)}</div>
-            <p className="text-xs text-muted-foreground">Disponible para operar</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Disponible USD</CardTitle>
-            <PiggyBank className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl font-bold">{formatUSD(portfolio.cashUsd)}</div>
-            <p className="text-xs text-muted-foreground">Disponible para operar</p>
-          </CardContent>
-        </Card>
-      </div>
+      <PortfolioStats mode="real" totals={toNormalizedTotalsReal(portfolio)} />
 
       {/* Gráfico de evolución + Distribución */}
       <div className="grid gap-4 lg:grid-cols-3">

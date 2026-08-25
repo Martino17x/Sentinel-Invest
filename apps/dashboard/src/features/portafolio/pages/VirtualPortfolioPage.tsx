@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, TrendingUp, TrendingDown, Loader2, Briefcase, Wallet, BarChart3, CalendarRange } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Loader2, Briefcase, BarChart3, CalendarRange } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CalendarView } from "@/components/reports/CalendarView";
 import { MetricsSection } from "@/components/metrics/MetricsSection";
@@ -23,10 +23,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { virtualPortfoliosApi, type VirtualPosition } from "@/features/portafolio/api";
-import { useApiData, invalidateApiCache } from "@/hooks/useApiData";
+import { invalidateApiCache } from "@/hooks/useApiData";
+import { useVirtualPortfolioDetails } from "@/hooks/useVirtualPortfolioDetails";
 import { InstrumentPicker, type PickedInstrument } from "@/components/InstrumentPicker";
 import CompanyLogo from "@/components/ui/company-logo";
-import { formatARS, formatUSD } from "@/lib/formatters";
+import { formatARS } from "@/lib/formatters";
+import { PortfolioStats } from "@/components/portfolio/PortfolioStats";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
@@ -36,16 +38,7 @@ export function VirtualPortfolioPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const {
-    data,
-    isLoading,
-    error,
-    refetch,
-  } = useApiData(id ? `virtual-portfolio:${id}` : null, () => virtualPortfoliosApi.get(id!));
-
-  const portfolio = data?.portfolio ?? null;
-  const positions: VirtualPosition[] = portfolio?.positions ?? [];
-  const totals = portfolio?.totals;
+  const { portfolio, positions, totals, isLoading, error, refetch } = useVirtualPortfolioDetails(id ?? null);
 
   // Reportes dialog/drawer (misma interfaz que ReportsPage para virtual)
   const [reportsOpen, setReportsOpen] = useState(false);
@@ -182,10 +175,6 @@ export function VirtualPortfolioPage() {
       </div>
     );
   }
-
-  const isUp = (totals?.gainArs ?? 0) >= 0;
-  const ChangeIcon = isUp ? TrendingUp : TrendingDown;
-  const gainPct = totals?.gainPctArs ?? 0;
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8 animate-in fade-in-0 duration-200 motion-reduce:animate-none">
@@ -388,63 +377,7 @@ export function VirtualPortfolioPage() {
         </div>
       </div>
 
-      {/* Stats — espejo de DashboardPage */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ganancia / Pérdida</CardTitle>
-            <ChangeIcon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <div className="text-xl font-bold">{formatARS(totals?.gainArs ?? 0)}</div>
-              {gainPct !== 0 && (
-                <span className={`text-lg font-bold tabular-nums ${gainPct >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                  {gainPct.toFixed(2)}%
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {totals?.costArs ? `Sobre costo ${formatARS(totals.costArs)}` : "Sin costo base"}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Valorizado</CardTitle>
-            <Wallet className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl font-bold">{formatARS(totals?.totalArs ?? 0)}</div>
-            <p className="text-xs text-muted-foreground">
-              {(totals?.totalUsd ?? 0) > 0 ? `${formatUSD(totals!.totalUsd)} en USD` : `${positions.length} posiciones`}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Costo base</CardTitle>
-            <Wallet className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl font-bold">{formatARS(totals?.costArs ?? 0)}</div>
-            <p className="text-xs text-muted-foreground">Suma de compras ficticias</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Posiciones</CardTitle>
-            <Briefcase className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl font-bold">{positions.length}</div>
-            <p className="text-xs text-muted-foreground">Activos en seguimiento</p>
-          </CardContent>
-        </Card>
-      </div>
+      {totals && <PortfolioStats mode="virtual" totals={totals} />}
 
       {/* Tabla posiciones */}
       <Card className="animate-in fade-in-0 slide-in-from-bottom-1 duration-300 motion-reduce:animate-none">
