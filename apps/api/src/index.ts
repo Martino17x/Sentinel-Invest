@@ -19,6 +19,7 @@ import ratesRouter from "./interfaces/http/routes/rates.js";
 import radarRouter from "./interfaces/http/routes/radar.js";
 import bondsRouter from "./interfaces/http/routes/bonds.js";
 import agentRouter from "./interfaces/http/routes/agent.js";
+import investorProfileRouter from "./interfaces/http/routes/investorProfile.js";
 import apiKeysRouter from "./interfaces/http/routes/api-keys.js";
 import virtualPortfoliosRouter from "./interfaces/http/routes/virtualPortfolios.js";
 import { mountMcpHttp } from "./interfaces/mcp/http.js";
@@ -83,6 +84,7 @@ app.use("/api/rates", ratesRouter);
 app.use("/api/radar", radarRouter);
 app.use("/api/bonds", bondsRouter);
 app.use("/api/virtual-portfolios", virtualPortfoliosRouter);
+app.use("/api/investor-profile", investorProfileRouter);
 // API keys — infraestructura de credenciales para agentes externos
 // (el consumo MCP se monta/desmonta con AGENT_ENABLED en fase G).
 // Se monta SIEMPRE: el usuario debe poder gestionar sus keys aunque

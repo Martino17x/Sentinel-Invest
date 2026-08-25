@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { and, asc, count, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth } from "../middleware/auth.js";
+import { requireInvestorProfile } from "../middleware/requireInvestorProfile.js";
 import { getIolProvider } from "../../../services/iol/index.js";
 import { getIolCredentials } from "../../../lib/iol-credentials.js";
 import { getAccountForUser } from "../../../services/agent/account.js";
@@ -469,6 +470,37 @@ router.get("/reports/:month", async (req: Request, res: Response) => {
     const message = err instanceof Error ? err.message : "Error al consultar el reporte";
     res.status(502).json({ error: message });
   }
+});
+
+// ============================================================
+// POST /api/portfolio/proposals — gate 428 CNV (C2)
+// Stub advisory v1: crea portfolio_proposals row mínimo.
+// GETs NO bloqueados — solo este POST mutante.
+// ============================================================
+router.post("/proposals", requireInvestorProfile, async (req: Request, res: Response) => {
+  const { eq } = await import("drizzle-orm");
+  const { db, schema } = await import("../../../db/index.js");
+  const [profile] = await db
+    .select()
+    .from(schema.investorProfiles)
+    .where(eq(schema.investorProfiles.userId, req.user!.id))
+    .limit(1);
+
+  // Stub: insertar propuesta mínima vinculada al perfil
+  const [proposal] = await db
+    .insert(schema.portfolioProposals)
+    .values({
+      userId: req.user!.id,
+      payload: {
+        stub: true,
+        risk_tolerance: profile?.riskTolerance ?? null,
+        horizon: profile?.horizon ?? null,
+        requestedAt: new Date().toISOString(),
+      },
+    })
+    .returning();
+
+  res.status(201).json({ proposal, profile: profile ? { risk_tolerance: profile.riskTolerance, horizon: profile.horizon } : null });
 });
 
 export default router;

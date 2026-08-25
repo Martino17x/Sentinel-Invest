@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { requireAuth } from "../middleware/auth.js";
+import { requireInvestorProfile } from "../middleware/requireInvestorProfile.js";
 import { AgentLoopError, chatLoop } from "../../../services/agent/chatLoop.js";
 import { getSessionOwned, deleteSession, getSessionMessages, listSessions } from "../../../services/agent/sessions.js";
 import { SseWriter } from "../../../services/agent/sse.js";
@@ -266,6 +267,33 @@ router.post("/orders/:id/reject", async (req, res) => {
     clientName: "api:agent-orders",
   });
   res.json({ ok: true, message: "Orden rechazada" });
+});
+
+// ============================================================
+// POST /api/agent/analyze-exhaustive — gate 428 CNV (C2)
+// Requiere perfil inversor; stub advisory que lee risk_tolerance/horizon.
+// GETs NO bloqueados — solo este POST mutante.
+// ============================================================
+router.post("/analyze-exhaustive", requireInvestorProfile, async (req, res) => {
+  // Lee perfil para personalizar advisory (stub v1)
+  const { eq } = await import("drizzle-orm");
+  const { db, schema } = await import("../../../db/index.js");
+  const [profile] = await db
+    .select()
+    .from(schema.investorProfiles)
+    .where(eq(schema.investorProfiles.userId, req.user!.id))
+    .limit(1);
+  res.json({
+    ok: true,
+    message: "Análisis exhaustivo (stub) — perfil aplicado",
+    profile: profile
+      ? {
+          risk_tolerance: profile.riskTolerance,
+          horizon: profile.horizon,
+          risk_score: profile.riskScore,
+        }
+      : null,
+  });
 });
 
 export default router;
