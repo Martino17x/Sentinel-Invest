@@ -1,15 +1,15 @@
-﻿// ============================================================
+// ============================================================
 // SCHEDULER â€” jobs diarios del portafolio (node-cron)
 //
 // D2: cron "30 17 * * 1-5" en tz ART, arrancado en index.ts
-// tras ensureSchema(). Kill-switches por env (patrÃ³n AGENT_ENABLED
+// tras ensureSchema(). Kill-switches por env (patrón AGENT_ENABLED
 // de index.ts:27): habilitado salvo que la env sea literalmente
 // 'false'. stop() para tests/shutdown. Guard de tabla: si
 // portfolio_snapshots no existe, los jobs NO arrancan (boot
 // degradado, la app sigue viva).
 //
-// El handler de reconciliaciÃ³n (jobs/reconciliation.ts) se conecta acÃ¡
-// vÃ­a runDailyReconciliation, detrÃ¡s del kill-switch
+// El handler de reconciliación (jobs/reconciliation.ts) se conecta acá
+// vía runDailyReconciliation, detrás del kill-switch
 // RECONCILIATION_JOB_ENABLED (D2).
 // ============================================================
 
@@ -111,7 +111,7 @@ function defaultRunSnapshot(
   log: Pick<Console, "log" | "warn" | "error">
 ): () => Promise<unknown> {
   return async () => {
-    // En modo mock no hay captura real (la cuenta "demo" no estÃ¡ en BD);
+    // En modo mock no hay captura real (la cuenta "demo" no está en BD);
     // guard espejo del de la ruta GET /api/portfolio (portfolio.ts:33).
     if (process.env.IOL_PROVIDER !== "api") return;
     await runDailySnapshots(makeDailySnapshotDeps({ log }));
@@ -142,15 +142,15 @@ function defaultRunTirValidation(
     // Corre siempre que haya datos MAE; no requiere flag extra (usa misma guard bondAnalyticsReady)
     try {
       const summary = await runDailyTirValidation();
-      log.log(`ðŸ“Š tir-validation: checked=${summary.checked} diverged5bps=${summary.diverged5bps} diverged1pct=${summary.diverged1pct}`);
+      log.log("[TIR] tir-validation: checked=${summary.checked} diverged5bps=${summary.diverged5bps} diverged1pct=${summary.diverged1pct}");
     } catch (err) {
-      log.warn(`âš ï¸ tir-validation fallÃ³: ${err instanceof Error ? err.message : String(err)}`);
+      log.warn("[WARN] tir-validation fallo: ${err instanceof Error ? err.message : String(err)}");
     }
   };
 }
 
 /**
- * Arranca los jobs diarios. Idempotente por diseÃ±o (cada boot lo vuelve
+ * Arranca los jobs diarios. Idempotente por diseño (cada boot lo vuelve
  * a llamar una vez). La idempotencia del snapshot (unique(account_id,
  * captured_at) + ON CONFLICT DO NOTHING) es la defensa primaria contra
  * doble instancia (D2/D4).
@@ -168,7 +168,7 @@ export async function startScheduledJobs(deps: SchedulerDeps = {}): Promise<Sche
   const bondAnalyticsReady = await (deps.bondAnalyticsTablesReady ?? defaultBondAnalyticsTablesReady)();
 
   if (!portfolioReady && !quotesReady && !bondAnalyticsReady) {
-    log.warn("âš ï¸ scheduler: portfolio_snapshots, quotes_snapshots y bond_analytics_snapshots ausentes â€” jobs NO arrancan");
+    log.warn("[WARN] scheduler: portfolio_snapshots, quotes_snapshots y bond_analytics_snapshots ausentes - jobs NO arrancan");
     return {
       started: false,
       snapshot: { enabled: false, scheduled: false },
@@ -181,7 +181,7 @@ export async function startScheduledJobs(deps: SchedulerDeps = {}): Promise<Sche
   }
 
   if (!portfolioReady) {
-    log.warn("âš ï¸ scheduler: portfolio_snapshots ausente â€” snapshot/reconciliaciÃ³n NO arrancan (quotes sÃ­)");
+    log.warn("[WARN] scheduler: portfolio_snapshots ausente - snapshot/reconciliacion NO arrancan (quotes si)");
   }
 
   const snapshotEnabled = process.env.SNAPSHOT_JOB_ENABLED !== "false";
@@ -195,7 +195,7 @@ export async function startScheduledJobs(deps: SchedulerDeps = {}): Promise<Sche
     const run = deps.runQuotesSnapshot ?? defaultRunQuotesSnapshot(log);
     const task = schedule(QUOTES_SNAPSHOT_CRON, () => {
       run().catch((err) => {
-        log.error("âš ï¸ scheduler: quotes-snapshot fallÃ³:", err instanceof Error ? err : new Error(String(err)));
+        log.error("[WARN] scheduler: quotes-snapshot fallo:", err instanceof Error ? err : new Error(String(err)));
       });
     }, {
       timezone: CRON_TZ,
@@ -205,11 +205,11 @@ export async function startScheduledJobs(deps: SchedulerDeps = {}): Promise<Sche
     });
     tasks.push(task);
     quotesScheduled = true;
-    log.log("ðŸ•’ scheduler: snapshot de cotizaciones 17:05 ART (Lâ€“V) activo");
+    log.log("[SCHEDULER] snapshot de cotizaciones 17:05 ART (L-V) activo");
   } else if (!quotesReady) {
-    log.warn("âš ï¸ scheduler: quotes_snapshots ausente â€” snapshot de cotizaciones NO arranca");
+    log.warn("[WARN] scheduler: quotes_snapshots ausente - snapshot de cotizaciones NO arranca");
   } else {
-    log.log("ðŸ•’ scheduler: QUOTES_SNAPSHOT_ENABLED=false â†’ snapshot de cotizaciones deshabilitado");
+    log.log("[SCHEDULER] QUOTES_SNAPSHOT_ENABLED=false -> snapshot de cotizaciones deshabilitado");
   }
 
   // â€” Portfolio snapshot 17:30 â€”
@@ -218,7 +218,7 @@ export async function startScheduledJobs(deps: SchedulerDeps = {}): Promise<Sche
     const run = deps.runSnapshot ?? defaultRunSnapshot(log);
     const task = schedule(SNAPSHOT_CRON, () => {
       run().catch((err) => {
-        log.error("âš ï¸ scheduler: snapshot job fallÃ³:", err instanceof Error ? err : new Error(String(err)));
+        log.error("[WARN] scheduler: snapshot job fallo:", err instanceof Error ? err : new Error(String(err)));
       });
     }, {
       timezone: CRON_TZ,
@@ -229,12 +229,12 @@ export async function startScheduledJobs(deps: SchedulerDeps = {}): Promise<Sche
     tasks.push(task);
     snapshotScheduled = true;
     if (process.env.IOL_PROVIDER !== "api") {
-      log.log("ðŸ•’ scheduler: snapshot diario 17:30 ART activo (IOL_PROVIDER no es 'api' â†’ no captura hasta que lo sea)");
+      log.log("[SCHEDULER] snapshot diario 17:30 ART activo (IOL_PROVIDER no es 'api' -> no captura hasta que lo sea)");
     } else {
-      log.log("ðŸ•’ scheduler: snapshot diario 17:30 ART (Lâ€“V) activo");
+      log.log("[SCHEDULER] snapshot diario 17:30 ART (L-V) activo");
     }
   } else if (portfolioReady) {
-    log.log("ðŸ•’ scheduler: SNAPSHOT_JOB_ENABLED=false â†’ snapshot diario deshabilitado");
+    log.log("[SCHEDULER] SNAPSHOT_JOB_ENABLED=false -> snapshot diario deshabilitado");
   }
 
   // â€” Bond analytics snapshot 17:10 â€”
@@ -243,7 +243,7 @@ export async function startScheduledJobs(deps: SchedulerDeps = {}): Promise<Sche
     const run = deps.runBondAnalyticsSnapshot ?? defaultRunBondAnalyticsSnapshot(log);
     const task = schedule(BOND_ANALYTICS_CRON, () => {
       run().catch((err) => {
-        log.error("âš ï¸ scheduler: bond-analytics-snapshot fallÃ³:", err instanceof Error ? err : new Error(String(err)));
+        log.error("[WARN] scheduler: bond-analytics-snapshot fallo:", err instanceof Error ? err : new Error(String(err)));
       });
     }, {
       timezone: CRON_TZ,
@@ -253,11 +253,11 @@ export async function startScheduledJobs(deps: SchedulerDeps = {}): Promise<Sche
     });
     tasks.push(task);
     bondAnalyticsScheduled = true;
-    log.log("ðŸ•’ scheduler: snapshot analytics bonos 17:10 ART (Lâ€“V) activo");
+    log.log("[SCHEDULER] snapshot analytics bonos 17:10 ART (L-V) activo");
   } else if (!bondAnalyticsReady) {
-    log.warn("âš ï¸ scheduler: bond_analytics_snapshots ausente â€” snapshot analytics bonos NO arranca");
+    log.warn("[WARN] scheduler: bond_analytics_snapshots ausente - snapshot analytics bonos NO arranca");
   } else {
-    log.log("ðŸ•’ scheduler: BONDS_SNAPSHOT_ENABLED!=true â†’ snapshot analytics bonos deshabilitado");
+    log.log("[SCHEDULER] BONDS_SNAPSHOT_ENABLED!=true -> snapshot analytics bonos deshabilitado");
   }
 
   // â€” TIR validation 17:15 â€” T-008 (depende de bondAnalyticsReady, pero corre aunque snapshot estÃ© off)
@@ -267,7 +267,7 @@ export async function startScheduledJobs(deps: SchedulerDeps = {}): Promise<Sche
     const run = deps.runTirValidation ?? defaultRunTirValidation(log);
     const task = schedule(TIR_VALIDATION_CRON, () => {
       run().catch((err) => {
-        log.error("âš ï¸ scheduler: tir-validation fallÃ³:", err instanceof Error ? err : new Error(String(err)));
+        log.error("[WARN] scheduler: tir-validation fallo:", err instanceof Error ? err : new Error(String(err)));
       });
     }, {
       timezone: CRON_TZ,
@@ -277,9 +277,9 @@ export async function startScheduledJobs(deps: SchedulerDeps = {}): Promise<Sche
     });
     tasks.push(task);
     tirValidationScheduled = true;
-    log.log("ðŸ•’ scheduler: validaciÃ³n TIR diaria 17:15 ART (Lâ€“V) activa (5bps / 1% crÃ­tico)");
+    log.log("[SCHEDULER] validacion TIR diaria 17:15 ART (L-V) activa (5bps / 1% critico)");
   } else {
-    log.warn("âš ï¸ scheduler: bond_analytics_snapshots ausente â€” validaciÃ³n TIR NO arranca");
+    log.warn("[WARN] scheduler: bond_analytics_snapshots ausente - validacion TIR NO arranca");
   }
 
   // â€” ReconciliaciÃ³n 18:30 â€”
@@ -290,7 +290,7 @@ export async function startScheduledJobs(deps: SchedulerDeps = {}): Promise<Sche
     });
     const task = schedule(RECONCILIATION_CRON, () => {
       run().catch((err) => {
-        log.error("âš ï¸ scheduler: reconciliaciÃ³n fallÃ³:", err instanceof Error ? err : new Error(String(err)));
+        log.error("[WARN] scheduler: reconciliacion fallo:", err instanceof Error ? err : new Error(String(err)));
       });
     }, {
       timezone: CRON_TZ,
@@ -300,9 +300,9 @@ export async function startScheduledJobs(deps: SchedulerDeps = {}): Promise<Sche
     });
     tasks.push(task);
     reconciliationScheduled = true;
-    log.log("ðŸ•’ scheduler: reconciliaciÃ³n 18:30 ART (Lâ€“V) activa");
+    log.log("[SCHEDULER] reconciliacion 18:30 ART (L-V) activa");
   } else if (portfolioReady) {
-    log.log("ðŸ•’ scheduler: RECONCILIATION_JOB_ENABLED=false â†’ reconciliaciÃ³n deshabilitada");
+    log.log("[SCHEDULER] RECONCILIATION_JOB_ENABLED=false -> reconciliacion deshabilitada");
   }
 
   const started = quotesScheduled || snapshotScheduled || reconciliationScheduled || bondAnalyticsScheduled || tirValidationScheduled;
