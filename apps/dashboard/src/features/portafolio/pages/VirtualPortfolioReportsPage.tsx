@@ -8,7 +8,7 @@ import { virtualPortfoliosApi } from "@/features/portafolio/api";
 import { useApiData } from "@/hooks/useApiData";
 import { CalendarView } from "@/components/reports/CalendarView";
 import { MetricsSection } from "@/components/metrics/MetricsSection";
-import { VirtualPortfolioReportsPanel } from "@/components/reports/VirtualPortfolioReportsPanel";
+import { MonthlyReportPanel } from "@/components/portfolio/MonthlyReportPanel";
 
 export function VirtualPortfolioReportsPage() {
   const { id } = useParams<{ id: string }>();
@@ -79,7 +79,7 @@ export function VirtualPortfolioReportsPage() {
         </TabsList>
 
         <TabsContent value="reporte" className="space-y-6 animate-in fade-in-50 duration-200">
-          <VirtualPortfolioReportsPanel portfolioId={portfolio.id} portfolioName={portfolio.name} />
+          <MonthlyReportPanel virtualPortfolioId={portfolio.id} />
         </TabsContent>
 
         <TabsContent value="calendario" className="space-y-6 animate-in fade-in-50 duration-200">
