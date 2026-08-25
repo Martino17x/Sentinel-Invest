@@ -41,6 +41,7 @@ const RentaFijaCurvaPage = lazy(() => import("@/features/renta-fija/pages/RentaF
 const RentaFijaCalendarioPage = lazy(() => import("@/features/renta-fija/pages/RentaFijaCalendarioPage"));
 const RentaFijaComparePage = lazy(() => import("@/features/renta-fija/pages/RentaFijaComparePage"));
 const RentaFijaScreenerPage = lazy(() => import("@/features/renta-fija/pages/RentaFijaScreenerPage"));
+const InvestorProfilePage = lazy(() => import("@/pages/InvestorProfile"));
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -326,6 +327,34 @@ function App() {
             <Route path="/connect" element={<ConnectIolPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/agent-connect" element={<AgentConnectPage />} />
+            <Route
+              path="/investor-profile"
+              element={
+                <Suspense
+                  fallback={
+                    <div className="flex min-h-48 items-center justify-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  }
+                >
+                  <InvestorProfilePage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/perfil-inversor"
+              element={
+                <Suspense
+                  fallback={
+                    <div className="flex min-h-48 items-center justify-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  }
+                >
+                  <InvestorProfilePage />
+                </Suspense>
+              }
+            />
           </Route>
 
           <Route path="/" element={<Navigate to="/inicio" replace />} />
