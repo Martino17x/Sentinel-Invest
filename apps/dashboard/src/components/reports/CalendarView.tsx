@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { calendarApi, virtualReportsApi, type CalendarDay } from "@/features/portafolio/api";
+import { calendarApi, virtualReportsApi, type CalendarDay, type MonthCalendar } from "@/features/portafolio/api";
 import { useApiData } from "@/hooks/useApiData";
 import { artTodayMonthKey, dayLabel, monthLabel, shiftMonthKey } from "@/lib/art-time";
 import { DayDetailDialog } from "./DayDetailDialog";
@@ -185,7 +185,7 @@ export function CalendarView({ virtualPortfolioId }: { virtualPortfolioId?: stri
     data,
     isLoading: loading,
     error,
-  } = useApiData(cacheKey, fetcher as () => Promise<never>);
+  } = useApiData<MonthCalendar>(cacheKey, fetcher as () => Promise<MonthCalendar>);
 
   // Celdas en blanco iniciales: semanas L→D (convención es-AR)
   const leadingBlanks = useMemo(() => {

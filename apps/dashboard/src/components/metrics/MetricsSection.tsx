@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { metricsApi, virtualReportsApi } from "@/features/portafolio/api";
+import { metricsApi, virtualReportsApi, type PortfolioMetrics } from "@/features/portafolio/api";
 import { useApiData } from "@/hooks/useApiData";
 
 // Tasas libres de riesgo ANUAL preestablecidas. BADLAR/LECAP son
@@ -101,7 +101,7 @@ export function MetricsSection({ virtualPortfolioId }: { virtualPortfolioId?: st
     data: metrics,
     isLoading: loading,
     error,
-  } = useApiData(cacheKey, fetcher as () => Promise<never>);
+  } = useApiData<PortfolioMetrics>(cacheKey, fetcher as () => Promise<PortfolioMetrics>);
 
   return (
     <TooltipProvider>

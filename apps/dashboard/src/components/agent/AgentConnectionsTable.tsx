@@ -50,13 +50,6 @@ const CATEGORY_LABELS: Record<ApiKeyCategory, { label: string; desc: string }> =
   trading: { label: "Trading", desc: "Operar (requiere scope trade)" },
 };
 
-function formatDate(value: string | null): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
-}
-
 function formatLastUsed(value: string | null): string {
   if (!value) return "Nunca";
   const d = new Date(value);
