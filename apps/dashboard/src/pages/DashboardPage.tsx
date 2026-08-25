@@ -4,13 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ResponsiveTable } from "@/components/ui/responsive-table";
-import { AssetTypeBadge } from "@/components/ui/asset-type-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { portfolioApi } from "@/features/portafolio/api";
 import { useApiData } from "@/hooks/useApiData";
 import { formatARS, formatUSD, toNormalizedTotalsReal } from "@/lib/formatters";
 import { PortfolioStats } from "@/components/portfolio/PortfolioStats";
+import { PortfolioPositionsTable } from "@/components/portfolio/PortfolioPositionsTable";
+import { PortfolioMobileCard } from "@/components/portfolio/PortfolioMobileCard";
 
 const PIE_COLORS = [
   "var(--chart-1)",
@@ -236,252 +236,13 @@ export function DashboardPage() {
           <CardDescription>{portfolio.positions.length} activos en cartera</CardDescription>
         </CardHeader>
         <CardContent>
-          {/* ===== MOBILE / TABLET: cards con jerarquía ===== */}
           <div className="space-y-3 lg:hidden">
-            {portfolio.positions.map((pos) => {
-              const gainPositive = pos.gainLossPct >= 0;
-              return (
-                <div key={`${pos.symbol}-${pos.market}`} className="rounded-xl border bg-card p-4 shadow-sm">
-                  {/* Nivel 1: identificación */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <Link
-                          to={`/quotes/${pos.symbol}`}
-                          className="text-base font-semibold text-foreground transition-colors hover:text-primary"
-                        >
-                          {pos.symbol}
-                        </Link>
-                        <AssetTypeBadge type={pos.assetType} className="font-mono text-[10px]" />
-                      </div>
-                      <p className="mt-0.5 truncate text-xs text-muted-foreground">{pos.name}</p>
-                    </div>
-                  </div>
-
-                  {/* Nivel 2: rendimiento (HERO) */}
-                  <div className="mt-3 rounded-lg bg-muted/50 px-3 py-2.5">
-                    <div className="flex items-baseline justify-between">
-                      <span
-                        className={`text-xl font-bold tabular-nums ${
-                          gainPositive ? "text-emerald-600" : "text-red-600"
-                        }`}
-                      >
-                        {gainPositive ? "" : "-"}
-                        {formatARS(Math.abs(pos.gainLossAmount))}
-                      </span>
-                      <span
-                        className={`text-xs font-medium tabular-nums ${
-                          gainPositive ? "text-emerald-600" : "text-red-600"
-                        }`}
-                      >
-                        {pos.gainLossPct.toFixed(2)}%
-                      </span>
-                    </div>
-                    <div className="mt-0.5 flex items-center justify-between">
-                      <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                        Rendimiento
-                      </span>
-                      <span
-                        className={`text-xs font-medium tabular-nums ${
-                          pos.dayChangePct > 0.01
-                            ? "text-emerald-600"
-                            : pos.dayChangePct < -0.01
-                              ? "text-red-600"
-                              : "text-muted-foreground"
-                        }`}
-                      >
-                        {pos.dayChangePct > 0.01
-                          ? `▲ ${pos.dayChangePct.toFixed(2)}%`
-                          : pos.dayChangePct < -0.01
-                            ? `▼ ${Math.abs(pos.dayChangePct).toFixed(2)}%`
-                            : "= 0,00%"}
-                        {pos.totalValue > 0 && pos.dayChangePct !== 0 && (
-                          <>
-                            {" "}
-                            (
-                            {pos.dayChangePct > 0 ? "+" : "-"}
-                            {formatARS(
-                              Math.abs(
-                                pos.totalValue *
-                                  (pos.dayChangePct / (100 + pos.dayChangePct))
-                              )
-                            )}
-                            )
-                          </>
-                        )}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Nivel 3: detalles compactos */}
-                  <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                    <div className="rounded-md border px-1 py-1.5">
-                      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                        Cantidad
-                      </p>
-                      <p className="text-sm font-medium tabular-nums">
-                        {pos.quantity.toLocaleString("es-AR")}
-                      </p>
-                    </div>
-                    <div className="rounded-md border px-1 py-1.5">
-                      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                        Último
-                      </p>
-                      <p className="text-sm font-medium tabular-nums">{formatARS(pos.lastPrice)}</p>
-                    </div>
-                    <div className="rounded-md border px-1 py-1.5">
-                      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                        Valor bruto
-                      </p>
-                      <p className="text-sm font-medium tabular-nums">{formatARS(pos.totalValue)}</p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {portfolio.positions.map((pos) => (
+              <PortfolioMobileCard key={`${pos.symbol}-${pos.market}`} mode="real" position={pos} />
+            ))}
           </div>
-
-          {/* ===== DESKTOP: tabla completa ===== */}
           <div className="hidden lg:block">
-            <ResponsiveTable
-              columns={[
-                {
-                  key: "activo",
-                  header: "Activo",
-                  sortable: true,
-                  sortValue: (pos) => pos.symbol,
-                  render: (pos) => (
-                    <div className="min-w-0">
-                      <Link
-                        to={`/quotes/${pos.symbol}`}
-                        className="font-medium text-foreground transition-colors hover:text-primary"
-                      >
-                        {pos.symbol}
-                      </Link>
-                      <div className="max-w-48 truncate text-xs text-muted-foreground">
-                        {pos.name}
-                      </div>
-                    </div>
-                  ),
-                },
-                {
-                  key: "tipo",
-                  header: "Tipo",
-                  sortable: true,
-                  sortValue: (pos) => pos.assetType,
-                  render: (pos) => <AssetTypeBadge type={pos.assetType} />,
-                },
-                {
-                  key: "cantidad",
-                  header: "Cantidad",
-                  sortable: true,
-                  sortValue: (pos) => pos.quantity,
-                  align: "right",
-                  render: (pos) => (
-                    <span className="tabular-nums">{pos.quantity.toLocaleString("es-AR")}</span>
-                  ),
-                },
-                {
-                  key: "variacion-diaria",
-                  header: "Variación diaria",
-                  sortable: true,
-                  sortValue: (pos) => pos.dayChangePct,
-                  align: "right",
-                  render: (pos) => {
-                    // Monto del día: totalValue × pct/(100+pct) — el % es relativo
-                    // al cierre anterior, así el cambio en $ es exacto.
-                    // OJO: NO usar quantity × lastPrice: para bonos/ONs IOL
-                    // reporta el precio por VN 100 (100× el precio unitario),
-                    // por lo que quantity × lastPrice ≠ totalValue (inflan 100×).
-                    const dayAmount =
-                      pos.totalValue > 0
-                        ? pos.totalValue * (pos.dayChangePct / (100 + pos.dayChangePct))
-                        : 0;
-                    const dayUp = pos.dayChangePct > 0.01;
-                    const dayDown = pos.dayChangePct < -0.01;
-                    return (
-                      <div className="text-right">
-                        <div
-                          className={`tabular-nums ${
-                            dayUp ? "text-emerald-600" : dayDown ? "text-red-600" : "text-muted-foreground"
-                          }`}
-                        >
-                          {dayUp ? "▲" : dayDown ? "▼" : "="} {Math.abs(pos.dayChangePct).toFixed(2)}%
-                        </div>
-                        {dayAmount !== 0 && (
-                          <div
-                            className={`text-xs tabular-nums ${
-                              dayUp ? "text-emerald-600" : dayDown ? "text-red-600" : "text-muted-foreground"
-                            }`}
-                          >
-                            ({dayUp ? "+" : dayDown ? "-" : ""}
-                            {formatARS(Math.abs(dayAmount))})
-                          </div>
-                        )}
-                      </div>
-                    );
-                  },
-                },
-                {
-                  key: "ultimo",
-                  header: "Último",
-                  sortable: true,
-                  sortValue: (pos) => pos.lastPrice,
-                  align: "right",
-                  render: (pos) => <span className="tabular-nums">{formatARS(pos.lastPrice)}</span>,
-                },
-                {
-                  key: "promedio",
-                  header: "Prom. compra",
-                  sortable: true,
-                  sortValue: (pos) => pos.avgPrice,
-                  align: "right",
-                  render: (pos) => <span className="tabular-nums">{formatARS(pos.avgPrice)}</span>,
-                },
-                {
-                  key: "rendimiento",
-                  header: "Rendimiento",
-                  sortable: true,
-                  sortValue: (pos) => pos.gainLossPct,
-                  align: "right",
-                  render: (pos) => {
-                    const gainPositive = pos.gainLossPct >= 0;
-                    // Estilo IOL: % sin "+" en positivos, monto con $ y signo
-                    return (
-                      <div className="text-right">
-                        <div
-                          className={`font-medium tabular-nums ${
-                            gainPositive ? "text-emerald-600" : "text-red-600"
-                          }`}
-                        >
-                          {pos.gainLossPct.toFixed(2)}%
-                        </div>
-                        <div
-                          className={`text-xs tabular-nums ${
-                            gainPositive ? "text-emerald-600" : "text-red-600"
-                          }`}
-                        >
-                          {gainPositive ? "" : "-"}
-                          {formatARS(Math.abs(pos.gainLossAmount))}
-                        </div>
-                      </div>
-                    );
-                  },
-                },
-                {
-                  key: "valorizado",
-                  header: "Valorizado",
-                  sortable: true,
-                  sortValue: (pos) => pos.totalValue,
-                  align: "right",
-                  render: (pos) => (
-                    <span className="font-medium tabular-nums">{formatARS(pos.totalValue)}</span>
-                  ),
-                },
-              ]}
-              data={portfolio.positions}
-              rowKey={(pos) => `${pos.symbol}-${pos.market}`}
-            />
+            <PortfolioPositionsTable mode="real" positions={portfolio.positions} />
           </div>
         </CardContent>
       </Card>

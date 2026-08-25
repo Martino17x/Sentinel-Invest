@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Loader2, Briefcase, BarChart3, CalendarRange } from "lucide-react";
+import { ArrowLeft, Plus, Loader2, Briefcase, BarChart3, CalendarRange } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CalendarView } from "@/components/reports/CalendarView";
 import { MetricsSection } from "@/components/metrics/MetricsSection";
@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { AssetTypeBadge } from "@/components/ui/asset-type-badge";
 import {
   Dialog,
@@ -29,6 +28,8 @@ import { InstrumentPicker, type PickedInstrument } from "@/components/Instrument
 import CompanyLogo from "@/components/ui/company-logo";
 import { formatARS } from "@/lib/formatters";
 import { PortfolioStats } from "@/components/portfolio/PortfolioStats";
+import { PortfolioPositionsTable } from "@/components/portfolio/PortfolioPositionsTable";
+import { PortfolioMobileCard } from "@/components/portfolio/PortfolioMobileCard";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
@@ -396,147 +397,13 @@ export function VirtualPortfolioPage() {
             </div>
           ) : (
             <>
-              {/* Mobile cards */}
               <div className="space-y-3 lg:hidden">
-                {positions.map((pos) => {
-                  const gainPos = (pos.gainLossPct ?? 0) >= 0;
-                  return (
-                    <div key={pos.id} className="rounded-xl border bg-card p-4 shadow-sm">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <Link
-                              to={`/quotes/${pos.symbol}`}
-                              className="text-base font-semibold hover:text-primary transition-colors"
-                            >
-                              {pos.symbol}
-                            </Link>
-                            <AssetTypeBadge type={pos.market === "bonds" ? "bono" : "accion"} className="font-mono text-[10px]" />
-                            <span className="text-xs text-muted-foreground">{pos.currency}</span>
-                          </div>
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            {pos.quantity.toLocaleString("es-AR")} × {formatARS(pos.avgPrice)} prom.
-                          </p>
-                        </div>
-                        <Button variant="ghost" size="icon-sm" onClick={() => setPendingDelete(pos)} aria-label={`Borrar ${pos.symbol}`}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <div className="mt-3 rounded-lg bg-muted/50 px-3 py-2.5">
-                        <div className="flex items-baseline justify-between">
-                          <span className={`text-lg font-bold tabular-nums ${gainPos ? "text-emerald-600" : "text-red-600"}`}>
-                            {gainPos ? "" : "-"}
-                            {formatARS(Math.abs(pos.gainLossAmount ?? 0))}
-                          </span>
-                          <span className={`text-xs font-medium tabular-nums ${gainPos ? "text-emerald-600" : "text-red-600"}`}>
-                            {(pos.gainLossPct ?? 0).toFixed(2)}%
-                          </span>
-                        </div>
-                        <div className="mt-1 flex justify-between text-xs">
-                          <span className="text-muted-foreground">Valorizado {formatARS(pos.totalValue ?? pos.quantity * (pos.lastPrice ?? pos.avgPrice))}</span>
-                          <span className="text-muted-foreground">
-                            Último {pos.lastPrice != null ? formatARS(pos.lastPrice) : "—"}
-                            {pos.variationPct != null && ` (${pos.variationPct.toFixed(2)}% hoy)`}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                {positions.map((pos) => (
+                  <PortfolioMobileCard key={pos.id} mode="virtual" position={pos} onRemove={setPendingDelete} />
+                ))}
               </div>
-
-              {/* Desktop table */}
               <div className="hidden lg:block">
-                <ResponsiveTable
-                  columns={[
-                    {
-                      key: "activo",
-                      header: "Activo",
-                      sortable: true,
-                      sortValue: (p) => p.symbol,
-                      render: (p) => (
-                        <div className="min-w-0">
-                          <Link to={`/quotes/${p.symbol}`} className="font-medium hover:text-primary transition-colors">
-                            {p.symbol}
-                          </Link>
-                          <div className="text-xs text-muted-foreground">
-                            {p.currency} · {p.market}
-                          </div>
-                        </div>
-                      ),
-                    },
-                    {
-                      key: "cantidad",
-                      header: "Cantidad",
-                      sortable: true,
-                      sortValue: (p) => p.quantity,
-                      align: "right",
-                      render: (p) => <span className="tabular-nums">{p.quantity.toLocaleString("es-AR")}</span>,
-                    },
-                    {
-                      key: "promedio",
-                      header: "Prom. compra",
-                      sortable: true,
-                      sortValue: (p) => p.avgPrice,
-                      align: "right",
-                      render: (p) => <span className="tabular-nums">{formatARS(p.avgPrice)}</span>,
-                    },
-                    {
-                      key: "ultimo",
-                      header: "Último",
-                      sortable: true,
-                      sortValue: (p) => p.lastPrice ?? 0,
-                      align: "right",
-                      render: (p) => (
-                        <span className="tabular-nums">{p.lastPrice != null ? formatARS(p.lastPrice) : "—"}</span>
-                      ),
-                    },
-                    {
-                      key: "valorizado",
-                      header: "Valorizado",
-                      sortable: true,
-                      sortValue: (p) => p.totalValue ?? 0,
-                      align: "right",
-                      render: (p) => (
-                        <span className="font-medium tabular-nums">
-                          {formatARS(p.totalValue ?? p.quantity * (p.lastPrice ?? p.avgPrice))}
-                        </span>
-                      ),
-                    },
-                    {
-                      key: "rendimiento",
-                      header: "Rendimiento",
-                      sortable: true,
-                      sortValue: (p) => p.gainLossPct ?? 0,
-                      align: "right",
-                      render: (p) => {
-                        const pos = (p.gainLossPct ?? 0) >= 0;
-                        return (
-                          <div className="text-right">
-                            <div className={`font-medium tabular-nums ${pos ? "text-emerald-600" : "text-red-600"}`}>
-                              {(p.gainLossPct ?? 0).toFixed(2)}%
-                            </div>
-                            <div className={`text-xs tabular-nums ${pos ? "text-emerald-600" : "text-red-600"}`}>
-                              {pos ? "" : "-"}
-                              {formatARS(Math.abs(p.gainLossAmount ?? 0))}
-                            </div>
-                          </div>
-                        );
-                      },
-                    },
-                    {
-                      key: "acciones",
-                      header: "",
-                      render: (p) => (
-                        <Button variant="ghost" size="icon-sm" onClick={() => setPendingDelete(p)} aria-label={`Borrar ${p.symbol}`}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      ),
-                    },
-                  ]}
-                  data={positions}
-                  rowKey={(p) => p.id}
-                />
+                <PortfolioPositionsTable mode="virtual" positions={positions} onRemove={setPendingDelete} />
               </div>
             </>
           )}
