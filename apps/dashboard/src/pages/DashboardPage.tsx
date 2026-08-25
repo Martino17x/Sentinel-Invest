@@ -9,28 +9,7 @@ import { AssetTypeBadge } from "@/components/ui/asset-type-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { portfolioApi } from "@/features/portafolio/api";
 import { useApiData } from "@/hooks/useApiData";
-
-// Formateadores de moneda — ARS con separador de miles
-const formatterARS = new Intl.NumberFormat("es-AR", {
-  style: "currency",
-  currency: "ARS",
-  maximumFractionDigits: 2,
-  minimumFractionDigits: 2,
-});
-
-const formatterUSD = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  maximumFractionDigits: 2,
-});
-
-function formatARS(value: number) {
-  return formatterARS.format(value);
-}
-
-function formatUSD(value: number) {
-  return formatterUSD.format(value);
-}
+import { formatARS, formatUSD } from "@/lib/formatters";
 
 const PIE_COLORS = [
   "var(--chart-1)",

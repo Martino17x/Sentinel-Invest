@@ -97,3 +97,9 @@ export function formatPct(value: number): string {
   const sign = value > 0.01 ? "+" : value < -0.01 ? "-" : "";
   return `${sign}${Math.abs(value).toFixed(2)}%`;
 }
+
+// Aliases camelCase MAYÚS para paridad spec/design (grep centralizado formatters)
+export const formatARS = formatArs;
+export const formatUSD = formatUsd;
+export const formatPercent = formatPct;
+export const formatARSNoDecimals = formatArsNoDecimals;

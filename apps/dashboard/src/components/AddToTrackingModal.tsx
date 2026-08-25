@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { virtualPortfoliosApi, type VirtualPortfolio, type VirtualPortfolioDetail } from "@/features/portafolio/api";
 import { useApiData, invalidateApiCache } from "@/hooks/useApiData";
+import { formatARS } from "@/lib/formatters";
 
 type Props = {
   open: boolean;
@@ -26,15 +27,9 @@ type Props = {
   onSuccess?: (portfolioId: string) => void;
 };
 
-const formatterARS = new Intl.NumberFormat("es-AR", {
-  style: "currency",
-  currency: "ARS",
-  maximumFractionDigits: 2,
-});
-
 function formatPrice(v: number | null | undefined) {
   if (v == null || !Number.isFinite(v)) return "—";
-  return formatterARS.format(v);
+  return formatARS(v);
 }
 
 export function AddToTrackingModal({ open, onOpenChange, symbol, market: rawMarket, lastPrice, currency: rawCurrency, onSuccess }: Props) {

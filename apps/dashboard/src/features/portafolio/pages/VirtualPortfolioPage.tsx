@@ -26,24 +26,8 @@ import { virtualPortfoliosApi, type VirtualPosition } from "@/features/portafoli
 import { useApiData, invalidateApiCache } from "@/hooks/useApiData";
 import { InstrumentPicker, type PickedInstrument } from "@/components/InstrumentPicker";
 import CompanyLogo from "@/components/ui/company-logo";
+import { formatARS, formatUSD } from "@/lib/formatters";
 
-const formatterARS = new Intl.NumberFormat("es-AR", {
-  style: "currency",
-  currency: "ARS",
-  maximumFractionDigits: 2,
-  minimumFractionDigits: 2,
-});
-const formatterUSD = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  maximumFractionDigits: 2,
-});
-function formatARS(v: number) {
-  return formatterARS.format(v);
-}
-function formatUSD(v: number) {
-  return formatterUSD.format(v);
-}
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
 }
