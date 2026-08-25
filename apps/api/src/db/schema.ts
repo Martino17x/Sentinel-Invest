@@ -37,6 +37,9 @@ export const pendingOrderStatusEnum = pgEnum("pending_order_status", ["pending",
 export const cashMovementSourceEnum = pgEnum("cash_movement_source", ["manual", "imported", "detected"]);
 export const cashMovementStatusEnum = pgEnum("cash_movement_status", ["confirmed", "pending", "rejected"]);
 
+export const riskToleranceEnum = pgEnum("risk_tolerance", ["conservador", "moderado", "agresivo"]);
+export const horizonEnum = pgEnum("horizon", ["corto", "medio", "largo"]);
+
 // ============================================================
 // USERS — el corazón del multitenant
 // ============================================================
@@ -602,4 +605,81 @@ export const virtualPositionsRelations = relations(virtualPositions, ({ one }) =
 
 export const pendingOrdersRelations = relations(pendingOrders, ({ one }) => ({
   user: one(users, { fields: [pendingOrders.userId], references: [users.id] }),
+}));
+
+// ============================================================
+// INVESTOR PROFILES — perfil CNV 1:1 por usuario
+// ============================================================
+
+export const investorProfiles = pgTable(
+  "investor_profiles",
+  {
+    userId: uuid("user_id")
+      .primaryKey()
+      .references(() => users.id, { onDelete: "cascade" }),
+    riskTolerance: riskToleranceEnum("risk_tolerance").notNull(),
+    horizon: horizonEnum("horizon").notNull(),
+    knowledgeLevel: text("knowledge_level").notNull(),
+    lossTolerancePct: integer("loss_tolerance_pct").notNull(),
+    investmentGoal: text("investment_goal").notNull(),
+    riskScore: integer("risk_score").notNull(),
+    profileVersion: integer("profile_version").notNull().default(1),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [check("risk_score_range", sql`risk_score BETWEEN 0 AND 100`)]
+);
+
+export const investorProfilesRelations = relations(investorProfiles, ({ one }) => ({
+  user: one(users, { fields: [investorProfiles.userId], references: [users.id] }),
+}));
+
+// ============================================================
+// ANALYSIS RUNS — stub para advisory v1 (payload jsonb)
+// ============================================================
+
+export const analysisRuns = pgTable(
+  "analysis_runs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    payload: jsonb("payload").notNull().default("{}"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("analysis_runs_user_idx").on(table.userId)]
+);
+
+export const analysisRunsRelations = relations(analysisRuns, ({ one }) => ({
+  user: one(users, { fields: [analysisRuns.userId], references: [users.id] }),
+}));
+
+// ============================================================
+// PORTFOLIO PROPOSALS — stub para advisory v1 (payload jsonb)
+// ============================================================
+
+export const portfolioProposals = pgTable(
+  "portfolio_proposals",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    analysisRunId: uuid("analysis_run_id").references(() => analysisRuns.id, { onDelete: "set null" }),
+    payload: jsonb("payload").notNull().default("{}"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("portfolio_proposals_user_idx").on(table.userId),
+    index("portfolio_proposals_analysis_run_idx").on(table.analysisRunId),
+  ]
+);
+
+export const portfolioProposalsRelations = relations(portfolioProposals, ({ one }) => ({
+  user: one(users, { fields: [portfolioProposals.userId], references: [users.id] }),
+  analysisRun: one(analysisRuns, {
+    fields: [portfolioProposals.analysisRunId],
+    references: [analysisRuns.id],
+  }),
 }));

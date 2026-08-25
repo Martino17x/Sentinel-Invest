@@ -229,6 +229,65 @@ const VIRTUAL_PORTFOLIO_MIGRATIONS = [
 ];
 
 /**
+ * Enums del perfil inversor (risk_tolerance, horizon) — idempotentes
+ * vía DO block (Postgres no tiene CREATE TYPE IF NOT EXISTS).
+ */
+const INVESTOR_ENUM_MIGRATIONS = [
+  sql`DO $$ BEGIN
+        CREATE TYPE risk_tolerance AS ENUM ('conservador', 'moderado', 'agresivo');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$`,
+  sql`DO $$ BEGIN
+        CREATE TYPE horizon AS ENUM ('corto', 'medio', 'largo');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$`,
+];
+
+/**
+ * Tablas del perfil inversor + stubs advisory — ADDITIVE, idempotente.
+ * Espejan apps/api/src/db/schema.ts (investor_profiles, analysis_runs,
+ * portfolio_proposals). Re-correr N veces = no-op.
+ */
+const INVESTOR_TABLE_MIGRATIONS = [
+  sql`CREATE TABLE IF NOT EXISTS investor_profiles (
+        user_id uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        risk_tolerance risk_tolerance NOT NULL,
+        horizon horizon NOT NULL,
+        knowledge_level text NOT NULL,
+        loss_tolerance_pct integer NOT NULL,
+        investment_goal text NOT NULL,
+        risk_score integer NOT NULL CHECK (risk_score BETWEEN 0 AND 100),
+        profile_version integer NOT NULL DEFAULT 1,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now()
+      )`,
+  sql`CREATE TABLE IF NOT EXISTS analysis_runs (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        payload jsonb NOT NULL DEFAULT '{}',
+        created_at timestamptz NOT NULL DEFAULT now()
+      )`,
+  sql`CREATE INDEX IF NOT EXISTS analysis_runs_user_idx ON analysis_runs (user_id)`,
+  sql`CREATE TABLE IF NOT EXISTS portfolio_proposals (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        analysis_run_id uuid REFERENCES analysis_runs(id) ON DELETE SET NULL,
+        payload jsonb NOT NULL DEFAULT '{}',
+        created_at timestamptz NOT NULL DEFAULT now()
+      )`,
+  sql`CREATE INDEX IF NOT EXISTS portfolio_proposals_user_idx ON portfolio_proposals (user_id)`,
+  sql`CREATE INDEX IF NOT EXISTS portfolio_proposals_analysis_run_idx ON portfolio_proposals (analysis_run_id)`,
+  sql`ALTER TABLE investor_profiles ADD COLUMN IF NOT EXISTS risk_tolerance risk_tolerance`,
+  sql`ALTER TABLE investor_profiles ADD COLUMN IF NOT EXISTS horizon horizon`,
+  sql`ALTER TABLE investor_profiles ADD COLUMN IF NOT EXISTS knowledge_level text`,
+  sql`ALTER TABLE investor_profiles ADD COLUMN IF NOT EXISTS loss_tolerance_pct integer`,
+  sql`ALTER TABLE investor_profiles ADD COLUMN IF NOT EXISTS investment_goal text`,
+  sql`ALTER TABLE investor_profiles ADD COLUMN IF NOT EXISTS risk_score integer`,
+  sql`ALTER TABLE investor_profiles ADD COLUMN IF NOT EXISTS profile_version integer`,
+  sql`ALTER TABLE portfolio_proposals ADD COLUMN IF NOT EXISTS analysis_run_id uuid`,
+];
+
+/**
  * Aplica las migraciones idempotentes. Llamar al boot del server.
  * Nunca debe romper el arranque: cualquier fallo queda registrado
  * como warning (los reportes se degradan, la app sigue viva).
@@ -245,6 +304,8 @@ export async function ensureSchema(): Promise<void> {
     ...BCRA_CER_HISTORY_MIGRATIONS,
     ...API_KEYS_CAPABILITIES_MIGRATIONS,
     ...VIRTUAL_PORTFOLIO_MIGRATIONS,
+    ...INVESTOR_ENUM_MIGRATIONS,
+    ...INVESTOR_TABLE_MIGRATIONS,
   ]) {
     await db.execute(statement);
   }
