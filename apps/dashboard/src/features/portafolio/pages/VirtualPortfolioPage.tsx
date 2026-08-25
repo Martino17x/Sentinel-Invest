@@ -1,10 +1,6 @@
 import { useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Loader2, Briefcase, BarChart3, CalendarRange } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { CalendarView } from "@/components/reports/CalendarView";
-import { MetricsSection } from "@/components/metrics/MetricsSection";
-import { VirtualPortfolioReportsPanel } from "@/components/reports/VirtualPortfolioReportsPanel";
+import { ArrowLeft, Plus, Loader2, Briefcase, BarChart3 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,9 +36,6 @@ export function VirtualPortfolioPage() {
   const navigate = useNavigate();
 
   const { portfolio, positions, totals, isLoading, error, refetch } = useVirtualPortfolioDetails(id ?? null);
-
-  // Reportes dialog/drawer (misma interfaz que ReportsPage para virtual)
-  const [reportsOpen, setReportsOpen] = useState(false);
 
   // Add position dialog — XL picker + inline form
   const [open, setOpen] = useState(false);
@@ -198,46 +191,11 @@ export function VirtualPortfolioPage() {
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          {/* Reportes — misma interfaz que ReportsPage pero filtrada por este portfolio virtual */}
-          <Button variant="outline" className="gap-1.5" onClick={() => setReportsOpen(true)}>
-            <BarChart3 className="h-4 w-4" /> Reportes
+          <Button variant="outline" className="gap-1.5" asChild>
+            <Link to="./reportes">
+              <BarChart3 className="h-4 w-4" /> Reportes
+            </Link>
           </Button>
-          <Dialog open={reportsOpen} onOpenChange={setReportsOpen}>
-            <DialogContent className="max-w-5xl w-[calc(100%-2rem)] max-h-[85vh] flex flex-col overflow-hidden p-0 gap-0 sm:max-w-5xl max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:top-auto max-sm:left-0 max-sm:right-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:w-full max-sm:max-w-none max-sm:rounded-t-2xl max-sm:rounded-b-none max-sm:h-[92vh] max-sm:max-h-[92vh] max-sm:shadow-xl max-sm:border-t motion-reduce:animate-none max-sm:data-[state=open]:slide-in-from-bottom-full max-sm:data-[state=closed]:slide-out-to-bottom-full max-sm:data-[state=open]:zoom-in-100 max-sm:data-[state=closed]:zoom-out-100">
-              <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b text-left">
-                <DialogTitle className="flex items-center gap-2 text-left">
-                  <CalendarRange className="h-5 w-5 text-muted-foreground" />
-                  Reportes — {portfolio.name}
-                </DialogTitle>
-                <DialogDescription className="text-left">
-                  Misma interfaz que Reportes normales, pero para este portafolio ficticio. Tabs Reporte / Calendario / Métricas.
-                  También disponible en <Link to={`/portfolio/seguimiento/${portfolio.id}/reportes`} className="underline hover:text-foreground" onClick={() => setReportsOpen(false)}>vista completa</Link>.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 min-h-0">
-                <Tabs defaultValue="reporte" className="space-y-4">
-                  <TabsList className="w-full sm:w-auto">
-                    <TabsTrigger value="reporte">Reporte</TabsTrigger>
-                    <TabsTrigger value="calendario">Calendario</TabsTrigger>
-                    <TabsTrigger value="metricas">Métricas</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="reporte" className="space-y-4 animate-in fade-in-50 duration-200 motion-reduce:animate-none">
-                    <VirtualPortfolioReportsPanel portfolioId={portfolio.id} portfolioName={portfolio.name} />
-                  </TabsContent>
-                  <TabsContent value="calendario" className="space-y-4 animate-in fade-in-50 duration-200 motion-reduce:animate-none">
-                    <CalendarView virtualPortfolioId={portfolio.id} />
-                  </TabsContent>
-                  <TabsContent value="metricas" className="space-y-4 animate-in fade-in-50 duration-200 motion-reduce:animate-none">
-                    <MetricsSection virtualPortfolioId={portfolio.id} />
-                  </TabsContent>
-                </Tabs>
-              </div>
-              <div className="shrink-0 border-t bg-muted/20 px-4 py-3 sm:px-6 flex justify-between">
-                <Button variant="ghost" onClick={() => navigate(`/portfolio/seguimiento/${portfolio.id}/reportes`)}>Abrir página completa</Button>
-                <Button variant="outline" onClick={() => setReportsOpen(false)}>Cerrar</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
 
           <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
