@@ -9,6 +9,7 @@ const TYPE_BADGE_COLORS: Record<string, string> = {
   bono: "#10b981", // esmeralda — Bonos
   cedear: "#8b5cf6", // violeta — CEDEARs
   accion: "#3b82f6", // azul — Acciones
+  on: "#d97706", // ámbar-600 — Obligaciones Negociables (distinto de FCI y Bonos)
   fci: "#f59e0b", // ámbar — FCI
   caucion: "#06b6d4", // cyan — Cauciones
   futuro: "#ef4444", // rojo — Futuros
@@ -21,6 +22,7 @@ const TYPE_BADGE_LABELS: Record<string, string> = {
   bono: "Bono",
   accion: "Acción",
   cedear: "CEDEAR",
+  on: "Obligación Negoc.",
   fci: "FCI",
   caucion: "Caución",
   futuro: "Futuro",
