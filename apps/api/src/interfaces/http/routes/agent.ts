@@ -1,8 +1,14 @@
 import { Router } from "express";
 import { z } from "zod";
 import { requireAuth } from "../middleware/auth.js";
-import { requireInvestorProfile } from "../middleware/requireInvestorProfile.js";
+import {
+  INVESTOR_PROFILE_428_PAYLOAD,
+  requireInvestorProfile,
+} from "../middleware/requireInvestorProfile.js";
 import { AgentLoopError, chatLoop } from "../../../services/agent/chatLoop.js";
+import { hasInvestmentIntent } from "../../../aplicacion/agente/investorProfileGuard.js";
+import { eq } from "drizzle-orm";
+import { db, schema } from "../../../db/index.js";
 import { getSessionOwned, deleteSession, getSessionMessages, listSessions } from "../../../services/agent/sessions.js";
 import { SseWriter } from "../../../services/agent/sse.js";
 import { agentRegistry } from "../../../services/agent/tools/index.js";
@@ -60,6 +66,19 @@ router.post("/chat/stream", async (req, res) => {
   }
   const { sessionId, message } = parsed.data;
   const userId = req.user!.id;
+
+  // Capa A — guardrail conversacional: si intención de inversión y sin perfil, 428 sin abrir SSE
+  if (hasInvestmentIntent(message)) {
+    const [profile] = await db
+      .select({ userId: schema.investorProfiles.userId })
+      .from(schema.investorProfiles)
+      .where(eq(schema.investorProfiles.userId, userId))
+      .limit(1);
+    if (!profile) {
+      res.status(428).json(INVESTOR_PROFILE_428_PAYLOAD);
+      return;
+    }
+  }
 
   // Verificar propiedad ANTES de abrir el stream (respuesta JSON limpia)
   if (sessionId) {
@@ -120,6 +139,69 @@ router.post("/chat/stream", async (req, res) => {
   } finally {
     res.off("close", onClose);
     sse.end();
+  }
+});
+
+// ============================================================
+// POST /api/agent/chat — alias no-SSE para validación/guardrail tests
+// Mismo gate que /chat/stream (Capa A): 428 si intención de inversión sin perfil.
+// Si no bloquea, delega a chatLoop y acumula respuesta final como JSON.
+// ============================================================
+router.post("/chat", async (req, res) => {
+  if (!isAgentEnabled()) {
+    res.status(503).json({ error: "El asistente está deshabilitado (AGENT_ENABLED=false)" });
+    return;
+  }
+  const parsed = chatRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Datos inválidos" });
+    return;
+  }
+  const { sessionId, message } = parsed.data;
+  const userId = req.user!.id;
+
+  if (hasInvestmentIntent(message)) {
+    const [profile] = await db
+      .select({ userId: schema.investorProfiles.userId })
+      .from(schema.investorProfiles)
+      .where(eq(schema.investorProfiles.userId, userId))
+      .limit(1);
+    if (!profile) {
+      res.status(428).json(INVESTOR_PROFILE_428_PAYLOAD);
+      return;
+    }
+  }
+
+  if (sessionId) {
+    const owned = await getSessionOwned(sessionId, userId);
+    if (!owned) {
+      res.status(404).json({ error: "Sesión de chat no encontrada" });
+      return;
+    }
+  }
+
+  // Reusar chatLoop sin SSE: acumular deltas y retornar JSON.
+  let finalText = "";
+  const events: unknown[] = [];
+  try {
+    const result = await chatLoop({
+      userId,
+      sessionId,
+      message,
+      registry: agentRegistry,
+      clientName: "chat",
+      onEvent: (event) => {
+        events.push(event);
+        if (event.type === "delta") finalText += event.text;
+      },
+    });
+    res.json({ ok: true, sessionId: result.sessionId, messageId: result.messageId, text: finalText, events });
+  } catch (err) {
+    if (err instanceof AgentLoopError) {
+      res.status(err.code === "session_not_found" ? 404 : 500).json({ error: err.message, code: err.code });
+      return;
+    }
+    res.status(500).json({ error: err instanceof Error ? err.message : "Error inesperado" });
   }
 });
 

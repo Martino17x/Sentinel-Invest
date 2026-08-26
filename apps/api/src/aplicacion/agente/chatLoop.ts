@@ -2,11 +2,15 @@ import { createHash } from "node:crypto";
 import OpenAI from "openai";
 import { executeTool } from "./executor.js";
 import { isGreeting, WELCOME_MESSAGE } from "./greetings.js";
+import { hasInvestmentIntent, hasInvestorProfile, INVESTOR_PROFILE_REQUIRED_MESSAGE } from "./investorProfileGuard.js";
 import { toLlmTool } from "./llmTools.js";
 import type { ToolRegistry } from "./registry.js";
 import { stripControlChars } from "./sanitize.js";
 import { appendMessage, createSession, getSessionOwned, loadChatHistory } from "./sessions.js";
 import type { AgentSseEvent } from "./sse.js";
+
+// Re-export guardrail constants for reuse in middleware/routes (defensa en profundidad)
+export { hasInvestmentIntent, INVESTOR_PROFILE_REQUIRED_MESSAGE } from "./investorProfileGuard.js";
 
 // ============================================================
 // Chat loop — tool-calling iterativo con streaming SSE
@@ -80,6 +84,11 @@ const SYSTEM_PROMPT = [
   "- Explicá la fórmula de forma educativa cuando corresponda: CCL = precio CEDEAR (ARS) × ratio / precio subyacente (USD). Sin semáforo verde/rojo ni etiqueta 'OPORTUNIDAD' — tabla neutra.",
   "- CIERRE OBLIGATORIO: toda respuesta que toque CEDEAR / CCL / arbitraje DEBE cerrar en línea separada con la frase exacta: 'Información educativa, no asesoramiento CNV.' Sin excepciones ni paráfrasis.",
   "- El envelope del Radar expone además el disclaimer completo en el footer de la UI: 'Información educativa, no asesoramiento financiero. No constituye recomendación CNV.' — no lo dupliques en el cuerpo salvo el cierre obligatorio anterior.",
+  "",
+  "PERFIL INVERSOR — GUARDRAIL CNV (NO NEGOCIABLE):",
+  "- Si el usuario pide análisis de mercado, recomendación de acciones/portfolio, 'qué comprar', 'qué acción conviene', 'mejor opción para invertir', 'ayudame a analizar qué acciones comprar' o cualquier intención de inversión personalizada, y NO tiene perfil de inversor (investor_profile == null), NO analices el mercado ni llames a tools de mercado (analyze_stock, get_screener, fundamentals, analyst_consensus, backtest_strategy, get_bond_analytics, etc.).",
+  "- En ese caso respondé EXACTAMENTE con: 'Para analizar el mercado necesito tu perfil de inversor. Completá tu test de 2 minutos en /investor-profile y después te doy un análisis exhaustivo.' y detente. No agregues análisis, precios ni recomendaciones.",
+  "- Solo cuando el usuario YA tenga perfil (investor_profile != null), procedé con el flujo completo Fase 1-5 (régimen → screening → deep dive → portfolio) usando las tools correspondientes.",
 ].join("\n");
 
 // ============================================================
@@ -430,6 +439,22 @@ export async function chatLoop(options: ChatLoopOptions): Promise<ChatLoopResult
     const assistant = await appendMessage(sessionId, "assistant", SCOPE_LIMIT_MESSAGE);
     onEvent({ type: "done", sessionId, messageId: assistant.id, usage: { input: 0, output: 0 } });
     return { sessionId, messageId: assistant.id, usage: { input: 0, output: 0 } };
+  }
+
+  // ---------- 1quater. Guardrail perfil inversor — intención de inversión sin perfil (Capa B) ----------
+  // Defensa conversacional: si el usuario pide recomendación/análisis personalizado y no tiene perfil,
+  // no llamar al LLM ni a tools de mercado. Respuesta canónica con CTA a /investor-profile.
+  if (hasInvestmentIntent(message)) {
+    const hasProfile = await hasInvestorProfile(userId);
+    if (!hasProfile) {
+      await appendMessage(sessionId, "user", message);
+      if (signal?.aborted) return { sessionId, aborted: true };
+      await simulateCannedStreaming(INVESTOR_PROFILE_REQUIRED_MESSAGE, onEvent, signal);
+      if (signal?.aborted) return { sessionId, aborted: true };
+      const assistant = await appendMessage(sessionId, "assistant", INVESTOR_PROFILE_REQUIRED_MESSAGE);
+      onEvent({ type: "done", sessionId, messageId: assistant.id, usage: { input: 0, output: 0 } });
+      return { sessionId, messageId: assistant.id, usage: { input: 0, output: 0 } };
+    }
   }
 
   const client = createClient(options);

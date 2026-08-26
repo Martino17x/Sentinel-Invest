@@ -1,6 +1,7 @@
 import { getIolCredentials } from "../../lib/iol-credentials.js";
 import { getAccountForUser } from "./account.js";
 import { auditAgentAction } from "./audit.js";
+import { hasInvestorProfile, INVESTOR_PROFILE_REQUIRED_MESSAGE, isProfileGatedTool } from "./investorProfileGuard.js";
 import { checkPermission } from "./permissions.js";
 import type { ToolRegistry } from "./registry.js";
 import { sanitizeToolResult } from "./sanitize.js";
@@ -62,6 +63,27 @@ export async function executeTool(options: ExecuteToolOptions): Promise<ToolResu
       errorMessage: verdict.reason,
     });
     return { ok: false, message: verdict.reason };
+  }
+
+  // Gate 2bis: perfil inversor requerido para tools de recomendación/mercado (Capa C)
+  // Aunque el system prompt sea burlado, el tool mismo no devuelve datos sin perfil.
+  if (isProfileGatedTool(toolName)) {
+    const hasProfile = await hasInvestorProfile(userId);
+    if (!hasProfile) {
+      await auditAgentAction({
+        userId,
+        tool: toolName,
+        args,
+        piiFields: tool.piiFields,
+        resultStatus: "error",
+        clientName,
+        errorMessage: "profile_required",
+      });
+      return {
+        ok: false,
+        message: `profile_required: ${INVESTOR_PROFILE_REQUIRED_MESSAGE}`,
+      };
+    }
   }
 
   // Gate 3: userId → cuenta (multitenant)
