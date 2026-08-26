@@ -38,6 +38,11 @@ import { getMetricsTool } from "../../../infraestructura/mcp/tools/metrics.js";
 import { getQuoteHistoryTool } from "../../../infraestructura/mcp/tools/quoteHistory.js";
 import { getNewsFeedTool } from "../../../infraestructura/mcp/tools/newsFeed.js";
 import { getInvestorProfileTool } from "../../../infraestructura/mcp/tools/investorProfile.js";
+import {
+  createInvestmentPlanTool,
+  getInvestmentPlanTool,
+  listInvestmentPlanHistoryTool,
+} from "../../../infraestructura/mcp/tools/investmentPlan.js";
 
 // ============================================================
 // Registry de tools del agente â€” fuente ÃšNICA de definiciones
@@ -58,7 +63,7 @@ import { getInvestorProfileTool } from "../../../infraestructura/mcp/tools/inves
 export type ToolCategory = "cartera" | "mercado" | "bonos" | "conocimiento" | "trading";
 
 const TOOL_CATEGORY_MAP: Record<string, ToolCategory> = {
-  // cartera (14) â€” lectura + gestiÃ³n efectivo (sub-grupo colapsado en UI)
+  // cartera (14+3) â€” lectura + gestiÃ³n efectivo (sub-grupo colapsado en UI)
   get_portfolio: "cartera",
   get_portfolio_history: "cartera",
   get_series: "cartera",
@@ -73,6 +78,9 @@ const TOOL_CATEGORY_MAP: Record<string, ToolCategory> = {
   import_movements_preview: "cartera",
   import_movements_confirm: "cartera",
   reconcile: "cartera",
+  get_investment_plan: "cartera",
+  list_investment_plan_history: "cartera",
+  create_investment_plan: "cartera",
   // mercado y dÃ³lar (6)
   get_quote: "mercado",
   search_instruments: "mercado",
@@ -146,6 +154,9 @@ const DOMAIN_TOOLS: ToolDefinition[] = [
   getQuoteHistoryTool,
   getNewsFeedTool,
   getInvestorProfileTool,
+  getInvestmentPlanTool,
+  listInvestmentPlanHistoryTool,
+  createInvestmentPlanTool,
 ];
 
 export function createAgentRegistry(): ToolRegistry {

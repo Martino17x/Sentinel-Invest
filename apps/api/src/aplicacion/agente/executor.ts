@@ -87,7 +87,7 @@ export async function executeTool(options: ExecuteToolOptions): Promise<ToolResu
   }
 
   // Gate 3: userId → cuenta (multitenant) — get_investor_profile NO requiere cuenta
-  const NO_ACCOUNT_TOOLS = new Set(["get_investor_profile"]);
+  const NO_ACCOUNT_TOOLS = new Set(["get_investor_profile", "get_investment_plan", "list_investment_plan_history", "create_investment_plan"]);
   const needsAccount = !NO_ACCOUNT_TOOLS.has(toolName);
   let accountResult: Awaited<ReturnType<typeof getAccountForUser>>;
   if (needsAccount) {
