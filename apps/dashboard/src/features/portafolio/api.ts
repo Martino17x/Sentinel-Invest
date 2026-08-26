@@ -374,6 +374,12 @@ export const virtualPortfoliosApi = {
   async remove(portfolioId: string): Promise<void> {
     return apiFetch(`/virtual-portfolios/${encodeURIComponent(portfolioId)}`, { method: "DELETE" });
   },
+  async getHistory(
+    portfolioId: string,
+    days = 90
+  ): Promise<{ history: PortfolioSnapshotPoint[]; message?: string }> {
+    return apiFetch(`/virtual-portfolios/${encodeURIComponent(portfolioId)}/history?days=${days}`);
+  },
 };
 
 export const virtualReportsApi = {

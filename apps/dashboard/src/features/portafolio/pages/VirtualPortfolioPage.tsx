@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, Loader2, Briefcase, BarChart3 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +18,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { virtualPortfoliosApi, type VirtualPosition } from "@/features/portafolio/api";
-import { invalidateApiCache } from "@/hooks/useApiData";
+import { invalidateApiCache, useApiData } from "@/hooks/useApiData";
 import { useVirtualPortfolioDetails } from "@/hooks/useVirtualPortfolioDetails";
 import { InstrumentPicker, type PickedInstrument } from "@/components/InstrumentPicker";
 import CompanyLogo from "@/components/ui/company-logo";
@@ -26,6 +26,8 @@ import { formatARS } from "@/lib/formatters";
 import { PortfolioStats } from "@/components/portfolio/PortfolioStats";
 import { PortfolioPositionsTable } from "@/components/portfolio/PortfolioPositionsTable";
 import { PortfolioMobileCard } from "@/components/portfolio/PortfolioMobileCard";
+import { PortfolioEvolution } from "@/components/portfolio/PortfolioEvolution";
+import { PortfolioDistribution } from "@/components/portfolio/PortfolioDistribution";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
@@ -36,6 +38,20 @@ export function VirtualPortfolioPage() {
   const navigate = useNavigate();
 
   const { portfolio, positions, totals, isLoading, error, refetch } = useVirtualPortfolioDetails(id ?? null);
+
+  const { data: histData } = useApiData(
+    id ? `virtual-portfolio:${id}:history:90` : null,
+    () => virtualPortfoliosApi.getHistory(id!, 90)
+  );
+  const history = histData?.history ?? [];
+
+  const distribution = useMemo(() => {
+    const total = positions.reduce((s, p) => s + p.totalValue, 0);
+    if (total === 0) return [];
+    return positions
+      .map((p) => ({ label: p.symbol, pct: (p.totalValue / total) * 100 }))
+      .sort((a, b) => b.pct - a.pct);
+  }, [positions]);
 
   // Add position dialog — XL picker + inline form
   const [open, setOpen] = useState(false);
@@ -91,6 +107,7 @@ export function VirtualPortfolioPage() {
         market,
       });
       invalidateApiCache(`virtual-portfolio:${id}`);
+      invalidateApiCache(`virtual-portfolio:${id}:history:90`);
       setSelected(null);
       setQuantity("");
       setAvgPrice("");
@@ -109,6 +126,7 @@ export function VirtualPortfolioPage() {
     try {
       await virtualPortfoliosApi.removePosition(id, pendingDelete.id);
       invalidateApiCache(`virtual-portfolio:${id}`);
+      invalidateApiCache(`virtual-portfolio:${id}:history:90`);
       setPendingDelete(null);
       await refetch({ forceLoading: true });
     } catch (err) {
@@ -337,6 +355,12 @@ export function VirtualPortfolioPage() {
       </div>
 
       {totals && <PortfolioStats mode="virtual" totals={totals} />}
+
+      {/* Gráfico de evolución + Distribución — paridad con DashboardPage */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <PortfolioEvolution history={history} />
+        <PortfolioDistribution distribution={distribution} />
+      </div>
 
       {/* Tabla posiciones */}
       <Card className="animate-in fade-in-0 slide-in-from-bottom-1 duration-300 motion-reduce:animate-none">
