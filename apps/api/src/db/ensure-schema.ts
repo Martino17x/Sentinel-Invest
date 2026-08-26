@@ -244,6 +244,59 @@ const INVESTOR_ENUM_MIGRATIONS = [
 ];
 
 /**
+ * Enum created_by para portfolio_investment_plans — idempotente
+ * vía DO block (Postgres no tiene CREATE TYPE IF NOT EXISTS).
+ */
+const INVESTMENT_PLAN_ENUM_MIGRATIONS = [
+  sql`DO $$ BEGIN
+        CREATE TYPE created_by AS ENUM ('user', 'agent');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$`,
+];
+
+/**
+ * Tabla portfolio_investment_plans — ADDITIVE, idempotente.
+ * Espeja apps/api/src/db/schema.ts (portfolioInvestmentPlans).
+ * Incluye CREATE TABLE IF NOT EXISTS + índices + ALTER ADD COLUMN
+ * para drift, y seed v1 idempotente para f4948001-... (ON CONFLICT DO NOTHING).
+ */
+const INVESTMENT_PLAN_TABLE_MIGRATIONS = [
+  sql`CREATE TABLE IF NOT EXISTS portfolio_investment_plans (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        portfolio_id uuid NOT NULL REFERENCES virtual_portfolios(id) ON DELETE CASCADE,
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        version integer NOT NULL CHECK (version > 0),
+        title text NOT NULL,
+        objective text,
+        allocation_target jsonb NOT NULL,
+        rationale text,
+        constraints jsonb,
+        created_by created_by NOT NULL,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        UNIQUE (portfolio_id, version)
+      )`,
+  sql`CREATE INDEX IF NOT EXISTS plans_portfolio_idx ON portfolio_investment_plans (portfolio_id)`,
+  sql`CREATE UNIQUE INDEX IF NOT EXISTS plans_portfolio_version_unique ON portfolio_investment_plans (portfolio_id, version)`,
+  // Drift guards — ALTER ADD COLUMN IF NOT EXISTS para cada columna
+  sql`ALTER TABLE portfolio_investment_plans ADD COLUMN IF NOT EXISTS portfolio_id uuid`,
+  sql`ALTER TABLE portfolio_investment_plans ADD COLUMN IF NOT EXISTS user_id uuid`,
+  sql`ALTER TABLE portfolio_investment_plans ADD COLUMN IF NOT EXISTS version integer`,
+  sql`ALTER TABLE portfolio_investment_plans ADD COLUMN IF NOT EXISTS title text`,
+  sql`ALTER TABLE portfolio_investment_plans ADD COLUMN IF NOT EXISTS objective text`,
+  sql`ALTER TABLE portfolio_investment_plans ADD COLUMN IF NOT EXISTS allocation_target jsonb`,
+  sql`ALTER TABLE portfolio_investment_plans ADD COLUMN IF NOT EXISTS rationale text`,
+  sql`ALTER TABLE portfolio_investment_plans ADD COLUMN IF NOT EXISTS constraints jsonb`,
+  sql`ALTER TABLE portfolio_investment_plans ADD COLUMN IF NOT EXISTS created_by created_by`,
+  sql`ALTER TABLE portfolio_investment_plans ADD COLUMN IF NOT EXISTS created_at timestamptz`,
+  // Seed v1 idempotente — 40/35/15/10 (CER 40, equity global/local 35, dollar_linked 15, cash 10)
+  // allocation_target: T2X5 20 + TX26 20 = 40 CER, SPY 10 + AAPL 10 + MSFT 7 + META 5 + YPFD 3 = 35 equity, dollar_linked 15, cash 10
+  sql`INSERT INTO portfolio_investment_plans (portfolio_id, user_id, version, title, objective, allocation_target, rationale, constraints, created_by)
+      SELECT 'f4948001-3807-404c-bca0-b08f9d803404', user_id, 1, 'Cartera Moderada CER+ Diversificada v1', 'Superar CER con diversificacion moderada 40% CER / 35% equity global y local / 15% dollar-linked / 10% cash', '{"T2X5":20,"TX26":20,"SPY":10,"AAPL":10,"MSFT":7,"META":5,"YPFD":3,"cash":10,"dollar_linked":15}'::jsonb, 'Plan base v1: 40% CER (T2X5/TX26) para cobertura inflacion, 35% equity diversificado global y local (SPY/AAPL/MSFT/META/YPFD), 15% dollar-linked y 10% cash para liquidez. Objetivo superar CER con volatilidad moderada.', '{"maxPorActivo":25,"maxSector":40,"betaMax":1.2}'::jsonb, 'user'::created_by
+      FROM virtual_portfolios WHERE id = 'f4948001-3807-404c-bca0-b08f9d803404'
+      ON CONFLICT (portfolio_id, version) DO NOTHING`,
+];
+
+/**
  * Tablas del perfil inversor + stubs advisory — ADDITIVE, idempotente.
  * Espejan apps/api/src/db/schema.ts (investor_profiles, analysis_runs,
  * portfolio_proposals). Re-correr N veces = no-op.
@@ -306,6 +359,8 @@ export async function ensureSchema(): Promise<void> {
     ...VIRTUAL_PORTFOLIO_MIGRATIONS,
     ...INVESTOR_ENUM_MIGRATIONS,
     ...INVESTOR_TABLE_MIGRATIONS,
+    ...INVESTMENT_PLAN_ENUM_MIGRATIONS,
+    ...INVESTMENT_PLAN_TABLE_MIGRATIONS,
   ]) {
     await db.execute(statement);
   }

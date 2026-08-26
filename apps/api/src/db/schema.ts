@@ -40,6 +40,8 @@ export const cashMovementStatusEnum = pgEnum("cash_movement_status", ["confirmed
 export const riskToleranceEnum = pgEnum("risk_tolerance", ["conservador", "moderado", "agresivo"]);
 export const horizonEnum = pgEnum("horizon", ["corto", "medio", "largo"]);
 
+export const createdByEnum = pgEnum("created_by", ["user", "agent"]);
+
 // ============================================================
 // USERS — el corazón del multitenant
 // ============================================================
@@ -61,6 +63,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   aiChatSessions: many(aiChatSessions),
   apiKeys: many(apiKeys),
   agentActions: many(agentActions),
+  portfolioInvestmentPlans: many(portfolioInvestmentPlans),
 }));
 
 // ============================================================
@@ -570,6 +573,7 @@ export const virtualPortfolios = pgTable(
 export const virtualPortfoliosRelations = relations(virtualPortfolios, ({ one, many }) => ({
   user: one(users, { fields: [virtualPortfolios.userId], references: [users.id] }),
   positions: many(virtualPositions),
+  investmentPlans: many(portfolioInvestmentPlans),
 }));
 
 export const virtualPositions = pgTable(
@@ -600,6 +604,54 @@ export const virtualPositionsRelations = relations(virtualPositions, ({ one }) =
   portfolio: one(virtualPortfolios, {
     fields: [virtualPositions.portfolioId],
     references: [virtualPortfolios.id],
+  }),
+}));
+
+// ============================================================
+// PORTFOLIO INVESTMENT PLANS — plan versionado por portfolio
+// Append-only: cada portfolio tiene versiones crecientes (unique
+// portfolio_id + version). FK CASCADE a virtual_portfolios y users.
+// allocation_target jsonb {symbol: pct}, constraints jsonb.
+// ============================================================
+
+export const portfolioInvestmentPlans = pgTable(
+  "portfolio_investment_plans",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    portfolioId: uuid("portfolio_id")
+      .notNull()
+      .references(() => virtualPortfolios.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    title: text("title").notNull(),
+    objective: text("objective"),
+    allocationTarget: jsonb("allocation_target").$type<Record<string, number>>().notNull(),
+    rationale: text("rationale"),
+    constraints: jsonb("constraints").$type<{
+      maxPorActivo?: number;
+      maxSector?: number;
+      betaMax?: number;
+    }>(),
+    createdBy: createdByEnum("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("plans_portfolio_version_unique").on(table.portfolioId, table.version),
+    index("plans_portfolio_idx").on(table.portfolioId),
+    check("plans_version_positive", sql`version > 0`),
+  ]
+);
+
+export const portfolioInvestmentPlansRelations = relations(portfolioInvestmentPlans, ({ one }) => ({
+  portfolio: one(virtualPortfolios, {
+    fields: [portfolioInvestmentPlans.portfolioId],
+    references: [virtualPortfolios.id],
+  }),
+  user: one(users, {
+    fields: [portfolioInvestmentPlans.userId],
+    references: [users.id],
   }),
 }));
 
