@@ -63,6 +63,13 @@ export function isRouteActive(targetPath: string, currentPathname: string): bool
     );
   }
 
+  if (targetPath === "/radar") {
+    return (
+      currentPathname === "/radar" ||
+      currentPathname.startsWith("/radar/")
+    );
+  }
+
   if (targetPath === "/investor-profile") {
     return (
       currentPathname === "/investor-profile" ||
