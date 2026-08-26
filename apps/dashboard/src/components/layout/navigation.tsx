@@ -15,9 +15,9 @@ import {
   Shield,
   Link2,
   ChevronDown,
-  Layers,
   Compass,
-  Menu,
+  Newspaper,
+  Layers,
   Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -40,13 +40,7 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/context/AuthContext";
 import { isRouteActive } from "@/lib/nav";
 import { cn } from "@/lib/utils";
@@ -61,21 +55,27 @@ function getInitials(name: string | null | undefined, email: string): string {
 }
 
 /**
- * Header Opción B — 4 primarios + Command Palette ⌘K
+ * Header Opción B — fix: desktop sin Cartera dropdown, Mercado como popover card.
  *
  * Desktop (md+):
- *   Sentinel | Inicio | Cartera▾ (Portafolio / Seguimiento) | Mercado▾ (Renta Fija / Radar / Explorar / Cotizaciones) | Reportes | 🔍 Buscar (⌘K) | avatar▾
+ *   Sentinel | Inicio | Portafolio | Cotizaciones | Mercado▾(popover card) | Reportes | 🔍 Buscar (⌘K) | avatar▾
+ *   - Cartera dropdown eliminado: Seguimiento accesible desde /portfolio (vista Portafolio).
+ *   - Cotizaciones como link individual (no dentro de Mercado).
+ *   - Mercado como Popover (no DropdownMenu) estilo card con grid de links e iconos,
+ *     patrón glass-popover igual al popover "Más" mobile (GlassPopoverContent).
+ *     Contenido: Renta Fija, Radar CCL, Explorar, Noticias, Operaciones.
+ *     Operaciones movido a Mercado para agrupar herramientas de mercado; alternativa era
+ *     dejarlo top-level pero saturaba la barra (5 primarios ya).
  * Mobile:
- *   Logo | Buscar icon | hamburger → drawer con mismos 4 primarios | avatar
- *   BottomNav permanece intacto (< md).
- * Agente vive en AgentChatDrawer (FAB flotante); en avatar solo link a /agent-connect.
+ *   Header: logo + Buscar icon + avatar (sin hamburger drawer — drawer eliminado, BottomNav intacta).
+ *   BottomNav permanece intacta (< md) con 6 tabs, sin cambios (ver git diff HEAD~1 BottomNav).
+ *   Agente vive en AgentChatDrawer (FAB); en avatar solo link a /agent-connect.
  */
 export function Navigation() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [cmdOpen, setCmdOpen] = useState(false);
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   async function handleLogout() {
     await logout();
@@ -98,25 +98,21 @@ export function Navigation() {
 
   const isInicioActive = isRouteActive("/inicio", location.pathname);
   const isReportesActive = isRouteActive("/reports", location.pathname);
-  const isCarteraActive =
-    isRouteActive("/portfolio", location.pathname) ||
-    location.pathname.startsWith("/portfolio/seguimiento");
+  const isPortafolioActive =
+    location.pathname === "/portfolio" || location.pathname === "/dashboard";
+  const isCotizacionesActive = isRouteActive("/quotes", location.pathname);
   const isMercadoActive =
     isRouteActive("/renta-fija", location.pathname) ||
     isRouteActive("/radar", location.pathname) ||
-    isRouteActive("/quotes", location.pathname) ||
-    isRouteActive("/explorar", location.pathname);
+    isRouteActive("/explorar", location.pathname) ||
+    isRouteActive("/news", location.pathname) ||
+    isRouteActive("/operations", location.pathname) ||
+    isRouteActive("/operar", location.pathname);
 
   function runCommand(fn: () => void) {
     setCmdOpen(false);
-    setMobileNavOpen(false);
     fn();
   }
-
-  // Helpers for dropdown active states
-  const isPortafolioActive =
-    location.pathname === "/portfolio" || location.pathname === "/dashboard";
-  const isSeguimientoActive = location.pathname.startsWith("/portfolio/seguimiento");
 
   return (
     <>
@@ -129,7 +125,7 @@ export function Navigation() {
               <span>Sentinel</span>
             </Link>
 
-            {/* Desktop nav — 4 primarios */}
+            {/* Desktop nav — Inicio | Portafolio | Cotizaciones | Mercado(popover) | Reportes */}
             <nav className="hidden items-center gap-1 md:flex" aria-label="Navegación principal">
               {/* Inicio */}
               <Link
@@ -146,52 +142,39 @@ export function Navigation() {
                 Inicio
               </Link>
 
-              {/* Cartera ▾ */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    aria-label="Cartera"
-                    className={cn(
-                      "inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      isCarteraActive
-                        ? "bg-accent text-foreground font-semibold"
-                        : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                    )}
-                  >
-                    <Briefcase className={cn("h-4 w-4", isCarteraActive && "text-primary")} />
-                    Cartera
-                    <ChevronDown className="h-3 w-3 opacity-60" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="start"
-                  className="w-56 animate-in fade-in-0 zoom-in-95 motion-reduce:animate-none"
-                >
-                  <DropdownMenuItem
-                    asChild
-                    className={cn(isPortafolioActive && "bg-accent")}
-                  >
-                    <Link to="/portfolio" onClick={() => setMobileNavOpen(false)}>
-                      <Briefcase className="mr-2 h-4 w-4" />
-                      Portafolio
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    asChild
-                    className={cn(isSeguimientoActive && "bg-accent")}
-                  >
-                    <Link to="/portfolio/seguimiento" onClick={() => setMobileNavOpen(false)}>
-                      <Layers className="mr-2 h-4 w-4" />
-                      Seguimiento
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {/* Portafolio — individual, sin dropdown Cartera */}
+              <Link
+                to="/portfolio"
+                aria-current={isPortafolioActive ? "page" : undefined}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors",
+                  isPortafolioActive
+                    ? "bg-accent text-foreground font-semibold"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                )}
+              >
+                <Briefcase className={cn("h-4 w-4", isPortafolioActive && "text-primary")} />
+                Portafolio
+              </Link>
 
-              {/* Mercado ▾ */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+              {/* Cotizaciones — individual */}
+              <Link
+                to="/quotes"
+                aria-current={isCotizacionesActive ? "page" : undefined}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors",
+                  isCotizacionesActive
+                    ? "bg-accent text-foreground font-semibold"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                )}
+              >
+                <LineChart className={cn("h-4 w-4", isCotizacionesActive && "text-primary")} />
+                Cotizaciones
+              </Link>
+
+              {/* Mercado — Popover card (no DropdownMenu), estilo GlassPopover "Más" mobile */}
+              <Popover>
+                <PopoverTrigger asChild>
                   <button
                     type="button"
                     aria-label="Mercado"
@@ -206,37 +189,80 @@ export function Navigation() {
                     Mercado
                     <ChevronDown className="h-3 w-3 opacity-60" />
                   </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
+                </PopoverTrigger>
+                <PopoverContent
                   align="start"
-                  className="w-56 animate-in fade-in-0 zoom-in-95 motion-reduce:animate-none"
+                  side="bottom"
+                  sideOffset={8}
+                  className="w-80 max-w-[calc(100vw-2rem)] rounded-[20px] border border-white/20 bg-white/80 p-3 shadow-xl shadow-black/10 ring-1 ring-black/[0.04] backdrop-blur-xl supports-[backdrop-filter]:bg-white/80 dark:border-white/10 dark:bg-zinc-900/70 dark:ring-white/10"
                 >
-                  <DropdownMenuItem asChild>
-                    <Link to="/renta-fija">
-                      <Landmark className="mr-2 h-4 w-4" />
-                      Renta Fija
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <Link
+                      to="/renta-fija"
+                      className={cn(
+                        "flex flex-col gap-1 rounded-xl border px-3 py-3 text-left transition-colors hover:bg-accent",
+                        isRouteActive("/renta-fija", location.pathname) && "bg-accent"
+                      )}
+                    >
+                      <span className="flex items-center gap-2 text-sm font-medium">
+                        <Landmark className="h-4 w-4 text-muted-foreground" />
+                        Renta Fija
+                      </span>
+                      <span className="text-xs text-muted-foreground">Bonos & curva</span>
                     </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/radar">
-                      <ArrowLeftRight className="mr-2 h-4 w-4" />
-                      Radar CCL
+                    <Link
+                      to="/radar"
+                      className={cn(
+                        "flex flex-col gap-1 rounded-xl border px-3 py-3 text-left transition-colors hover:bg-accent",
+                        isRouteActive("/radar", location.pathname) && "bg-accent"
+                      )}
+                    >
+                      <span className="flex items-center gap-2 text-sm font-medium">
+                        <ArrowLeftRight className="h-4 w-4 text-muted-foreground" />
+                        Radar CCL
+                      </span>
+                      <span className="text-xs text-muted-foreground">Brecha dólar</span>
                     </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/explorar">
-                      <Search className="mr-2 h-4 w-4" />
-                      Explorar
+                    <Link
+                      to="/explorar"
+                      className={cn(
+                        "flex flex-col gap-1 rounded-xl border px-3 py-3 text-left transition-colors hover:bg-accent",
+                        isRouteActive("/explorar", location.pathname) && "bg-accent"
+                      )}
+                    >
+                      <span className="flex items-center gap-2 text-sm font-medium">
+                        <Search className="h-4 w-4 text-muted-foreground" />
+                        Explorar
+                      </span>
+                      <span className="text-xs text-muted-foreground">Screener</span>
                     </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/quotes">
-                      <LineChart className="mr-2 h-4 w-4" />
-                      Cotizaciones
+                    <Link
+                      to="/news"
+                      className={cn(
+                        "flex flex-col gap-1 rounded-xl border px-3 py-3 text-left transition-colors hover:bg-accent",
+                        isRouteActive("/news", location.pathname) && "bg-accent"
+                      )}
+                    >
+                      <span className="flex items-center gap-2 text-sm font-medium">
+                        <Newspaper className="h-4 w-4 text-muted-foreground" />
+                        Noticias
+                      </span>
+                      <span className="text-xs text-muted-foreground">Mercado</span>
                     </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    <Link
+                      to="/operations"
+                      className={cn(
+                        "col-span-2 flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-accent",
+                        isRouteActive("/operations", location.pathname) && "bg-accent"
+                      )}
+                    >
+                      <Link2 className="h-4 w-4 text-muted-foreground" />
+                      Operaciones
+                      <span className="ml-auto text-xs font-normal text-muted-foreground">Historial</span>
+                    </Link>
+                  </div>
+                </PopoverContent>
+              </Popover>
 
               {/* Reportes */}
               <Link
@@ -255,7 +281,7 @@ export function Navigation() {
             </nav>
           </div>
 
-          {/* Derecha: Buscar + avatar (+ hamburger mobile) */}
+          {/* Derecha: Buscar + avatar (sin hamburger en mobile — BottomNav intacta) */}
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             {/* Buscar (⌘K) — desktop */}
             <Button
@@ -280,18 +306,6 @@ export function Navigation() {
               aria-label="Buscar"
             >
               <Search className="h-5 w-5" />
-            </Button>
-
-            {/* Hamburger — mobile: abre drawer con 4 primarios */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden"
-              onClick={() => setMobileNavOpen(true)}
-              aria-label="Abrir menú"
-              aria-expanded={mobileNavOpen}
-            >
-              <Menu className="h-5 w-5" />
             </Button>
 
             {/* Avatar dropdown */}
@@ -365,123 +379,6 @@ export function Navigation() {
           </div>
         </div>
       </header>
-
-      {/* Mobile drawer — 4 primarios agrupados */}
-      <Dialog open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-        <DialogContent
-          className="top-0 left-0 h-[100dvh] w-[84vw] max-w-[320px] translate-x-0 translate-y-0 rounded-none border-r p-0 gap-0 animate-in fade-in slide-in-from-left-2 motion-reduce:animate-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-left-2 sm:max-w-[320px]"
-          aria-describedby={undefined}
-        >
-          <DialogHeader className="shrink-0 border-b px-4 py-4 text-left">
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              Sentinel
-            </DialogTitle>
-            <DialogDescription className="sr-only">Navegación principal</DialogDescription>
-          </DialogHeader>
-          <nav className="flex flex-col gap-1 overflow-y-auto p-3" aria-label="Navegación móvil">
-            <Link
-              to="/inicio"
-              onClick={() => setMobileNavOpen(false)}
-              className={cn(
-                "flex items-center gap-2.5 rounded-md px-3 py-2.5 text-sm font-medium",
-                isInicioActive ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent hover:text-foreground"
-              )}
-            >
-              <Home className="h-4 w-4" />
-              Inicio
-            </Link>
-
-            <p className="mt-2 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Cartera
-            </p>
-            <Link
-              to="/portfolio"
-              onClick={() => setMobileNavOpen(false)}
-              className={cn(
-                "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm",
-                isPortafolioActive ? "bg-accent font-medium text-foreground" : "text-muted-foreground hover:bg-accent hover:text-foreground"
-              )}
-            >
-              <Briefcase className="h-4 w-4" />
-              Portafolio
-            </Link>
-            <Link
-              to="/portfolio/seguimiento"
-              onClick={() => setMobileNavOpen(false)}
-              className={cn(
-                "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm",
-                isSeguimientoActive ? "bg-accent font-medium text-foreground" : "text-muted-foreground hover:bg-accent hover:text-foreground"
-              )}
-            >
-              <Layers className="h-4 w-4" />
-              Seguimiento
-            </Link>
-
-            <p className="mt-2 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Mercado
-            </p>
-            <Link
-              to="/renta-fija"
-              onClick={() => setMobileNavOpen(false)}
-              className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
-            >
-              <Landmark className="h-4 w-4" />
-              Renta Fija
-            </Link>
-            <Link
-              to="/radar"
-              onClick={() => setMobileNavOpen(false)}
-              className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
-            >
-              <ArrowLeftRight className="h-4 w-4" />
-              Radar CCL
-            </Link>
-            <Link
-              to="/explorar"
-              onClick={() => setMobileNavOpen(false)}
-              className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
-            >
-              <Search className="h-4 w-4" />
-              Explorar
-            </Link>
-            <Link
-              to="/quotes"
-              onClick={() => setMobileNavOpen(false)}
-              className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
-            >
-              <LineChart className="h-4 w-4" />
-              Cotizaciones
-            </Link>
-
-            <Link
-              to="/reports"
-              onClick={() => setMobileNavOpen(false)}
-              className={cn(
-                "mt-2 flex items-center gap-2.5 rounded-md px-3 py-2.5 text-sm font-medium",
-                isReportesActive ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent hover:text-foreground"
-              )}
-            >
-              <BarChart3 className="h-4 w-4" />
-              Reportes
-            </Link>
-
-            <div className="mt-2 border-t pt-3">
-              <Button
-                variant="outline"
-                className="w-full justify-start gap-2"
-                onClick={() => {
-                  setMobileNavOpen(false);
-                  setCmdOpen(true);
-                }}
-              >
-                <Search className="h-4 w-4" />
-                Buscar (⌘K)
-              </Button>
-            </div>
-          </nav>
-        </DialogContent>
-      </Dialog>
 
       {/* Command Palette ⌘K */}
       <CommandDialog open={cmdOpen} onOpenChange={setCmdOpen}>
@@ -558,6 +455,13 @@ export function Navigation() {
             >
               <LineChart className="mr-2 h-4 w-4" />
               Cotizaciones
+            </CommandItem>
+            <CommandItem
+              value="noticias news mercado"
+              onSelect={() => runCommand(() => navigate("/news"))}
+            >
+              <Newspaper className="mr-2 h-4 w-4" />
+              Noticias
             </CommandItem>
             <CommandItem
               value="operar trading"
