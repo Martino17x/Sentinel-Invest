@@ -344,6 +344,34 @@ export interface VirtualMonthClose {
   netContributionsArs: number;
 }
 
+export interface InvestmentPlan {
+  id: string;
+  portfolio_id: string;
+  portfolioId: string;
+  user_id: string;
+  userId: string;
+  version: number;
+  title: string;
+  objective: string | null;
+  allocation_target: Record<string, number>;
+  allocationTarget: Record<string, number>;
+  rationale: string | null;
+  constraints: { maxPorActivo?: number; maxSector?: number; betaMax?: number } | null;
+  created_by: string;
+  createdBy: string;
+  created_at: string;
+  createdAt: string;
+}
+
+export interface CreateInvestmentPlanInput {
+  title: string;
+  objective?: string;
+  allocation_target: Record<string, number>;
+  allocationTarget?: Record<string, number>;
+  rationale?: string;
+  constraints?: { maxPorActivo?: number; maxSector?: number; betaMax?: number };
+}
+
 export const virtualPortfoliosApi = {
   async list(): Promise<{ portfolios: VirtualPortfolio[] }> {
     return apiFetch("/virtual-portfolios");
@@ -379,6 +407,41 @@ export const virtualPortfoliosApi = {
     days = 90
   ): Promise<{ history: PortfolioSnapshotPoint[]; message?: string }> {
     return apiFetch(`/virtual-portfolios/${encodeURIComponent(portfolioId)}/history?days=${days}`);
+  },
+
+  // --- Investment Plans (append-only versionado por portfolio) ---
+  async getPlans(portfolioId: string): Promise<{ plans: InvestmentPlan[] }> {
+    return apiFetch(`/virtual-portfolios/${encodeURIComponent(portfolioId)}/plans`);
+  },
+  async listPlans(portfolioId: string): Promise<{ plans: InvestmentPlan[] }> {
+    return apiFetch(`/virtual-portfolios/${encodeURIComponent(portfolioId)}/plans`);
+  },
+  async getPlansHistory(portfolioId: string): Promise<{ plans: InvestmentPlan[] }> {
+    return apiFetch(`/virtual-portfolios/${encodeURIComponent(portfolioId)}/plans`);
+  },
+  async getInvestmentPlanLatest(portfolioId: string): Promise<{ plan: InvestmentPlan | null }> {
+    return apiFetch(`/virtual-portfolios/${encodeURIComponent(portfolioId)}/plans/latest`);
+  },
+  async getLatestPlan(portfolioId: string): Promise<{ plan: InvestmentPlan | null }> {
+    return apiFetch(`/virtual-portfolios/${encodeURIComponent(portfolioId)}/plans/latest`);
+  },
+  async getPlan(portfolioId: string, version: number): Promise<{ plan: InvestmentPlan }> {
+    return apiFetch(`/virtual-portfolios/${encodeURIComponent(portfolioId)}/plans/${version}`);
+  },
+  async getInvestmentPlans(portfolioId: string): Promise<{ plans: InvestmentPlan[] }> {
+    return apiFetch(`/virtual-portfolios/${encodeURIComponent(portfolioId)}/plans`);
+  },
+  async createInvestmentPlan(portfolioId: string, data: CreateInvestmentPlanInput): Promise<{ plan: InvestmentPlan }> {
+    return apiFetch(`/virtual-portfolios/${encodeURIComponent(portfolioId)}/plans`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+  async createPlan(portfolioId: string, data: CreateInvestmentPlanInput): Promise<{ plan: InvestmentPlan }> {
+    return apiFetch(`/virtual-portfolios/${encodeURIComponent(portfolioId)}/plans`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   },
 };
 

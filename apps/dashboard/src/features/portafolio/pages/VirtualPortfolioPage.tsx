@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AssetTypeBadge } from "@/components/ui/asset-type-badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,9 @@ import { PortfolioPositionsTable } from "@/components/portfolio/PortfolioPositio
 import { PortfolioMobileCard } from "@/components/portfolio/PortfolioMobileCard";
 import { PortfolioEvolution } from "@/components/portfolio/PortfolioEvolution";
 import { PortfolioDistribution } from "@/components/portfolio/PortfolioDistribution";
+import { PlanObjetivoVsActual } from "@/features/portafolio/components/PlanObjetivoVsActual";
+import { PlanTimeline } from "@/features/portafolio/components/PlanTimeline";
+import { PlanNewVersionDialog } from "@/features/portafolio/components/PlanNewVersionDialog";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
@@ -44,6 +48,13 @@ export function VirtualPortfolioPage() {
     () => virtualPortfoliosApi.getHistory(id!, 90)
   );
   const history = histData?.history ?? [];
+
+  const { data: plansData, refetch: refetchPlans } = useApiData(
+    id ? `virtual-portfolio:${id}:plans` : null,
+    () => virtualPortfoliosApi.getPlans(id!)
+  );
+  const plans = plansData?.plans ?? [];
+  const latestPlan = plans[0] ?? null;
 
   const distribution = useMemo(() => {
     const total = positions.reduce((s, p) => s + p.totalValue, 0);
@@ -356,41 +367,65 @@ export function VirtualPortfolioPage() {
 
       {totals && <PortfolioStats mode="virtual" totals={totals} />}
 
-      {/* Gráfico de evolución + Distribución — paridad con DashboardPage */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <PortfolioEvolution history={history} />
-        <PortfolioDistribution distribution={distribution} />
-      </div>
+      <Tabs defaultValue="posiciones" className="w-full">
+        <div className="flex items-center justify-between gap-2">
+          <TabsList>
+            <TabsTrigger value="posiciones">Posiciones</TabsTrigger>
+            <TabsTrigger value="plan">Plan</TabsTrigger>
+          </TabsList>
+          <Button variant="outline" size="sm" className="gap-1.5 lg:hidden" asChild>
+            <Link to="./reportes">
+              <BarChart3 className="h-4 w-4" /> Reportes
+            </Link>
+          </Button>
+        </div>
 
-      {/* Tabla posiciones */}
-      <Card className="animate-in fade-in-0 slide-in-from-bottom-1 duration-300 motion-reduce:animate-none">
-        <CardHeader>
-          <CardTitle>Posiciones</CardTitle>
-          <CardDescription>
-            {positions.length === 0
-              ? "Todavía no agregaste posiciones"
-              : `${positions.length} ${positions.length === 1 ? "posición" : "posiciones"} — valor actual con cotización del momento`}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {positions.length === 0 ? (
-            <div className="rounded-lg border border-dashed p-8 text-center">
-              <p className="text-sm text-muted-foreground">Usá &quot;Agregar posición&quot; para simular tu primera tenencia.</p>
-            </div>
-          ) : (
-            <>
-              <div className="space-y-3 lg:hidden">
-                {positions.map((pos) => (
-                  <PortfolioMobileCard key={pos.id} mode="virtual" position={pos} onRemove={setPendingDelete} />
-                ))}
-              </div>
-              <div className="hidden lg:block">
-                <PortfolioPositionsTable mode="virtual" positions={positions} onRemove={setPendingDelete} />
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+        <TabsContent value="posiciones" className="space-y-4 mt-4 animate-in fade-in-0 duration-200 motion-reduce:animate-none">
+          {/* Gráfico de evolución + Distribución — paridad con DashboardPage */}
+          <div className="grid gap-4 lg:grid-cols-3">
+            <PortfolioEvolution history={history} />
+            <PortfolioDistribution distribution={distribution} />
+          </div>
+
+          {/* Tabla posiciones */}
+          <Card className="animate-in fade-in-0 slide-in-from-bottom-1 duration-300 motion-reduce:animate-none">
+            <CardHeader>
+              <CardTitle>Posiciones</CardTitle>
+              <CardDescription>
+                {positions.length === 0
+                  ? "Todavía no agregaste posiciones"
+                  : `${positions.length} ${positions.length === 1 ? "posición" : "posiciones"} — valor actual con cotización del momento`}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {positions.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-8 text-center">
+                  <p className="text-sm text-muted-foreground">Usá &quot;Agregar posición&quot; para simular tu primera tenencia.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-3 lg:hidden">
+                    {positions.map((pos) => (
+                      <PortfolioMobileCard key={pos.id} mode="virtual" position={pos} onRemove={setPendingDelete} />
+                    ))}
+                  </div>
+                  <div className="hidden lg:block">
+                    <PortfolioPositionsTable mode="virtual" positions={positions} onRemove={setPendingDelete} />
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="plan" className="space-y-4 mt-4 animate-in fade-in-0 duration-200 motion-reduce:animate-none">
+          <div className="flex justify-end">
+            <PlanNewVersionDialog portfolioId={id!} onCreated={() => refetchPlans()} />
+          </div>
+          <PlanObjetivoVsActual plan={latestPlan} positions={positions} />
+          <PlanTimeline plans={plans} />
+        </TabsContent>
+      </Tabs>
 
       {/* Dialog confirmar borrado */}
       <Dialog open={!!pendingDelete} onOpenChange={(o) => !o && setPendingDelete(null)}>
