@@ -43,6 +43,7 @@ const RentaFijaCalendarioPage = lazy(() => import("@/features/renta-fija/pages/R
 const RentaFijaComparePage = lazy(() => import("@/features/renta-fija/pages/RentaFijaComparePage"));
 const RentaFijaScreenerPage = lazy(() => import("@/features/renta-fija/pages/RentaFijaScreenerPage"));
 const InvestorProfilePage = lazy(() => import("@/pages/InvestorProfile"));
+const OnboardingWelcomePage = lazy(() => import("@/pages/OnboardingWelcomePage"));
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -354,6 +355,20 @@ function App() {
                   }
                 >
                   <InvestorProfilePage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/onboarding"
+              element={
+                <Suspense
+                  fallback={
+                    <div className="flex min-h-48 items-center justify-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  }
+                >
+                  <OnboardingWelcomePage />
                 </Suspense>
               }
             />

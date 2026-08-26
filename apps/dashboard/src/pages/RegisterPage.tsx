@@ -30,7 +30,7 @@ export function RegisterPage() {
     setSubmitting(true);
     try {
       await register(email, password, fullName || undefined);
-      navigate("/inicio");
+      navigate("/onboarding");
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo crear la cuenta");
     } finally {

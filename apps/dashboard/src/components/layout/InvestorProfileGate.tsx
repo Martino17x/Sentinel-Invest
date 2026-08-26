@@ -54,6 +54,7 @@ function snooze(): void {
 }
 
 const PROFILE_ROUTES = new Set(["/investor-profile", "/perfil-inversor"]);
+const ONBOARDING_ROUTES = new Set(["/onboarding"]);
 
 export function InvestorProfileGate() {
   const navigate = useNavigate();
@@ -62,10 +63,11 @@ export function InvestorProfileGate() {
   const [checked, setChecked] = useState(false);
 
   const isOnProfilePage = PROFILE_ROUTES.has(location.pathname);
+  const isOnboardingPage = ONBOARDING_ROUTES.has(location.pathname);
 
   const checkProfile = useCallback(async () => {
-    // No chequear si ya está en la página del test — evita auto-bloquearse
-    if (isOnProfilePage) {
+    // No chequear si ya está en la página del test o del onboarding — evita auto-bloquearse
+    if (isOnProfilePage || isOnboardingPage) {
       setNeedsProfile(false);
       setChecked(true);
       return;
@@ -92,7 +94,7 @@ export function InvestorProfileGate() {
     } finally {
       setChecked(true);
     }
-  }, [isOnProfilePage]);
+  }, [isOnProfilePage, isOnboardingPage]);
 
   useEffect(() => {
     // Re-chequear al cambiar de ruta (por si completó el test y volvió)
@@ -120,8 +122,8 @@ export function InvestorProfileGate() {
 
   // Mientras no se verificó, no mostrar nada (evita flash)
   if (!checked) return null;
-  // En la propia página del test nunca mostrar el gate
-  if (isOnProfilePage) return null;
+  // En la propia página del test o del onboarding nunca mostrar el gate
+  if (isOnProfilePage || isOnboardingPage) return null;
   // Con perfil o snoozeado, no mostrar
   if (!needsProfile) return null;
 
