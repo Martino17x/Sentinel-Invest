@@ -11,6 +11,7 @@ export type WeightKey = "horizon" | "loss" | "expIngreso" | "objetivo";
 export interface QuestionOption {
   value: number;
   label: string;
+  description?: string;
 }
 
 export interface InvestorProfileQuestion {
@@ -107,11 +108,11 @@ export const INVESTOR_PROFILE_QUESTIONS: readonly InvestorProfileQuestion[] = [
     label: "¿Cuánta experiencia y conocimiento financiero tenés?",
     weightKey: "expIngreso",
     options: [
-      { value: 0, label: "Ninguna, es mi primera vez" },
-      { value: 1, label: "Básica, leí algo" },
-      { value: 2, label: "Intermedia, operé pocas veces" },
-      { value: 3, label: "Avanzada, opero seguido" },
-      { value: 4, label: "Profesional / experto" },
+      { value: 0, label: "Ninguna, es mi primera vez", description: "Aún no operaste instrumentos" },
+      { value: 1, label: "Básica, leí algo", description: "Plazo fijo, FCI money market, billetera" },
+      { value: 2, label: "Intermedia, operé pocas veces", description: "CEDEARs, acciones, ETFs" },
+      { value: 3, label: "Avanzada, opero seguido", description: "ON, bonos, cauciones, futuros" },
+      { value: 4, label: "Profesional / experto", description: "Futuros y opciones (call y put), cauciones, análisis técnico/fundamental" },
     ],
   },
   {

@@ -332,7 +332,12 @@ export default function InvestorProfile() {
                     >
                       {selected ? <Check className="h-3.5 w-3.5" /> : null}
                     </span>
-                    <span className={selected ? "font-medium" : ""}>{opt.label}</span>
+                    <span className="flex flex-col gap-0.5">
+                      <span className={selected ? "font-medium" : ""}>{opt.label}</span>
+                      {opt.description ? (
+                        <span className="text-xs leading-snug text-muted-foreground">{opt.description}</span>
+                      ) : null}
+                    </span>
                   </button>
                 );
               })}
