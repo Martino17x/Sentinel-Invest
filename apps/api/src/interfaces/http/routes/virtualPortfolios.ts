@@ -20,6 +20,15 @@ import {
   ytdReturn,
 } from "../../../services/reports/metrics.js";
 import { addArtDays, artDateKeyFromUtc, artStartOfDay } from "../../../services/reports/art-time.js";
+import {
+  createPlan,
+  getLatest as getLatestPlan,
+  getPlan as getPlanByVersion,
+  InvestmentPlanError,
+  listPlans,
+} from "../../../services/portfolio/InvestmentPlanService.js";
+
+const ENABLE_INVESTMENT_PLAN = process.env.ENABLE_INVESTMENT_PLAN !== "false";
 
 const router = Router();
 router.use(requireAuth);
@@ -993,6 +1002,102 @@ router.get("/:id/reports/:month", async (req: Request, res: Response) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Error al consultar el reporte virtual";
     res.status(502).json({ error: message });
+  }
+});
+
+// ============================================================
+// Investment Plans — versionado append-only por portfolio
+// Feature-flag ENABLE_INVESTMENT_PLAN (default true). 4 endpoints:
+// POST /:id/plans — crear versión+1 transaccional
+// GET  /:id/plans — historial DESC
+// GET  /:id/plans/latest — última versión
+// GET  /:id/plans/:version — versión exacta
+// Todos requieren ownership (403 si no owner, 404 si no existe)
+// y validación 400/409 (Zod + símbolos + unique violation).
+// ============================================================
+
+function handlePlanError(err: unknown, res: Response) {
+  if (err instanceof InvestmentPlanError) {
+    const body: Record<string, unknown> = { error: err.message, code: err.code };
+    if (err.extra) Object.assign(body, err.extra);
+    // 409 VERSION_CONFLICT must include retry:true per spec
+    if (err.code === "VERSION_CONFLICT") body.retry = true;
+    res.status(err.status).json(body);
+    return true;
+  }
+  return false;
+}
+
+router.post("/:id/plans", async (req: Request, res: Response) => {
+  if (!ENABLE_INVESTMENT_PLAN) {
+    res.status(404).json({ error: "No encontrado", code: "NOT_FOUND" });
+    return;
+  }
+  const portfolioId = String(req.params.id);
+  const userId = req.user!.id;
+  try {
+    const plan = await createPlan(portfolioId, userId, req.body, "user");
+    res.status(201).json({ plan });
+  } catch (err) {
+    if (handlePlanError(err, res)) return;
+    console.error("[virtualPortfolios POST /:id/plans] error:", err);
+    if (!res.headersSent) res.status(500).json({ error: "Error al crear plan" });
+  }
+});
+
+router.get("/:id/plans", async (req: Request, res: Response) => {
+  if (!ENABLE_INVESTMENT_PLAN) {
+    res.status(404).json({ error: "No encontrado", code: "NOT_FOUND" });
+    return;
+  }
+  const portfolioId = String(req.params.id);
+  const userId = req.user!.id;
+  try {
+    const plans = await listPlans(portfolioId, userId);
+    res.json({ plans });
+  } catch (err) {
+    if (handlePlanError(err, res)) return;
+    console.error("[virtualPortfolios GET /:id/plans] error:", err);
+    if (!res.headersSent) res.status(500).json({ error: "Error al listar planes" });
+  }
+});
+
+router.get("/:id/plans/latest", async (req: Request, res: Response) => {
+  if (!ENABLE_INVESTMENT_PLAN) {
+    res.status(404).json({ error: "No encontrado", code: "NOT_FOUND" });
+    return;
+  }
+  const portfolioId = String(req.params.id);
+  const userId = req.user!.id;
+  try {
+    const plan = await getLatestPlan(portfolioId, userId);
+    res.json({ plan });
+  } catch (err) {
+    if (handlePlanError(err, res)) return;
+    console.error("[virtualPortfolios GET /:id/plans/latest] error:", err);
+    if (!res.headersSent) res.status(500).json({ error: "Error al obtener latest" });
+  }
+});
+
+router.get("/:id/plans/:version", async (req: Request, res: Response) => {
+  if (!ENABLE_INVESTMENT_PLAN) {
+    res.status(404).json({ error: "No encontrado", code: "NOT_FOUND" });
+    return;
+  }
+  const portfolioId = String(req.params.id);
+  const userId = req.user!.id;
+  const v = Number(req.params.version);
+  if (!Number.isInteger(v) || v <= 0) {
+    res.status(400).json({ error: "Versión inválida", code: "INVALID_VERSION" });
+    return;
+  }
+  try {
+    const plan = await getPlanByVersion(portfolioId, userId, v);
+    res.json({ plan });
+  } catch (err) {
+    if (handlePlanError(err, res)) return;
+    console.error("[virtualPortfolios GET /:id/plans/:version] error:", err);
+    if (!res.headersSent) res.status(500).json({ error: "Error al obtener plan" });
   }
 });
 
