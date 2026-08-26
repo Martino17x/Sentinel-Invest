@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Briefcase, Bookmark, TrendingUp, Calendar, Layers, Loader2, HelpCircle, X } from "lucide-react";
+import { Plus, Briefcase, Bookmark, TrendingUp, Calendar, Layers, Loader2, HelpCircle, X, ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -116,6 +116,9 @@ export function PortfolioHubPage() {
     <div className="space-y-6 p-4 sm:p-6 lg:p-8 animate-in fade-in-0 duration-200 motion-reduce:animate-none">
       {/* Header */}
       <div className="flex flex-col gap-1">
+        <Link to="/portfolio" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" /> Volver a Portafolio
+        </Link>
         <div className="flex items-center gap-2">
           <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
             <Briefcase className="h-6 w-6 text-muted-foreground" />
