@@ -49,6 +49,7 @@ const SYSTEM_PROMPT = [
   "- backtest_strategy: Backtest analítico de una estrategia buy&hold sobre un símbolo: retorno total, anualizado, volatilidad, Sharpe, max drawdown y comparación contra benchmark (default ^MERV). Puramente analítico, NO ejecuta operaciones.",
   "- place_order / cancel_order / subscribe_fci / rescue_fci: podés PREPARAR órdenes (compra/venta, MEP, FCI, cancelación) y el sistema le pedirá confirmación explícita al usuario antes de ejecutarlas contra IOL. NUNCA des a entender que ya se ejecutó: si el usuario aprueba, la orden se envía; si rechaza, se cancela. También podés guiarlo a la app: Cotizaciones → botón Comprar, u Operaciones → Nueva operación (/operar).",
   "- get_quote_history: histórico de precios de un símbolo (serie {date, close}). USÁLA siempre que el usuario pida gráfico, evolución, histórico visual o comparativa visual de uno o más instrumentos — es la fuente para el bloque chart.",
+  "- get_investor_profile: perfil CNV del usuario (risk_tolerance, horizon, risk_score, etc.). Sin argumentos. LLAMALO SIEMPRE al inicio de Fase 1 si detectás intención de inversión, antes de cualquier análisis exhaustivo, para verificar el perfil y personalizar la respuesta. Si devuelve profile_not_found, respondé con el CTA a /investor-profile.",
   "",
   "FLUJO DE RESPUESTA:",
   "- Si el usuario pregunta por instrumentos o conceptos (ej. 'qué es un CEDEAR', 'AL30 vs GD30', 'cómo está NVDA'): buscá la cotización (get_quote/search_instruments) y consultá el corpus (search_knowledge) cuando aplique, y recién después respondé.",
@@ -137,7 +138,8 @@ function buildSystemMessage(model:string): {role:"system",content:string|typeof 
 
 export interface ToolFilterRule { keywords:string[]; tools:string[]; }
 export const TOOL_FILTER_RULES: ToolFilterRule[] = [
-  {keywords:["analiza","analizar","analisis","valuac","fundamental","per ","roe","eps","beta","recomenda","conviene"],tools:["analyze_stock","fundamentals","analyst_consensus","get_quote","news","search_knowledge"]},
+  {keywords:["perfil inversor","perfil de inversor","mi perfil","test inversor","riesgo inversor","horizonte inversor","get_investor_profile"],tools:["get_investor_profile"]},
+  {keywords:["analiza","analizar","analisis","valuac","fundamental","per ","roe","eps","beta","recomenda","conviene"],tools:["analyze_stock","fundamentals","analyst_consensus","get_quote","news","search_knowledge","get_investor_profile"]},
   {keywords:["cotiz","precio","cuanto esta","como esta","ticker","quote"],tools:["get_quote","search_instruments","get_quote_history","get_series"]},
   {keywords:["dolar","mep","ccl","blue","oficial","dolarizar"],tools:["get_dollar_rates","get_radar_ccl","get_series","search_knowledge"]},
   {keywords:["bono","bonar","global","al30","gd30","ae38","al29","gd29","dica","para","curva","tir","duration","paridad","riesgo pais"],tools:["get_bond_analytics","get_bond_curve","get_bond_cashflow","get_bond_panel","get_bond_ficha","get_series","get_quote","search_knowledge"]},

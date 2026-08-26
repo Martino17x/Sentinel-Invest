@@ -37,6 +37,7 @@ import { getCalendarTool } from "../../../infraestructura/mcp/tools/calendar.js"
 import { getMetricsTool } from "../../../infraestructura/mcp/tools/metrics.js";
 import { getQuoteHistoryTool } from "../../../infraestructura/mcp/tools/quoteHistory.js";
 import { getNewsFeedTool } from "../../../infraestructura/mcp/tools/newsFeed.js";
+import { getInvestorProfileTool } from "../../../infraestructura/mcp/tools/investorProfile.js";
 
 // ============================================================
 // Registry de tools del agente â€” fuente ÃšNICA de definiciones
@@ -85,7 +86,7 @@ const TOOL_CATEGORY_MAP: Record<string, ToolCategory> = {
   get_bond_cashflow: "bonos",
   get_bond_panel: "bonos",
   get_bond_ficha: "bonos",
-  // conocimiento y anÃ¡lisis (8)
+  // conocimiento y anÃ¡lisis (9)
   search_knowledge: "conocimiento",
   analyze_stock: "conocimiento",
   fundamentals: "conocimiento",
@@ -94,6 +95,7 @@ const TOOL_CATEGORY_MAP: Record<string, ToolCategory> = {
   news: "conocimiento",
   get_news_feed: "conocimiento",
   backtest_strategy: "conocimiento",
+  get_investor_profile: "conocimiento",
   // trading (4) â€” requiere scope trade
   place_order: "trading",
   cancel_order: "trading",
@@ -143,6 +145,7 @@ const DOMAIN_TOOLS: ToolDefinition[] = [
   getMetricsTool,
   getQuoteHistoryTool,
   getNewsFeedTool,
+  getInvestorProfileTool,
 ];
 
 export function createAgentRegistry(): ToolRegistry {

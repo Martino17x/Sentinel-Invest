@@ -86,23 +86,30 @@ export async function executeTool(options: ExecuteToolOptions): Promise<ToolResu
     }
   }
 
-  // Gate 3: userId → cuenta (multitenant)
-  const accountResult = await getAccountForUser(userId);
-  if (!accountResult.ok) {
-    await auditAgentAction({
-      userId,
-      tool: toolName,
-      args,
-      piiFields: tool.piiFields,
-      resultStatus: "account_error",
-      clientName,
-      errorMessage: accountResult.message,
-    });
-    return { ok: false, message: accountResult.message };
+  // Gate 3: userId → cuenta (multitenant) — get_investor_profile NO requiere cuenta
+  const NO_ACCOUNT_TOOLS = new Set(["get_investor_profile"]);
+  const needsAccount = !NO_ACCOUNT_TOOLS.has(toolName);
+  let accountResult: Awaited<ReturnType<typeof getAccountForUser>>;
+  if (needsAccount) {
+    accountResult = await getAccountForUser(userId);
+    if (!accountResult.ok) {
+      await auditAgentAction({
+        userId,
+        tool: toolName,
+        args,
+        piiFields: tool.piiFields,
+        resultStatus: "account_error",
+        clientName,
+        errorMessage: accountResult.message,
+      });
+      return { ok: false, message: accountResult.message };
+    }
+  } else {
+    accountResult = { ok: true, account: { id: "no-account", iolAccountNumber: "none", currency: "ARS" } };
   }
 
   // Gate 4: credenciales del usuario (en mock son vacías y el provider las ignora)
-  const creds = await getIolCredentials(userId);
+  const creds = needsAccount ? await getIolCredentials(userId) : { username: "", password: "", refreshToken: "" } as unknown as Awaited<ReturnType<typeof getIolCredentials>>;
 
   // Gate 5: validación de args contra el schema del tool
   const parsed = tool.inputSchema.safeParse(args);
