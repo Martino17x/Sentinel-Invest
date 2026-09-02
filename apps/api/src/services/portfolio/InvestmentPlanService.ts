@@ -151,18 +151,18 @@ export async function createPlan(
     });
   }
 
-  // Transacción SERIALIZABLE con SELECT MAX FOR UPDATE + INSERT
+  // Transacción SERIALIZABLE con SELECT latest LIMIT 1 FOR UPDATE + INSERT
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
     // Set isolation inside transaction
     await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
 
-    const maxRes = await client.query(
-      "SELECT COALESCE(MAX(version), 0)::int AS max FROM portfolio_investment_plans WHERE portfolio_id = $1 FOR UPDATE",
+    const latestRes = await client.query(
+      "SELECT version FROM portfolio_investment_plans WHERE portfolio_id = $1 ORDER BY version DESC LIMIT 1 FOR UPDATE",
       [portfolioId]
     );
-    const nextVersion = Number(maxRes.rows[0]?.max ?? 0) + 1;
+    const nextVersion = Number(latestRes.rows[0]?.version ?? 0) + 1;
 
     // Use drizzle-typed insert via raw query with jsonb casts
     const insertRes = await client.query(
