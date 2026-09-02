@@ -10,6 +10,12 @@ import agentRouter from "../../src/interfaces/http/routes/agent.js";
 import portfolioRouter from "../../src/interfaces/http/routes/portfolio.js";
 import { db, schema } from "../../src/db/index.js";
 
+// ------------------------------------------------------------------
+// Integration: requiere DATABASE_URL. Si no hay DB, se skipea —
+// typecheck sigue verde (mismo patrón que virtualPortfolios.plans).
+// ------------------------------------------------------------------
+const hasDb = !!process.env.DATABASE_URL;
+
 const USER_ID = randomUUID();
 const EMAIL = "investor-profile-test@sentinel.local";
 const OTHER_ID = randomUUID();
@@ -21,6 +27,7 @@ let token: string;
 let otherToken: string;
 
 before(async () => {
+  if (!hasDb) return;
   await db.insert(schema.users).values({ id: USER_ID, email: EMAIL, passwordHash: "x" });
   await db.insert(schema.users).values({ id: OTHER_ID, email: OTHER_EMAIL, passwordHash: "x" });
   // portfolio proposals/agents need account? gate tests use real user without account — 428 before account check.
@@ -42,7 +49,8 @@ before(async () => {
 });
 
 after(async () => {
-  await new Promise<void>((r) => server.close(() => r()));
+  if (!hasDb) return;
+  if (server) await new Promise<void>((r) => server.close(() => r()));
   await db.delete(schema.portfolioProposals).where(eq(schema.portfolioProposals.userId, USER_ID)).catch(() => undefined);
   await db.delete(schema.investorProfiles).where(eq(schema.investorProfiles.userId, USER_ID)).catch(() => undefined);
   await db.delete(schema.investorProfiles).where(eq(schema.investorProfiles.userId, OTHER_ID)).catch(() => undefined);
@@ -53,6 +61,7 @@ after(async () => {
 });
 
 async function req(method: string, path: string, body?: unknown, tk = token) {
+  if (!hasDb) return { status: 0, json: async () => ({}) } as unknown as Response;
   const headers: Record<string, string> = {};
   if (tk) headers.Authorization = `Bearer ${tk}`;
   if (body !== undefined) headers["Content-Type"] = "application/json";
@@ -60,19 +69,19 @@ async function req(method: string, path: string, body?: unknown, tk = token) {
   return res;
 }
 
-test("401 sin token en POST /api/investor-profile", async () => {
+test("401 sin token en POST /api/investor-profile", { skip: !hasDb }, async () => {
   const res = await req("POST", "/api/investor-profile", { answers: Array(12).fill(1) }, "");
   assert.equal(res.status, 401);
 });
 
-test("400 Zod: menos de 12 respuestas", async () => {
+test("400 Zod: menos de 12 respuestas", { skip: !hasDb }, async () => {
   const res = await req("POST", "/api/investor-profile", { answers: [1, 2, 3] });
   assert.equal(res.status, 400);
   const body = (await res.json()) as { issues: unknown[] };
   assert.ok(body.issues);
 });
 
-test("200 POST upsert crea perfil (version 1) + GET own 200", async () => {
+test("200 POST upsert crea perfil (version 1) + GET own 200", { skip: !hasDb }, async () => {
   const res = await req("POST", "/api/investor-profile", { answers: Array(12).fill(4) });
   assert.equal(res.status, 200);
   const body = (await res.json()) as { profile: { riskScore: number; profileVersion: number; riskTolerance: string } };
@@ -86,24 +95,24 @@ test("200 POST upsert crea perfil (version 1) + GET own 200", async () => {
   assert.equal(gbody.profile.riskScore, body.profile.riskScore);
 });
 
-test("200 segundo POST incrementa profile_version a 2", async () => {
+test("200 segundo POST incrementa profile_version a 2", { skip: !hasDb }, async () => {
   const res = await req("POST", "/api/investor-profile", { answers: Array(12).fill(0) });
   assert.equal(res.status, 200);
   const body = (await res.json()) as { profile: { profileVersion: number } };
   assert.equal(body.profile.profileVersion, 2);
 });
 
-test("GET /:userId 403 si no admin y distinto user", async () => {
+test("GET /:userId 403 si no admin y distinto user", { skip: !hasDb }, async () => {
   const res = await req("GET", `/api/investor-profile/${OTHER_ID}`);
   assert.equal(res.status, 403);
 });
 
-test("GET own con alias /:userId 200 (self)", async () => {
+test("GET own con alias /:userId 200 (self)", { skip: !hasDb }, async () => {
   const res = await req("GET", `/api/investor-profile/${USER_ID}`);
   assert.equal(res.status, 200);
 });
 
-test("Gate 428 sin perfil (other user) en POST /api/agent/analyze-exhaustive", async () => {
+test("Gate 428 sin perfil (other user) en POST /api/agent/analyze-exhaustive", { skip: !hasDb }, async () => {
   const res = await req("POST", "/api/agent/analyze-exhaustive", {}, otherToken);
   assert.equal(res.status, 428);
   const body = (await res.json()) as { error: string; next: string };
@@ -111,7 +120,7 @@ test("Gate 428 sin perfil (other user) en POST /api/agent/analyze-exhaustive", a
   assert.equal(body.next, "/investor-profile");
 });
 
-test("Gate libera tras perfil: POST /api/agent/analyze-exhaustive 200", async () => {
+test("Gate libera tras perfil: POST /api/agent/analyze-exhaustive 200", { skip: !hasDb }, async () => {
   const res = await req("POST", "/api/agent/analyze-exhaustive", {});
   assert.equal(res.status, 200);
   const body = (await res.json()) as { profile: { risk_tolerance: string } | null };
@@ -119,19 +128,19 @@ test("Gate libera tras perfil: POST /api/agent/analyze-exhaustive 200", async ()
   assert.ok(["conservador", "moderado", "agresivo"].includes(body.profile!.risk_tolerance));
 });
 
-test("Gate 428 sin perfil en POST /api/portfolio/proposals", async () => {
+test("Gate 428 sin perfil en POST /api/portfolio/proposals", { skip: !hasDb }, async () => {
   const res = await req("POST", "/api/portfolio/proposals", {}, otherToken);
   assert.equal(res.status, 428);
 });
 
-test("Gate libera en POST /api/portfolio/proposals 201 tras perfil", async () => {
+test("Gate libera en POST /api/portfolio/proposals 201 tras perfil", { skip: !hasDb }, async () => {
   const res = await req("POST", "/api/portfolio/proposals", {});
   assert.equal(res.status, 201);
   const body = (await res.json()) as { proposal: { id: string } };
   assert.ok(body.proposal.id);
 });
 
-test("GET /api/investor-profile sin perfil → 404 con next", async () => {
+test("GET /api/investor-profile sin perfil → 404 con next", { skip: !hasDb }, async () => {
   const res = await req("GET", "/api/investor-profile", undefined, otherToken);
   assert.equal(res.status, 404);
   const body = (await res.json()) as { error: string; next: string };
@@ -139,7 +148,7 @@ test("GET /api/investor-profile sin perfil → 404 con next", async () => {
   assert.equal(body.next, "/investor-profile");
 });
 
-test("GET /api/investor-profile/:userId 400 si uuid inválido", async () => {
+test("GET /api/investor-profile/:userId 400 si uuid inválido", { skip: !hasDb }, async () => {
   const res = await req("GET", "/api/investor-profile/not-a-uuid");
   assert.equal(res.status, 400);
 });
