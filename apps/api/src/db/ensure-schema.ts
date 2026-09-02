@@ -341,6 +341,45 @@ const INVESTOR_TABLE_MIGRATIONS = [
 ];
 
 /**
+ * Enum broker_type + tabla broker_connections + columnas accounts (Req 2).
+ * Idempotente: DO block para enum, CREATE TABLE IF NOT EXISTS + IF NOT EXISTS cols.
+ * Backfill desde iol_connections con broker_type='iol' se hace en ensureSchema
+ * con INSERT ... ON CONFLICT DO NOTHING (no bloquea si tabla vacía).
+ */
+const BROKER_ENUM_MIGRATIONS = [
+  sql`DO $$ BEGIN
+        CREATE TYPE broker_type AS ENUM ('iol', 'ppi');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$`,
+];
+
+const BROKER_TABLE_MIGRATIONS = [
+  sql`CREATE TABLE IF NOT EXISTS broker_connections (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        broker_type broker_type NOT NULL,
+        username text NOT NULL,
+        password_encrypted text NOT NULL,
+        refresh_token_encrypted text,
+        is_active boolean NOT NULL DEFAULT true,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now(),
+        UNIQUE (user_id, broker_type)
+      )`,
+  sql`CREATE INDEX IF NOT EXISTS broker_connections_user_idx ON broker_connections (user_id)`,
+  sql`CREATE UNIQUE INDEX IF NOT EXISTS broker_connections_user_broker_unique ON broker_connections (user_id, broker_type)`,
+  sql`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS broker_type broker_type`,
+  sql`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS broker_account_number text`,
+  sql`CREATE UNIQUE INDEX IF NOT EXISTS accounts_user_broker_account_unique ON accounts (user_id, broker_type, broker_account_number)`,
+  // Backfill idempotente desde iol_connections (si existe y tiene datos)
+  sql`INSERT INTO broker_connections (user_id, broker_type, username, password_encrypted, refresh_token_encrypted, is_active, created_at, updated_at)
+      SELECT user_id, 'iol'::broker_type, iol_username, iol_password_encrypted, refresh_token_encrypted, is_active, created_at, updated_at
+      FROM iol_connections
+      ON CONFLICT (user_id, broker_type) DO NOTHING`,
+  sql`UPDATE accounts SET broker_type = 'iol'::broker_type, broker_account_number = iol_account_number WHERE broker_type IS NULL`,
+];
+
+/**
  * Aplica las migraciones idempotentes. Llamar al boot del server.
  * Nunca debe romper el arranque: cualquier fallo queda registrado
  * como warning (los reportes se degradan, la app sigue viva).
@@ -361,6 +400,8 @@ export async function ensureSchema(): Promise<void> {
     ...INVESTOR_TABLE_MIGRATIONS,
     ...INVESTMENT_PLAN_ENUM_MIGRATIONS,
     ...INVESTMENT_PLAN_TABLE_MIGRATIONS,
+    ...BROKER_ENUM_MIGRATIONS,
+    ...BROKER_TABLE_MIGRATIONS,
   ]) {
     await db.execute(statement);
   }

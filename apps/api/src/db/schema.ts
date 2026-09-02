@@ -32,6 +32,8 @@ export const chatRoleEnum = pgEnum("chat_role", ["user", "assistant", "tool"]);
 export const apiKeyScopeEnum = pgEnum("api_key_scope", ["read", "trade"]);
 export const pendingOrderStatusEnum = pgEnum("pending_order_status", ["pending", "approved", "rejected", "cancelled"]);
 
+export const brokerTypeEnum = pgEnum("broker_type", ["iol", "ppi"]);
+
 // Enums del cash ledger (creados vía DO block idempotente en ensure-schema
 // para bases sin drizzle migrate — ver CASH_ENUM_MIGRATIONS)
 export const cashMovementSourceEnum = pgEnum("cash_movement_source", ["manual", "imported", "detected"]);
@@ -59,6 +61,7 @@ export const users = pgTable("users", {
 
 export const usersRelations = relations(users, ({ many }) => ({
   iolConnections: many(iolConnections),
+  brokerConnections: many(brokerConnections),
   accounts: many(accounts),
   aiChatSessions: many(aiChatSessions),
   apiKeys: many(apiKeys),
@@ -68,6 +71,8 @@ export const usersRelations = relations(users, ({ many }) => ({
 
 // ============================================================
 // IOL CONNECTIONS — credenciales del usuario en IOL (cifradas)
+// @deprecated Fase 2: migrado a broker_connections. Mantener 1 sprint
+// para compat/backfill. Nuevas conexiones deben usar broker_connections.
 // ============================================================
 
 export const iolConnections = pgTable(
@@ -96,6 +101,39 @@ export const iolConnectionsRelations = relations(iolConnections, ({ one }) => ({
 }));
 
 // ============================================================
+// BROKER CONNECTIONS — credenciales genéricas por broker (1:N)
+// Commit 2 DDL (Req 2). UNIQUE(userId, brokerType) permite IOL+PPI
+// simultáneos. Migración backfill: iol_connections → broker_connections
+// con broker_type='iol'. ENCRYPTION_KEY única Fase 1.
+// ============================================================
+
+export const brokerConnections = pgTable(
+  "broker_connections",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    brokerType: brokerTypeEnum("broker_type").notNull(),
+    // username plano (para display), password/refresh cifrados (AES-256-GCM)
+    username: text("username").notNull(),
+    passwordEncrypted: text("password_encrypted").notNull(),
+    refreshTokenEncrypted: text("refresh_token_encrypted"),
+    isActive: boolean("is_active").default(true).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("broker_connections_user_idx").on(table.userId),
+    uniqueIndex("broker_connections_user_broker_unique").on(table.userId, table.brokerType),
+  ]
+);
+
+export const brokerConnectionsRelations = relations(brokerConnections, ({ one }) => ({
+  user: one(users, { fields: [brokerConnections.userId], references: [users.id] }),
+}));
+
+// ============================================================
 // ACCOUNTS — cuentas comitente del usuario en IOL
 // ============================================================
 
@@ -107,7 +145,11 @@ export const accounts = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     // Número de cuenta en IOL (para /api/v2/portafolio/{cuenta})
+    // @deprecated Commit 2: mantener 1 sprint para compat. Nuevo: brokerAccountNumber
     iolAccountNumber: text("iol_account_number").notNull(),
+    // Commit 2 (Req 2): cuenta genérica por broker. Nullable para compat 1 sprint; backfill copia iolAccountNumber con brokerType='iol'.
+    brokerType: brokerTypeEnum("broker_type"),
+    brokerAccountNumber: text("broker_account_number"),
     name: text("name"),
     currency: currencyEnum("currency").default("ARS").notNull(),
     isActive: boolean("is_active").default(true).notNull(),
@@ -117,6 +159,8 @@ export const accounts = pgTable(
   (table) => [
     index("accounts_user_idx").on(table.userId),
     uniqueIndex("accounts_iol_number_unique").on(table.userId, table.iolAccountNumber),
+    // Nuevo unique genérico (partial: solo cuando brokerType not null)
+    uniqueIndex("accounts_user_broker_account_unique").on(table.userId, table.brokerType, table.brokerAccountNumber),
   ]
 );
 

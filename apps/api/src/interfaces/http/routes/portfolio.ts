@@ -3,9 +3,22 @@ import { and, asc, count, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth } from "../middleware/auth.js";
 import { requireInvestorProfile } from "../middleware/requireInvestorProfile.js";
-import { getIolProvider } from "../../../services/iol/index.js";
-import { getIolCredentials } from "../../../lib/iol-credentials.js";
+import { getBrokerProvider } from "../../../infraestructura/providers/registry.js";
+import { getBrokerCredentials } from "../../../lib/broker-credentials.js";
+import { BrokerNotEnabled } from "../../../services/iol/types.js";
+import type { BrokerType } from "../../../services/iol/ports.js";
 import { getAccountForUser } from "../../../services/agent/account.js";
+
+function parseBrokerType(req: Request): BrokerType {
+  const raw =
+    (req.query.broker as string) ||
+    (req.body?.brokerType as string) ||
+    (req.body?.broker as string) ||
+    (req.headers["x-broker-type"] as string) ||
+    "iol";
+  const v = raw.toLowerCase();
+  return (v === "ppi" ? "ppi" : "iol") as BrokerType;
+}
 import {
   buildMonthCalendar,
   fetchYahooDaily,
@@ -34,16 +47,18 @@ router.use(requireAuth);
 // ============================================================
 
 router.get("/", async (req: Request, res: Response) => {
-  const result = await getAccountForUser(req.user!.id, req.query.accountId as string | undefined);
+  const brokerType = parseBrokerType(req);
+  const result = await getAccountForUser(req.user!.id, req.query.accountId as string | undefined, brokerType);
   if (!result.ok) {
     res.status(result.status).json({ error: result.message });
     return;
   }
 
   try {
-    const creds = await getIolCredentials(req.user!.id);
-    const provider = getIolProvider();
-    const portfolio = await provider.getPortfolio(creds, result.account.iolAccountNumber);
+    const creds = await getBrokerCredentials(req.user!.id, brokerType);
+    const provider = await getBrokerProvider(brokerType, req.user!.id);
+    const accountNumber = (result.account as any).brokerAccountNumber ?? result.account.iolAccountNumber;
+    const portfolio = await provider.getPortfolio(creds, accountNumber);
 
     // Snapshot del día (uno por día local por cuenta) — solo con cuentas
     // reales en BD: en modo mock la cuenta es "demo" y no existe en la BD.
@@ -56,6 +71,10 @@ router.get("/", async (req: Request, res: Response) => {
 
     res.json({ portfolio });
   } catch (err) {
+    if (err instanceof BrokerNotEnabled) {
+      res.status(503).json({ error: err.message, code: "broker_not_enabled" });
+      return;
+    }
     const message = err instanceof Error ? err.message : "Error al consultar el portafolio";
     if (message.includes("autenticación") || message.includes("401")) {
       res.status(401).json({ error: "Credenciales de IOL inválidas o expiradas. Reconectá tu cuenta." });
@@ -432,11 +451,17 @@ router.get("/reports", async (req: Request, res: Response) => {
   }
 
   try {
-    const creds = await getIolCredentials(req.user!.id);
-    const provider = getIolProvider();
-    const closes = await provider.getMonthlyCloses(creds, result.account.iolAccountNumber);
+    const brokerType = parseBrokerType(req);
+    const creds = await getBrokerCredentials(req.user!.id, brokerType);
+    const provider = await getBrokerProvider(brokerType, req.user!.id);
+    const accountNumber = (result.account as any).brokerAccountNumber ?? result.account.iolAccountNumber;
+    const closes = await provider.getMonthlyCloses(creds, accountNumber);
     res.json({ closes });
   } catch (err) {
+    if (err instanceof BrokerNotEnabled) {
+      res.status(503).json({ error: err.message, code: "broker_not_enabled" });
+      return;
+    }
     const message = err instanceof Error ? err.message : "Error al consultar los reportes";
     res.status(502).json({ error: message });
   }
@@ -455,18 +480,24 @@ router.get("/reports/:month", async (req: Request, res: Response) => {
     return;
   }
 
-  const result = await getAccountForUser(req.user!.id, req.query.accountId as string | undefined);
+  const brokerType = parseBrokerType(req);
+  const result = await getAccountForUser(req.user!.id, req.query.accountId as string | undefined, brokerType);
   if (!result.ok) {
     res.status(result.status).json({ error: result.message });
     return;
   }
 
   try {
-    const creds = await getIolCredentials(req.user!.id);
-    const provider = getIolProvider();
-    const report = await provider.getMonthlyReport(creds, result.account.iolAccountNumber, month);
+    const creds = await getBrokerCredentials(req.user!.id, brokerType);
+    const provider = await getBrokerProvider(brokerType, req.user!.id);
+    const accountNumber = (result.account as any).brokerAccountNumber ?? result.account.iolAccountNumber;
+    const report = await provider.getMonthlyReport(creds, accountNumber, month);
     res.json({ report });
   } catch (err) {
+    if (err instanceof BrokerNotEnabled) {
+      res.status(503).json({ error: err.message, code: "broker_not_enabled" });
+      return;
+    }
     const message = err instanceof Error ? err.message : "Error al consultar el reporte";
     res.status(502).json({ error: message });
   }
