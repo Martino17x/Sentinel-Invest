@@ -106,14 +106,19 @@ export interface PortfolioSnapshotPoint {
   currency: Currency;
 }
 
-/** Cotización de un título */
+export type QuoteSource = "iol" | "ppi" | "byma" | "snapshot" | "cache";
+
+/** Cotización de un título — Req5 quotes-cache: source/fetchedAt/cacheHit */
 export interface Quote {
   symbol: string;
   market: Market;
   lastPrice: number;
   variationPct: number; // variación respecto al cierre anterior
   currency: Currency;
-  updatedAt: string; // ISO
+  updatedAt: string; // ISO — provider time (compat)
+  fetchedAt?: string; // ISO — Sentinel serve time
+  source?: QuoteSource;
+  cacheHit?: boolean;
   name?: string; // nombre/descripción del instrumento (si el proveedor lo conoce)
   // Datos de detalle (si el proveedor los conoce)
   bid?: number | null; // mejor precio compra (punta)
@@ -125,7 +130,7 @@ export interface Quote {
   volume?: number | null;
 }
 
-/** Fila de un panel de cotizaciones (tabla de mercado) */
+/** Fila de un panel de cotizaciones (tabla de mercado) — Req5: source/fetchedAt/cacheHit */
 export interface PanelQuote {
   symbol: string;
   name: string;
@@ -146,15 +151,21 @@ export interface PanelQuote {
   volumeNominal?: number | null;
   currency: Currency;
   isFavorite?: boolean;
+  source?: QuoteSource;
+  fetchedAt?: string;
+  cacheHit?: boolean;
 }
 
-/** Resumen del panel (indicadores arriba de la tabla) */
+/** Resumen del panel (indicadores arriba de la tabla) — Req5 */
 export interface PanelSummary {
   market: Market;
   assetType: string;
   totalVariationPct: number; // variación promedio del panel
   updatedAt: string;
   isRealtime: boolean;
+  source?: QuoteSource;
+  fetchedAt?: string;
+  cacheHit?: boolean;
 }
 
 /** Cierre mensual (para la comparativa de meses) */
@@ -203,10 +214,47 @@ export interface MonthlyReport {
   series: { date: string; valueArs: number; benchmark: number }[];
 }
 
-/** Credenciales de IOL — el provider las usa SOLO internamente */
-export interface IolCredentials {
+/** Credenciales genéricas multibroker — Fase 1 (Req 5) */
+export interface BrokerCredentials {
   username: string;
   password: string;
+}
+
+/** Alias legacy: IOL era el único broker (compat 1 sprint) */
+export type IolCredentials = BrokerCredentials;
+
+/** Error canónico normalizado por broker (Req 7) */
+export class BrokerError extends Error {
+  code: "auth" | "notFound" | "rateLimit" | "requires2FA" | "notEnabled" | "unknown";
+  brokerType?: string;
+  cause?: unknown;
+
+  constructor(
+    message: string,
+    code: BrokerError["code"] = "unknown",
+    opts?: { brokerType?: string; cause?: unknown }
+  ) {
+    super(message);
+    this.name = "BrokerError";
+    this.code = code;
+    this.brokerType = opts?.brokerType;
+    this.cause = opts?.cause;
+  }
+}
+
+/** @deprecated alias — usar BrokerError con code requires2FA */
+export class BrokerAuthRequires2FA extends BrokerError {
+  constructor(message = "Broker requiere 2FA interactivo", opts?: { brokerType?: string; cause?: unknown }) {
+    super(message, "requires2FA", opts);
+    this.name = "BrokerAuthRequires2FA";
+  }
+}
+
+export class BrokerNotEnabled extends BrokerError {
+  constructor(brokerType: string) {
+    super(`Broker no habilitado: ${brokerType}`, "notEnabled", { brokerType });
+    this.name = "BrokerNotEnabled";
+  }
 }
 
 import type { SettlementType } from "@sentinel/domain";
@@ -259,3 +307,7 @@ export interface OrderResult {
   status: OperationStatus;
   message?: string;
 }
+
+// Re-exports canónicos multibroker (Req 1) — evita importar desde ports en código nuevo
+// Nota: type-only, no runtime, circular type-safe (ports ↔ types) — solo provider/type, credenciales ya definidas aquí
+export type { BrokerProvider, BrokerType } from "./ports.js";

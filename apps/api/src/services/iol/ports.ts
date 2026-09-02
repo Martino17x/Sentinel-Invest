@@ -21,7 +21,18 @@ import type { BymaFicha } from "../../dominio/bonos/ficha.js";
  * ISP — puertos finos que particionan el IolProvider gordo (13 métodos).
  * Cada consumidor depende solo del puerto que necesita.
  * `IolProvider` permanece como alias intersección para compatibilidad temporal.
+ *
+ * Commit 1 Foundation (multibroker): `BrokerProvider` es el tipo canónico
+ * para Fase 1 lectura (MarketData + Portfolio + Operations). `BrokerType`
+ * discrimina el broker. `IolProvider` se mantiene como alias legacy 1 sprint
+ * para no romper 17 imports existentes — ver sdd/multibroker-support.
  */
+
+// Fase 1 — tipos canónicos multibroker (Req 1)
+export type BrokerType = "iol" | "ppi";
+
+/** BrokerProvider = intersección de puertos de lectura Fase 1 (Req 1) */
+export type BrokerProvider = MarketDataPort & PortfolioPort & OperationsPort;
 
 export interface MarketDataPort {
   getPanel(
@@ -83,3 +94,6 @@ export interface OperationsPort {
 
 export type IolProvider = MarketDataPort & PortfolioPort & TradingPort & FciPort & OperationsPort;
 export type LegacyIolProvider = IolProvider;
+
+// BrokerCredentials es alias de IolCredentials para compat (tipo canónico en types.ts)
+export type BrokerCredentials = IolCredentials;

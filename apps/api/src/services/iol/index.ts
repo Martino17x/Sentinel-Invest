@@ -1,5 +1,5 @@
 import type { IolProvider } from "./IolProvider.js";
-import type { MarketDataPort } from "./ports.js";
+import type { MarketDataPort, BrokerType, BrokerProvider } from "./ports.js";
 import { MockIolProvider } from "./MockIolProvider.js";
 import { IolApiProvider } from "./IolApiProvider.js";
 import { BymaClient } from "../../infraestructura/providers/byma/BymaClient.js";
@@ -176,3 +176,16 @@ function isPanelEmpty(result: unknown): boolean {
   const r = result as { quotes?: unknown };
   return Array.isArray(r.quotes) && r.quotes.length === 0;
 }
+
+// ─────────────────────────────────────────────────────────────────
+// Multibroker compat — Commit 1 Foundation (Req 1) + Commit 2 registry
+// Re-exports canónicos + alias para no romper imports legacy
+// ─────────────────────────────────────────────────────────────────
+export type { BrokerProvider, BrokerType, BrokerCredentials } from "./ports.js";
+export type { BrokerCredentials as BrokerCredentialsFromTypes, BrokerError, BrokerNotEnabled, BrokerAuthRequires2FA } from "./types.js";
+
+// Commit 2: registry canónico en infraestructura/providers/registry.ts
+// Re-export async getBrokerProvider que resuelve por brokerType con kill-switch.
+// Mantener sync compat para código que no pasa brokerType (default iol).
+export { getBrokerProvider, registerBroker, isBrokerEnabled, clearRegistry } from "../../infraestructura/providers/registry.js";
+export { getIolProvider as getIolProviderLegacy };
