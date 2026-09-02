@@ -6,6 +6,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { portfolioApi } from "@/features/portafolio/api";
 import { useApiData } from "@/hooks/useApiData";
+import { useBroker } from "@/hooks/useBroker";
+import { connectionsApi } from "@/features/auth/api";
 import { formatARS, formatUSD, toNormalizedTotalsReal } from "@/lib/formatters";
 import { PortfolioStats } from "@/components/portfolio/PortfolioStats";
 import { PortfolioPositionsTable } from "@/components/portfolio/PortfolioPositionsTable";
@@ -14,17 +16,20 @@ import { PortfolioEvolution } from "@/components/portfolio/PortfolioEvolution";
 import { PortfolioDistribution } from "@/components/portfolio/PortfolioDistribution";
 
 export function DashboardPage() {
+  const [broker, setBroker] = useBroker();
+  const { data: connectionsData } = useApiData("connections:selector", () => connectionsApi.getState());
+
   const {
     data: pfData,
     isLoading: pfLoading,
     error: pfError,
-  } = useApiData("portfolio", () => portfolioApi.get());
+  } = useApiData(`portfolio:${broker}`, () => portfolioApi.get(broker));
 
   const {
     data: histData,
     isLoading: histLoading,
     error: histError,
-  } = useApiData("portfolio:history:90", () => portfolioApi.getHistory(90));
+  } = useApiData(`portfolio:history:90:${broker}`, () => portfolioApi.getHistory(90, broker));
 
   const portfolio = pfData?.portfolio ?? null;
   const history = histData?.history ?? [];
@@ -66,14 +71,31 @@ export function DashboardPage() {
     );
   }
 
+  const isConnected = (b: "iol" | "ppi") => connectionsData?.connections?.some((c) => c.brokerType === b && c.isActive) ?? false;
+
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8 animate-in fade-in-0 duration-200 motion-reduce:animate-none">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-semibold tracking-tight">Panel</h1>
           <p className="text-sm text-muted-foreground">
-            Cuenta {portfolio.accountNumber} — resumen de tu cartera
+            Cuenta {portfolio.accountNumber} — resumen de tu cartera ({broker.toUpperCase()})
           </p>
+          <div className="flex items-center gap-2">
+            <label htmlFor="broker-select" className="text-xs text-muted-foreground">Broker:</label>
+            <select
+              id="broker-select"
+              value={broker}
+              onChange={(e) => setBroker(e.target.value as "iol" | "ppi")}
+              className="h-7 rounded-md border border-input bg-background px-2 text-xs"
+            >
+              <option value="iol">IOL {isConnected("iol") ? "✓" : "(conectar)"}</option>
+              <option value="ppi">PPI {isConnected("ppi") ? "✓" : "(conectar)"}</option>
+            </select>
+            {!isConnected(broker) && (
+              <Link to="/connect" className="text-xs text-primary underline">Conectar {broker.toUpperCase()}</Link>
+            )}
+          </div>
         </div>
         <Link to="/portfolio/seguimiento" className="shrink-0">
           <Button variant="outline" className="w-full shrink-0 sm:w-auto">

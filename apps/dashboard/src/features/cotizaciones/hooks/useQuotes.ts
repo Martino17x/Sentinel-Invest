@@ -18,6 +18,7 @@ export interface UseQuotesParams {
   pageSize?: number;
   /** Solo para modo no controlado: valor inicial de búsqueda (?q=) */
   initialSearch?: string;
+  broker?: "iol" | "ppi";
 }
 
 export interface UseQuotesReturn {
@@ -62,6 +63,7 @@ export function useQuotes({
   searched: controlledSearched,
   pageSize = 25,
   initialSearch = "",
+  broker,
 }: UseQuotesParams): UseQuotesReturn {
   const [search, setSearch] = useState(initialSearch);
   const [searchedInternal, setSearchedInternal] = useState(
@@ -114,7 +116,7 @@ export function useQuotes({
     setPageInternal(next as number & ((p: number) => number));
   };
 
-  const cacheKey = `quotes:panel:${market}:${assetType}:${page}:${searched}`;
+  const cacheKey = `quotes:panel:${market}:${assetType}:${page}:${searched}:${broker ?? "iol"}`;
 
   const {
     data: panelData,
@@ -123,7 +125,7 @@ export function useQuotes({
     error,
     refetch,
   } = useApiData(cacheKey, () =>
-    quotesApi.getPanel(market, assetType, page, pageSize, searched || undefined)
+    quotesApi.getPanel(market, assetType, page, pageSize, searched || undefined, broker)
   );
 
   const summary = panelData?.summary ?? null;

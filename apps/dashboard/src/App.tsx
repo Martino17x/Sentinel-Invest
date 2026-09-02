@@ -24,6 +24,7 @@ import { ReportsPage } from "@/features/reportes/pages/ReportsPage";
 import { PrivacyPage } from "@/pages/PrivacyPage";
 import { TermsPage } from "@/pages/TermsPage";
 import { ConnectIolPage } from "@/pages/ConnectIolPage";
+import { ConnectBrokerPage } from "@/pages/ConnectBrokerPage";
 import { ProfilePage } from "@/pages/ProfilePage";
 import { AgentConnectPage } from "@/features/agente/pages/AgentConnectPage";
 import { OperarPage } from "@/features/operar/pages/OperarPage";
@@ -327,7 +328,8 @@ function App() {
                 </Suspense>
               }
             />
-            <Route path="/connect" element={<ConnectIolPage />} />
+            <Route path="/connect" element={<ConnectBrokerPage />} />
+            <Route path="/connect-iol" element={<ConnectIolPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/agent-connect" element={<AgentConnectPage />} />
             <Route

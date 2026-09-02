@@ -68,6 +68,8 @@ export const authApi = {
   },
 };
 
+export type BrokerType = "iol" | "ppi";
+
 export interface IolConnectionState {
   connected: boolean;
   connection: {
@@ -76,26 +78,41 @@ export interface IolConnectionState {
     isActive: boolean;
     createdAt: string;
   } | null;
+  connections?: {
+    id: string;
+    brokerType: BrokerType;
+    username: string;
+    iolUsername: string;
+    isActive: boolean;
+    createdAt: string;
+  }[];
   accounts: {
     id: string;
     iolAccountNumber: string;
+    brokerAccountNumber?: string;
+    brokerType?: BrokerType;
     name: string;
     currency: string;
   }[];
 }
 
 export const connectionsApi = {
-  async getState(): Promise<IolConnectionState> {
-    return apiFetch("/connections");
+  async getState(broker?: BrokerType): Promise<IolConnectionState> {
+    const qs = broker ? `?broker=${broker}` : "";
+    return apiFetch(`/connections${qs}`);
   },
 
   async connect(input: {
+    brokerType?: BrokerType;
+    username?: string;
+    password?: string;
+    brokerAccountNumber?: string;
     iolUsername: string;
     iolPassword: string;
     iolAccountNumber: string;
   }): Promise<{
-    connection: { id: string; iolUsername: string };
-    accounts: { id: string; iolAccountNumber: string; name: string }[];
+    connection: { id: string; iolUsername: string; brokerType?: BrokerType };
+    accounts: { id: string; iolAccountNumber: string; brokerAccountNumber?: string; brokerType?: BrokerType; name: string }[];
   }> {
     return apiFetch("/connections", {
       method: "POST",
@@ -103,7 +120,8 @@ export const connectionsApi = {
     });
   },
 
-  async disconnect(): Promise<{ ok: boolean }> {
-    return apiFetch("/connections", { method: "DELETE" });
+  async disconnect(broker?: BrokerType): Promise<{ ok: boolean; brokerType?: BrokerType }> {
+    const qs = broker ? `?broker=${broker}` : "";
+    return apiFetch(`/connections${qs}`, { method: "DELETE" });
   },
 };

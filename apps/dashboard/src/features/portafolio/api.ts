@@ -83,18 +83,26 @@ export interface Operation {
 // ============================================================
 
 export const portfolioApi = {
-  async get(): Promise<{ portfolio: PortfolioSummary }> {
-    return apiFetch("/portfolio");
+  async get(broker?: "iol" | "ppi"): Promise<{ portfolio: PortfolioSummary }> {
+    const qs = broker ? `?broker=${broker}` : "";
+    return apiFetch(`/portfolio${qs}`);
   },
 
-  async getHistory(days = 90): Promise<{ history: PortfolioSnapshotPoint[] }> {
-    return apiFetch(`/portfolio/history?days=${days}`);
+  async getHistory(days = 90, broker?: "iol" | "ppi"): Promise<{ history: PortfolioSnapshotPoint[] }> {
+    const brokerQs = broker ? `&broker=${broker}` : "";
+    return apiFetch(`/portfolio/history?days=${days}${brokerQs}`);
   },
 };
 
 export const operationsApi = {
-  async getAll(): Promise<{ operations: Operation[] }> {
-    return apiFetch("/operations");
+  async getAll(broker?: "iol" | "ppi", filters?: { from?: string; to?: string; status?: string }): Promise<{ operations: Operation[] }> {
+    const params = new URLSearchParams();
+    if (broker) params.set("broker", broker);
+    if (filters?.from) params.set("from", filters.from);
+    if (filters?.to) params.set("to", filters.to);
+    if (filters?.status) params.set("status", filters.status);
+    const qs = params.toString();
+    return apiFetch(`/operations${qs ? `?${qs}` : ""}`);
   },
 };
 
