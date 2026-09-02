@@ -1,0 +1,1 @@
+export * from "../../infraestructura/http/cache.js";

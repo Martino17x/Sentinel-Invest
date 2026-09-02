@@ -18,7 +18,9 @@ metadata:
 
 - Cambios en UI/UX de dashboard o catálogo.
 - Refactors visuales de cards, badges, iconografía, colores o jerarquía.
-- Revisión de PRs donde la UI se vea “pl## Reglas críticas (MUST)
+- Revisión de PRs donde la UI se vea “plantilla”.
+
+## Reglas críticas (MUST)
 
 1. **Prohibido `border-l-*` decorativo en cards.** Extensión: Prohibido simular bordes coloreados de un solo lado (en cualquier borde de la tarjeta: superior, izquierdo, derecho o inferior) mediante elementos internos posicionados absolutamente (ej: `<div className="absolute left-0 top-0 bottom-0 w-1 bg-[...]">`) o mediante selectores de pseudo-elementos (`after:border-l-*`, `after:border-t-*`, etc.). Si se necesita indicar estado, usar un indicador funcional integrado como un status dot junto al texto o el contraste tipográfico.
 2. **Prohibido `Sparkles` fuera de Synara** y contexto explícito de asistente IA.
@@ -44,7 +46,9 @@ metadata:
 22. **Prohibido encajonar botones o chips de estado de filtros rápidos en pequeñas tarjetitas con bordes rígidos y fondos sólidos que simulen una tarjeta individual flotante.** Deben integrarse de forma plana al fondo general usando fondos translúcidos sin bordes.
 23. **Prohibido el uso de status dots (puntitos decorativos de color) antes del texto en botones de filtro rápidos de estado.** La semántica debe ser transmitida a través del propio icono funcional de negocio (ej: PackageX, AlertTriangle) o la tipografía.
 24. **Prohibido el uso injustificado de barras laterales (aside sidebars) para estructurar paneles principales cuando no hay contenido secundario sustancial.** La información debe organizarse en una grilla o bento equilibrado de una sola columna o flujo integrado, evitando fragmentar la pantalla en columnas desbalanceadas de 2/3 y 1/3 sin necesidad operativa real.
-
+25. **Prohibido el uso de kicker pill badges / pre-títulos en pastilla sobre los encabezados en auth y modales.** La jerarquía se define mediante escala y peso tipográfico directo.
+26. **Prohibido el uso de falsos marcos de ventana o navegador (`• • •` traffic lights, falsas URLs) para encuadrar capturas de producto.** Usar contenedores limpios con borde y sombra del sistema de diseño.
+27. **Prohibido apilar tarjetas decorativas de features con iconos en cajitas dentro de layouts de autenticación.** Preferir indicadores de confianza planos o dejar que la captura de producto hable por sí misma.
 
 ## Reglas de Componentes (Filtros y Chips)
 
@@ -52,6 +56,19 @@ metadata:
 - **Prohibición de tarjetas blancas flotantes y píldoras toscas para chips**: Prohibido envolver chips de filtro en cajas flotantes blancas pesadas o formas de cápsula/óvalo (`rounded-full`). En su lugar, usar chips redondeados rectangulares limpios (`rounded-xl` o `rounded-lg`) con texto de alto contraste e iconos específicos del dominio.
 - **Prohibición de tarjetas blancas flotantes o bordes rígidos en selectores de estado/toggles/chips activos o inactivos**: No usar tarjetas blancas flotantes rígidas con bordes de color gris sólido para contener selectores/chips. Se deben preferir de forma obligatoria diseños planos (flat) o translúcidos con fondos atenuados que se integren al fondo del panel y cambien de estado suavemente sin bordes rígidos innecesarios.
 
+### 🚫 Vicios de IA Prohibidos en Pantallas de Auth y Showcases (CRÍTICO)
+
+1. **PROHIBIDO Kicker Pill Badges sobre títulos**:
+   - NUNCA agregar pastillas flotantes redondeadas con iconos verdes/azules (`[ 📈 Terminal de Control ]`) encima de un `h1`/`h2`. La jerarquía la define la escala tipográfica limpia y sobria.
+
+2. **PROHIBIDO Faux Browser Chrome / Marcos de Semáforo macOS**:
+   - NUNCA envolver capturas de pantalla de la app en marcos simulados con 3 círculos (`• • •`) ni barras de dirección falsas. La captura del producto debe hablar por sí misma con un borde sutil (`border-border` o `border-zinc-800`), sombra limpia y radio regular.
+
+3. **PROHIBIDO Pilas de 3 Tarjetas de Features decorativas ("Cards-inside-cards")**:
+   - NUNCA apilar listas de 3 tarjetas con iconos en cajitas de colores en el panel lateral de login/registro. Si se requiere comunicar confianza o pilares, usar microcopy tipográfico plano y horizontal (`flex items-center gap-4 text-xs text-muted-foreground`), nunca tarjetas flotantes.
+
+4. **Capturas de Producto Precisas**:
+   - En pantallas de login institucional, mostrar la pantalla medular del producto (ej: la vista de **Portafolio** con rendimientos reales, posiciones y métricas), nunca pantallas genéricas vacías o sólo el resumen inicial.
 
 ## Flujo mínimo de revisión
 
@@ -86,6 +103,9 @@ metadata:
 | Inter/Roboto/Open Sans default | `font-family: 'Inter', 'Roboto', 'Open Sans', system-ui` sin otra opción | Tipografía definida en el sistema de diseño de Equarys |
 | Hero layout predecible de IA | Badge → H1 → Description → 2 CTAs → 3-column features siempre igual | Macro-estructura que responda al contenido específico, no a plantilla SaaS |
 | Barras laterales (aside sidebars) injustificadas | Fragmentar la pantalla en columnas desbalanceadas (ej: 2/3 y 1/3) con un aside vacío o de poco contenido | Estructura en grilla o bento equilibrado de flujo integrado o fila única |
+| Kicker pill badge en auth/modales | `[📈 Badge flotante]` sobre el h1/h2 en login o registro | Escala tipográfica y peso directo en h1/h2 sin píldoras cosméticas |
+| Faux browser mockup | Marcos simulados con botones semáforo `• • •` o barras URL falsas | Contenedores limpios con border-border, shadow sutil y aspect ratio natural |
+| Pila de tarjetas de features en auth | 3 tarjetas oscuras apiladas con iconos en cajitas verdes (`TRUST_HIGHLIGHTS`) | Indicadores de confianza planos horizontales (`flex items-center gap-6`) |
 ## Comandos
 
 ```bash
@@ -155,5 +175,8 @@ rg "bg-(blue|purple|gray)-|text-(blue|purple|gray)-|#[0-9a-fA-F]{6}" apps
 - [ ] No encajona botones rápidos de estado de filtros en tarjetas blancas con bordes duros.
 - [ ] No usa status dots decorativos antes del texto en botones de filtro rápidos.
 - [ ] No usa barras laterales (aside sidebars) injustificadas si no hay contenido secundario sustancial.
+- [ ] No usa kicker pill badges sobre encabezados en vistas de autenticación o modales.
+- [ ] No usa falsos marcos de navegador con botones de semáforo o URLs ficticias en mockups.
+- [ ] No apila tarjetas de features con iconos encapsulados en layouts de autenticación.
 - [ ] Usa tokens de tema.
 - [ ] Mantiene identidad Equarys.

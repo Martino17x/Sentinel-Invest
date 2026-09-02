@@ -17,5 +17,19 @@ services:
       timeout: 5s
       retries: 5
 
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:v1.21.0
+    container_name: invertir-dragonfly
+    command: --cache_mode --proactivedefrag
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
 volumes:
   invertir_pgdata:

@@ -1,0 +1,45 @@
+## Análisis de la Captura de Pantalla - App Sentinel (IOL Argentina)
+
+### **1. Textos Visibles (ordenados de arriba a abajo):**
+
+*   **Cabecera Superior:**
+    *   `Sentinel` (nombre de la app, con un ícono de línea ascendente a su izquierda)
+    *   `UD` (dentro de un avatar circular gris, iniciales del usuario)
+
+*   **Título Principal:**
+    *   `Reportes mensuales` (título grande y en negrita)
+    *   `i` (ícono de información circular al lado del título)
+    *   `Cierre de cada mes — rendimiento, actividad y comparativas` (subtítulo descriptivo)
+
+*   **Selector de Período:**
+    *   `agosto de 2026` (texto central del selector de mes)
+
+*   **Tarjeta 1: "Valor al cierre"**
+    *   `Valor al cierre` (etiqueta de la tarjeta)
+    *   `i` (ícono de información)
+    *   `$ 886.030,46` (valor principal en pesos argentinos)
+    *   `$14.12 en USD` (valor equivalente en dólares)
+
+*   **Tarjeta 2: "Rendimiento real (TWR)"**
+    *   `Rendimiento real (TWR)` (etiqueta de la tarjeta)
+    *   `i` (ícono de información)
+    *   `%` (ícono de porcentaje en la esquina superior derecha)
+    *   `+2.05%` (valor principal, en color verde)
+    *   `+ $17.830,46 — excluye aportes` (explicación del rendimiento)
+
+*   **Tarjeta 3: "Aportes netos"**
+    *   `Aportes netos` (etiqueta de la tarjeta)
+    *   `i` (ícono de información)
+    *   `—` (guión, indicando que no hay datos o es cero)
+    *   `Plata que metiste / sacaste` (descripción)
+
+*   **Tarjeta 4: "vs Merval"**
+    *   `vs Merval` (etiqueta de la tarjeta)
+    *   `i` (ícono de información)
+    *   `+0.25%` (valor principal, en color verde)
+    *   `Merval +1.80% — le ganaste` (comparativa con el índice)
+
+*   **Navegación Inferior (Barra de pestañas):**
+    *   `Inicio` (con ícono de casa)
+    *   `Portafolio` (con ícono de gráfico de barras)
+    *   `Cotizaciones` (con ícono de línea ascend

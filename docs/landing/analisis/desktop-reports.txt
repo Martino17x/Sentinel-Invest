@@ -1,0 +1,43 @@
+Análisis detallado de la captura de pantalla de la app **Sentinel** (control de inversiones IOL, Argentina).
+
+### **1. TEXTOS VISIBLES (ORDENADO)**
+
+**Encabezado / Navegación Superior:**
+*   Logo: **"Sentinel"** (con ícono de gráfico)
+*   Pestañas de navegación:
+    *   **Inicio** (con ícono de casa)
+    *   **Portafolio** (con ícono de cartera)
+    *   **Operaciones** (con ícono de flechas circulares)
+    *   **Cotizaciones** (con ícono de gráfico)
+    *   **Reportes** (con ícono de gráfico de barras)
+*   Perfil de usuario: **"UD"** (iniciales)
+
+**Título de Sección Principal:**
+*   **"Reportes mensuales"** (con ícono de información ⓘ)
+*   Subtítulo: **"Cierre de cada mes — rendimiento, actividad y comparativas"**
+*   Selector de período: **"agosto de 2026"** (con flechas de navegación ◀ ▶)
+
+**Tarjetas de Métricas (Cards):**
+1.  **Valor al cierre** (con ícono de información ⓘ y ícono de documento)
+    *   **"$ 886.030,46"**
+    *   "$14.12 en USD"
+2.  **Rendimiento real (TWR)** (con ícono de información ⓘ y ícono de porcentaje %)
+    *   **"+2,05%"** (en verde)
+    *   "+$ 17.830,46 — excluye aportes"
+3.  **Aportes netos** (con ícono de información ⓘ y ícono de persona/personas)
+    *   **"—"** (guion, sin valor)
+    *   "Plata que metiste / sacaste"
+4.  **vs Merval** (con ícono de información ⓘ y ícono de gráfico comparativo)
+    *   **"+0,25%"** (en verde)
+    *   "Merval +1.80% — le ganaste"
+5.  **Ganancia realizada** (con ícono de información ⓘ y ícono de tendencia creciente)
+    *   **"$ 0,00"**
+    *   "Lo que materializaste vendiendo"
+6.  **Ganancia latente** (con ícono de información ⓘ y ícono de tendencia)
+    *   **"+$ 119.114,78"** (en verde)
+    *   "Papel, no tocado"
+7.  **Comisiones** (con ícono de información ⓘ y ícono de dollar sign)
+    *   **"$ 0,00"**
+    *   "Costo de operar en el mes"
+8.  **Cupones / dividendos** (con ícono de información ⓘ y ícono de gráfico de barras)
+    *

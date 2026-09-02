@@ -1,0 +1,55 @@
+@import "@fontsource-variable/geist";
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: #ffffff;
+  --color-foreground: #0c0f12;
+  --color-muted: #5b6672;
+  --color-primary: #171717;
+  --color-primary-foreground: #fafafa;
+  --color-surface: #f6f7f8;
+  --color-border: #e5e7eb;
+  --color-brand: #0b6749;
+  --color-brand-dark: #064028;
+  --color-positive: #16a34a;
+  --color-negative: #dc2626;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--color-brand) 25%, transparent);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+}
+
+/* Reveals GSAP: oculto solo si JS está activo y no hay reduced-motion */
+html.js [data-reveal] {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.js [data-reveal] {
+    opacity: 1;
+    transform: none !important;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

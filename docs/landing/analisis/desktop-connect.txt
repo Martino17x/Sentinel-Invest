@@ -1,0 +1,55 @@
+# Análisis de Captura de Pantalla - Sentinel (IOL)
+
+## 1. **Textos Visibles (Listados)**
+
+**Header/Navegación Superior:**
+- Logo: `Sentinel`
+- Menú items: `Inicio`, `Portafolio`, `Operaciones`, `Cotizaciones`, `Reportes`
+- Iconos asociados a cada menú (casita, gráfico, etc.)
+- Usuario/sesión: `UD` (esquina superior derecha)
+
+**Contenido Principal:**
+- Título principal: `Conectar cuenta IOL`
+- Subtítulo: `Vinculá tu cuenta de InvertirOnline para ver tus datos reales`
+
+**Card Central:**
+- Título de card: `Cuenta conectada`
+- Badge de estado: `Activa`
+- Texto explicativo: `Sentinel consulta tu cartera en modo lectura — nunca ejecuta órdenes`
+- Campos de información:
+  - `Usuario IOL:` `demo_user`
+  - `Cuentas registradas:` `123456`
+- Texto de seguridad: `Tus credenciales están cifradas con AES-256. Podés desconectar cuando quieras y se eliminan de inmediato.`
+- Botón de acción: `Desconectar cuenta`
+
+**Navegación:**
+- Flecha atrás + `Volver` (esquina superior izquierda del contenido)
+
+## 2. **Elementos de UI**
+
+**Navegación/Headers:**
+- **Barra de navegación superior** con logo, menús e ícono de usuario
+- **Enlace "Volver"** con flecha hacia atrás
+
+**Cards/Contenedores:**
+- **Card principal** con bordes redondeados y sombra sutil, conteniendo toda la información de la cuenta
+
+**Botones/Actions:**
+- **Botón "Desconectar cuenta"** con icono de enlace roto y texto en color rojo/coral
+
+**Badges/Indicadores:**
+- **Badge "Activa"** con fondo verde claro y borde verde
+
+**Campos de Información:**
+- **Dos campos readonly** dentro de la card:
+  - Usuario IOL (valor: demo_user)
+  - Cuentas registradas (valor: 123456)
+
+**Iconos:**
+- Icono de candado/cerradura junto al texto de seguridad
+- Icono de enlace roto en el botón de desconectar
+
+**Elemento Flotante:**
+- **Botón de chat/soporte** (esquina inferior derecha, fondo oscuro con icono de chat)
+
+## 3. **Colores Dominantes (

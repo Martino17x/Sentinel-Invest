@@ -1,0 +1,21 @@
+Esta captura de pantalla corresponde a la pantalla de **registro (sign-up)** de la aplicación **Sentinel**, enfocada en el control de inversiones. A continuación, se presenta el análisis detallado ordenado por categorías:
+
+### 1. Textos Visibles (De arriba hacia abajo)
+*   **Icono de marca:** (Gráfico abstracto en forma de gráfico de línea o firma).
+*   **Título principal:** "Creá tu cuenta"
+*   **Subtítulo:** "Empezá a controlar tus inversiones"
+*   **Etiqueta 1:** "Nombre"
+*   **Placeholder 1:** "Tu nombre"
+*   **Etiqueta 2:** "Email"
+*   **Placeholder 2:** "vos@ejemplo.com"
+*   **Etiqueta 3:** "Contraseña"
+*   **Placeholder 3:** "Mínimo 8 caracteres"
+*   **Texto del botón principal:** "Crear cuenta"
+*   **Separador:** "o continuá con"
+*   **Texto del botón secundario:** "Continuar con Google" (acompañado del logo multicolor de Google).
+*   **Texto de enlace:** "¿Ya tenés cuenta? **Ingresá**"
+*   **Pie legal:** "Al registrarte aceptás nuestros **Términos** y nuestra **Política de Privacidad**"
+
+### 2. Elementos de UI (Interfaz de Usuario)
+*   **Contenedor/Card:** Una tarjeta centralizada con bordes redondeados y un ligero sombreado para separarla del fondo.
+*   **Inputs (Campos de entrada):** Tres campos de texto con bordes grises sutiles y esquinas ligeramente redondeadas.

@@ -1,0 +1,52 @@
+---
+import { SITE } from "../data/site";
+import LightboxImage from "./lightbox/LightboxImage.astro";
+---
+<section class="relative overflow-hidden">
+  <div
+    aria-hidden="true"
+    class="pointer-events-none absolute inset-y-0 right-0 hidden w-[55%] lg:block bg-[radial-gradient(60%_60%_at_70%_40%,rgba(11,103,73,0.06),transparent_70%)]"
+  />
+  <div class="mx-auto max-w-7xl px-4 pb-20 pt-16 sm:px-6 sm:pt-24 lg:px-8 lg:pb-28 lg:pt-28">
+    <div class="grid items-center gap-12 lg:grid-cols-12 lg:gap-16">
+      <div class="max-w-2xl lg:col-span-5" data-reveal>
+        <h1 class="text-balance text-4xl font-semibold tracking-tight sm:text-5xl xl:text-6xl">
+          Tu cartera de inversiones, <span class="text-brand">controlada</span>.
+        </h1>
+        <p class="mt-6 text-pretty text-lg leading-relaxed text-muted">
+          Conectá tu cuenta de InvertirOnline y mirá portafolio, cotizaciones, análisis y reportes en un solo lugar. Sentinel App: consulta y opera (POST /api/orders tras opt-in IOL_TRADING_ENABLED + confirmación explícita y auditoría). Sentinel MCP: solo lectura (scope read) + trading opcional (scope trade).
+        </p>
+        <div class="mt-9 flex flex-wrap items-center gap-3">
+          <a
+            href={SITE.registerUrl}
+            class="rounded-lg bg-brand px-6 py-3 text-sm font-medium text-white transition hover:brightness-110 active:scale-[0.98]"
+          >
+            Crear cuenta gratis
+          </a>
+          <a
+            href="/funcionalidades"
+            class="rounded-lg border border-border bg-background px-6 py-3 text-sm font-medium transition-colors hover:border-foreground/25 hover:bg-surface"
+          >
+            Ver funcionalidades
+          </a>
+        </div>
+        <p class="mt-9 text-sm text-muted">App opera • MCP scopes · Conectá tu IOL</p>
+      </div>
+
+      <div class="lg:col-span-7" data-reveal>
+        <div class="rounded-[1.75rem] bg-surface p-2 ring-1 ring-border shadow-[0_24px_80px_-32px_rgba(6,64,40,0.25)]">
+          <div class="overflow-hidden rounded-[1.25rem] border border-border/70 bg-white">
+            <LightboxImage
+              src="/screens/desktop/portfolio.png"
+              alt="Panel de portafolio de Sentinel: total valorizado en pesos, KPIs del día y evolución a 90 días"
+              group="hero"
+              label="Ver en pantalla completa"
+              loading="eager"
+              fit="full"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

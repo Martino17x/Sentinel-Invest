@@ -1,0 +1,30 @@
+Esta imagen muestra la pantalla principal o "Panel" de la aplicación **Sentinel**, que parece ser una plataforma para gestión de inversiones o portafolio financiero. Aquí tienes un desglose detallado de los elementos visuales y de diseño:
+
+### **1. Textos e Información**
+*   **Encabezado:** En la parte superior izquierda aparece el logo y nombre de la app "Sentinel". A la derecha hay un avatar con las iniciales "UD".
+*   **Título de la Sección:** "Panel" en letra grande y negrita, seguido de una subtítulo descriptiva: "Cuenta 123456 — resumen de tu cartera".
+*   **Tarjetas de Métricas (Cards):**
+    *   **Ganancia / Pérdida:** Muestra un valor positivo de **$ 119.114,78** en negrita, y un porcentaje en verde **15.53%**. Debajo, texto pequeño en verde indica el cambio reciente: "+0.27% hoy (+$ 2.360,32)".
+    *   **Activos valorizados:** Valor total **$ 871.678,20** con la aclaración "Solo posiciones en ARS".
+    *   **Disponible ARS:** Saldo **$ 14.352,26** (pesos argentinos) con la nota "Disponible para operar".
+    *   **Disponible USD:** Saldo **$14.12** (dólares) con la nota "Disponible para operar".
+    *   **Evolución del valor:** Encabezado para un gráfico (cortado en la parte inferior) que muestra "Últimos 90 días".
+
+### **2. Elementos de UI (Interfaz de Usuario)**
+*   **Iconografía:** Hay iconos pequeños en la esquina superior derecha de cada tarjeta (una línea de tendencia, un edificio bancario, una tarjeta de crédito, etc.) que ayudan a identificar visualmente el tipo de dato.
+*   **Botón Flotante:** En la parte inferior derecha hay un botón circular negro con un ícono de chat o mensaje, presumiblemente para soporte al cliente.
+*   **Navegación Inferior (Tab Bar):** Una barra fija en el fondo con cuatro íconos y etiquetas: "Inicio", "Portafolio" (seleccionado/activado), "Cotizaciones" y "Reportes".
+
+### **3. Colores**
+*   **Fondo:** Blanco limpio (#FFFFFF), lo que da una sensación de orden y profesionalismo financiero.
+*   **Texto Principal:** Negro o gris muy oscuro para títulos y valores grandes.
+*   **Texto Secundario:** Gris claro para descripciones como "Disponible para operar".
+*   **Acento Positivo (Verde):** Se utiliza un verde brillante para la ganancia y el porcentaje, indicando éxito o crecimiento en las inversiones.
+*   **Iconos y Navegación:** Tonos de gris para iconos inactivos. El ícono de "Portafolio" en la barra inferior parece tener un ligero tono o negrita para indicar que es la pantalla activa.
+*   **Contraste:** Alto contraste entre el fondo blanco y las tarjetas, que tienen bordes sutiles o sombras ligeras para elevar el contenido visualmente.
+
+### **4. Layout y Estado**
+*   **Diseño Vertical:** La interfaz utiliza un enfoque "Card-based design" (diseño basado en tarjetas), apilando verticalmente la información para facilitar el desplazamiento (scroll) en móviles.
+*   **Estado de la Cuenta:** La cuenta está activa y en ganancia. No se muestran alertas de error o estado vacío (empty state).
+*   **Jerarquía:** Los valores numéricos grandes son lo más prominente en cada tarjeta, seguidos de sus etiquetas y luego de la información complementaria en letra más pequeña.
+*   **

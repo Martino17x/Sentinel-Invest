@@ -1,0 +1,1 @@
+export * from "../../dominio/analisis/fundamentals.js";

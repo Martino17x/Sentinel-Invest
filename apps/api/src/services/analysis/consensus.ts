@@ -1,0 +1,1 @@
+export * from "../../dominio/analisis/consensus.js";

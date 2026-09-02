@@ -1,0 +1,18 @@
+---
+import Base from "../layouts/Base.astro";
+import { features } from "../data/features";
+import Features from "../components/Features.astro";
+import CTA from "../components/CTA.astro";
+---
+<Base
+  title="Funcionalidades — Sentinel Invest"
+  description="Portafolio, operaciones, cotizaciones AR/US, análisis con señal técnica, reportes TWR y dólar: todo para controlar tu cartera de IOL."
+>
+  <div class="mx-auto max-w-6xl px-4 pb-4 pt-16 text-center sm:px-6 lg:px-8">
+    <p class="text-sm font-medium uppercase tracking-[0.18em] text-brand">Funcionalidades</p>
+    <h1 class="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">Todo tu mercado, en un solo lugar</h1>
+    <p class="mx-auto mt-4 max-w-2xl text-lg text-muted">Cada función pensada para que veas tu cartera de un vistazo, sin vueltas.</p>
+  </div>
+  <Features items={features} layout="alternating" title="" />
+  <CTA />
+</Base>

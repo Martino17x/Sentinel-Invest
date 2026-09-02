@@ -1,0 +1,55 @@
+---
+interface Props {
+  src: string;
+  alt: string;
+  group: string;
+  caption?: string;
+  label?: string;
+  class?: string;
+  loading?: "lazy" | "eager";
+  /** "cover": recorta (thumb) · "full": respeta el aspecto natural */
+  fit?: "cover" | "full";
+}
+
+const {
+  src,
+  alt,
+  group,
+  caption = alt,
+  label = "Ver en pantalla completa",
+  loading = "lazy",
+  fit = "cover",
+} = Astro.props;
+---
+<button
+  type="button"
+  class:list={[
+    "lightbox-trigger group relative block w-full select-none overflow-hidden",
+    Astro.props.class,
+  ]}
+  data-lightbox={group}
+  data-lightbox-src={src}
+  data-lightbox-alt={alt}
+  data-lightbox-caption={caption}
+  aria-haspopup="dialog"
+  aria-label={`Ver captura "${alt}" en pantalla completa`}
+>
+  <img
+    src={src}
+    alt={alt}
+    loading={loading}
+    decoding="async"
+    draggable="false"
+    class:list={[
+      fit === "full"
+        ? "pointer-events-none h-auto w-full"
+        : "pointer-events-none h-full w-full object-cover object-top",
+    ]}
+  />
+  <span class="lightbox-overlay" aria-hidden="true">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" class="h-4 w-4" aria-hidden="true">
+      <path d="M6 2H2v4M10 2h4v4M6 14H2v-4M10 14h4v-4" />
+    </svg>
+    <span>{label}</span>
+  </span>
+</button>

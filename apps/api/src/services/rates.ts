@@ -1,0 +1,1 @@
+export * from "../dominio/dolares/rates.js";

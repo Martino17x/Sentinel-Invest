@@ -1,0 +1,5 @@
+{
+  "extends": "@sentinel/tsconfig/astro.json",
+  "include": [".astro/types.d.ts", "**/*"],
+  "exclude": ["dist"]
+}

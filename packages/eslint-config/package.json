@@ -1,0 +1,20 @@
+{
+  "name": "@sentinel/eslint-config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./react": "./react.js",
+    "./node": "./node.js"
+  },
+  "dependencies": {
+    "@eslint/js": "^9.0.0",
+    "globals": "^16.0.0",
+    "typescript-eslint": "^8.0.0"
+  },
+  "peerDependencies": {
+    "eslint": "^9.0.0",
+    "typescript": ">=5.0.0"
+  }
+}

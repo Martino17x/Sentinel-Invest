@@ -1,0 +1,216 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+  /* Paleta de gráficos — vibrante, consistente con el donut del Inicio */
+  --chart-1: oklch(0.72 0.15 165); /* esmeralda  */
+  --chart-2: oklch(0.62 0.23 290); /* violeta   */
+  --chart-3: oklch(0.62 0.22 255); /* azul      */
+  --chart-4: oklch(0.78 0.16 75);  /* ámbar     */
+  --chart-5: oklch(0.71 0.13 220); /* cyan      */
+  /* Chat pantalla completa (modal Synara) — gradiente verde de marca.
+     Contraste ≥ 4.5:1 con texto blanco: from #0b6749 ≈ 6.9:1, to #064028 ≈ 11.9:1 */
+  --synara-panel-bg-from: #0b6749;
+  --synara-panel-bg-to: #064028;
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  /* Paleta de gráficos — misma vibrante que en light */
+  --chart-1: oklch(0.72 0.15 165);
+  --chart-2: oklch(0.62 0.23 290);
+  --chart-3: oklch(0.62 0.22 255);
+  --chart-4: oklch(0.78 0.16 75);
+  --chart-5: oklch(0.71 0.13 220);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --font-heading: var(--font-sans);
+  --font-sans: 'Geist Variable', sans-serif;
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    /* El scroll del documento ocurre en html — reservar SIEMPRE el
+       espacio del scrollbar → cero layout shift con overlays/dropdowns.
+       overflow-y: scroll fuerza la barra SIEMPRE: Radix pone
+       body[data-scroll-locked] { overflow: hidden } al abrir menus/
+       dialogs y ese overflow del body se PROPAGA al viewport, apagando
+       el scrollbar y corriendo la app a la izquierda. Con el scrollbar
+       del html siempre presente el gutter nunca cambia de ancho. */
+    scrollbar-gutter: stable;
+    overflow-y: scroll;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Evitar layout shift y mantener bloqueo de scroll limpio cuando se abren Dialogs o Modales.
+     - html maneja el scroll con scrollbar-gutter: stable y overflow-y: scroll por defecto.
+     - Cuando un modal/dialog bloquea el scroll (body[data-scroll-locked]), bloqueamos el overflow
+       tanto en html como en body para que el fondo no sea scrolleable.
+     - Como scrollbar-gutter: stable está activo, no hay layout shift ni saltos horizontales.
+     - Sobrescribir padding-right: 0px y --removed-body-scroll-bar-size: 0px evita duplicar gutters.
+     - position: static !important en body evita alterar el contexto de posición del header sticky. */
+  :root {
+    --removed-body-scroll-bar-size: 0px !important;
+  }
+
+  html:has(body[data-scroll-locked]) {
+    overflow: hidden !important;
+  }
+
+  body[data-scroll-locked],
+  [data-radix-scroll-lock] {
+    overflow: hidden !important;
+    position: static !important;
+    padding-right: 0px !important;
+    margin-right: 0px !important;
+  }
+}
+
+/* ============================================================
+   Scrollbar custom delgado — 7px, track transparente, thumb
+   translúcido redondeado. Uso variables CSS para adaptar el color:
+   la variante base es para temas claros (drawer) y
+   .custom-scrollbar-on-dark para superficies oscuras (modal Synara).
+   ============================================================ */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb, rgb(0 0 0 / 0.18)) transparent;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb, rgb(0 0 0 / 0.18));
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover, rgb(0 0 0 / 0.35));
+}
+
+/* Superficies oscuras (modal del chat, fondo verde Synara) */
+.custom-scrollbar-on-dark {
+  --scrollbar-thumb: rgb(255 255 255 / 0.2);
+  --scrollbar-thumb-hover: rgb(255 255 255 / 0.4);
+}
+
+/* Animaciones de entrada/salida (tw-animate-css): respetar
+   prefers-reduced-motion de forma global */
+@media (prefers-reduced-motion: reduce) {
+  .animate-in,
+  .animate-out {
+    animation: none;
+  }
+}

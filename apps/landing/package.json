@@ -1,0 +1,27 @@
+{
+  "name": "@sentinel/landing",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "check": "astro check",
+    "preview": "astro preview",
+    "lint": "eslint .",
+    "typecheck": "astro check"
+  },
+  "dependencies": {
+    "@fontsource-variable/geist": "^5.3.0",
+    "astro": "^5.0.0",
+    "gsap": "^3.15.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@sentinel/eslint-config": "workspace:*",
+    "@sentinel/tsconfig": "workspace:*",
+    "@tailwindcss/vite": "^4.3.3",
+    "eslint": "^9.0.0",
+    "typescript": "^5.8.0"
+  }
+}

@@ -1,0 +1,14 @@
+Esta imagen corresponde al panel principal o "Dashboard" de la aplicación **Sentinel**, una plataforma de seguimiento de inversiones. A continuación, detallo su composición visual y elementos:
+
+### 1. Cabecera (Header)
+*   **Logo y Marca:** A la izquierda, el logo de "Sentinel" con un ícono de línea de tendencia.
+*   **Navegación Principal:** Un menú horizontal con los siguientes enlaces: *Inicio, Portafolio, Operaciones, Cotizaciones y Reportes*. Cada uno acompañado de un pequeño ícono vectorial.
+*   **Avatar de Usuario:** Un círculo gris a la derecha con las iniciales "UD".
+
+### 2. Layout Principal
+La pantalla utiliza un diseño de **dos columnas** sobre un fondo gris muy claro.
+
+#### Columna Izquierda (Resumen Financiero)
+Contiene varias tarjetas (cards) con esquinas redondeadas y fondo blanco:
+*   **Total Valorizado:** Muestra el monto total: **$ 907.346**. Incluye un selector de moneda (ARS) y un ícono de "ojo" para ocultar/mostrar valores. Abajo detalla la variación del día (**+$ 2.360,32**) en color verde, indicando una suba.
+*   **Dis

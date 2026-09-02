@@ -1,0 +1,35 @@
+---
+import "../../styles/lightbox.css";
+---
+<dialog id="image-lightbox" class="lightbox" aria-label="Galería de capturas de Sentinel" aria-modal="true">
+  <div class="lightbox__frame">
+    <button id="lightbox-close" type="button" class="lightbox__close" aria-label="Cerrar galería">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5" aria-hidden="true">
+        <path d="M3 3l10 10M13 3L3 13" />
+      </svg>
+    </button>
+    <button id="lightbox-prev" type="button" class="lightbox__nav lightbox__nav--prev" aria-label="Captura anterior" hidden>
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5" aria-hidden="true">
+        <path d="M10 3L5 8l5 5" />
+      </svg>
+    </button>
+    <button id="lightbox-next" type="button" class="lightbox__nav lightbox__nav--next" aria-label="Captura siguiente" hidden>
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5" aria-hidden="true">
+        <path d="M6 3l5 5-5 5" />
+      </svg>
+    </button>
+
+    <figure id="lightbox-stage" class="lightbox__stage" tabindex="-1">
+      <img id="lightbox-img" src="" alt="" draggable="false" />
+      <figcaption id="lightbox-caption" class="lightbox__caption"></figcaption>
+    </figure>
+
+    <p id="lightbox-counter" class="lightbox__counter" aria-live="polite" aria-atomic="true"></p>
+  </div>
+</dialog>
+
+<script>
+  import { initLightbox } from "../../scripts/lightbox";
+  // ClientRouter: se re-ejecuta en la carga inicial y tras cada navegación (View Transitions)
+  document.addEventListener("astro:page-load", () => initLightbox());
+</script>

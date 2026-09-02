@@ -1,0 +1,20 @@
+Esta captura de pantalla corresponde a la página de **Perfil o Configuración de Cuenta** de la aplicación **Sentinel** (una plataforma de control de inversiones para IOL en Argentina). El diseño es limpio, con estética de SaaS moderno, usando tarjetas (*cards*) sobre un fondo gris claro.
+
+A continuación, el análisis detallado:
+
+### 1. Barra de Navegación Superior (Header)
+*   **Logo:** A la izquierda, el icono de Sentinel (un gráfico de líneas) seguido del nombre de la marca.
+*   **Menú Principal:** Cinco módulos de navegación con iconos de estilo "lucide" o "outline":
+    *   **Inicio** (casa)
+    *   **Portafolio** (edificio/monedas)
+    *   **Operaciones** (enlace o doble círculo)
+    *   **Cotizaciones** (gráfico de líneas)
+    *   **Reportes** (columnas de gráfico de barras)
+*   **Avatar:** A la derecha, un círculo gris con las iniciales **"UD"** (representando "Usuario Demo").
+
+### 2. Cabecera de la Página
+*   **Botón de retorno:** En la esquina superior izquierda del contenido principal, un enlace de texto **"← Volver"**.
+*   **Identificación del Usuario:** Se muestra un ícono genérico de persona dentro de un círculo, el nombre **"Usuario Demo"** en un tamaño de fuente grande y negrita, y debajo su correo electrónico: `demo@sentinel.dev`.
+
+### 3. Sección: Información de la Cuenta (Primera Tarjeta)
+*   **Título:**

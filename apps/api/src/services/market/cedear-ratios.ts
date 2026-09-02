@@ -1,0 +1,1 @@
+export * from "../../dominio/dolares/cedear-ratios.js";

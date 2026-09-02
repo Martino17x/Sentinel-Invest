@@ -1,0 +1,12 @@
+---
+import Base from "../layouts/Base.astro";
+import Security from "../components/Security.astro";
+import CTA from "../components/CTA.astro";
+---
+<Base
+  title="Seguridad — Sentinel Invest"
+  description="Sentinel App: consulta y opera (POST /api/orders tras opt-in IOL_TRADING_ENABLED + confirmación explícita y auditoría). Sentinel MCP: solo lectura (scope read) + trading opcional (scope trade). Tus credenciales cifradas con AES-256 y eliminadas al desconectar."
+>
+  <Security />
+  <CTA />
+</Base>

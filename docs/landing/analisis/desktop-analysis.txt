@@ -1,0 +1,43 @@
+Análisis detallado de la captura de pantalla de la aplicación **Sentinel**:
+
+---
+
+### **1. Textos Visibles (ordenados de arriba a izquierda)**
+*   **Barra de navegación superior:**
+    *   Logo/Nombre: `Sentinel` (con ícono de gráfico).
+    *   Ítems de menú: `Inicio`, `Portafolio`, `Operaciones`, `Cotizaciones`, `Reportes`.
+    *   Usuario: `UT` (esquina superior derecha).
+*   **Encabezado de la vista:**
+    *   Ruta de navegación: `← Cotizaciones / GGAL`.
+    *   Título principal: `GGAL` (negrita grande).
+    *   Descripción: `Grupo Financiero Galicia`.
+    *   Ticker adicional: `GGAL.BA` (esquina derecha).
+*   **Tarjeta "Último cierre":**
+    *   Título de sección: `Último cierre`.
+    *   Precio principal: `$ 6.850,00`.
+    *   Variación: `▼-3,45%` (fondo rojo claro, texto rojo).
+    *   Estado del mercado: `Mercado cerrado — último cierre 2026-08-14`.
+*   **Tarjeta "Señal técnica":**
+    *   Título de sección: `Señal técnica`.
+    *   Subtítulo explicativo: `Score compuesto 0-100 con pesos renormalizados`.
+    *   Etiqueta de estado: `Neutral` (esquina derecha, fondo gris claro).
+    *   Score global: `52 / 100` (grande).
+    *   **Desglose de indicadores (filas):**
+        1.  `Tendencia`: `vs SMA50 7837.40 · vs SMA200 7432.82 · golden cross` | `30%` | `20`.
+        2.  `MACD`: `histograma negativo · sin cruce` | `25%` | `25`.
+        3.  `RSI`: `RSI 32.0 (zona neutral)` | `20%` | `95`.
+        4.  `Rango 52 semanas`: `posición 73% del rango anual` | `15%` | `73`.
+        5.  `Volumen`: `ratio 1.28x vs promedio 20 días` | `10%` | `100`.
+*   **Tarjeta "Fundamentales":**
+    *   Solo visible el título: `Fundamentales` (corte inferior).
+
+---
+
+### **2. Elementos de UI**
+*   **Navegación:** Menú horizontal superior con íconos al lado de cada texto.
+*   **Botones/Íconos:**
+    *   Flecha de retroceso (`←`) junto a "Cotizaciones".
+    *   Ícono de chat/burbuja de diálogo (esquina inferior derecha, fondo negro).
+*   **Tarjetas (Cards):** Contenedores blancos con bordes redondeados sutiles y sombra ligera, que separan las secciones de información.
+*   **Barra de progreso (Global):** Barra horizontal que representa el score de 52, coloreada en azul-grisáceo.
+*   **Barras de progreso (Indicadores):** Cada fila del desglose tiene una barra horizontal debajo del nombre del indicador, que representa visualmente el valor del score individual (largo variable).
